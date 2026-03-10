@@ -285,7 +285,7 @@ func TestParseSparseFloatVectorStructs(t *testing.T) {
 		return builder.NewListArray()
 	}
 
-	// idices field missed
+	// indices field missed
 	checkFunc(nil, genFloat32ArrList([]float32{0.1}), false)
 
 	// values field missed

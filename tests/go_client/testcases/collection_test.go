@@ -702,7 +702,7 @@ func TestCreateCollectionMultiAutoId(t *testing.T) {
 		entity.NewField().WithName(common.DefaultFloatVecFieldName).WithDataType(entity.FieldTypeFloatVector).WithDim(common.DefaultDim),
 	).WithName(collName)
 	errMultiAuto := mc.CreateCollection(ctx, client.NewCreateCollectionOption(collName, schema))
-	common.CheckErr(t, errMultiAuto, false, "only one field can speficy AutoID with true")
+	common.CheckErr(t, errMultiAuto, false, "only one field can specify AutoID with true")
 }
 
 // test create collection with different autoId between pk field and schema

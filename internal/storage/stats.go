@@ -339,15 +339,15 @@ func (m *BM25Stats) Append(rows ...map[uint32]float32) {
 	}
 }
 
-func (m *BM25Stats) AppendFieldData(datas ...*SparseFloatVectorFieldData) {
-	for _, data := range datas {
+func (m *BM25Stats) AppendFieldData(data ...*SparseFloatVectorFieldData) {
+	for _, data := range data {
 		m.AppendBytes(data.GetContents()...)
 	}
 }
 
 // Update BM25Stats by sparse vector bytes
-func (m *BM25Stats) AppendBytes(datas ...[]byte) {
-	for _, data := range datas {
+func (m *BM25Stats) AppendBytes(data ...[]byte) {
+	for _, data := range data {
 		dim := typeutil.SparseFloatRowElementCount(data)
 		for i := 0; i < dim; i++ {
 			index := typeutil.SparseFloatRowIndexAt(data, i)

@@ -148,7 +148,7 @@ class CachedSearchIteratorTest
         SearchResult search_result;
         float radius, range_filter;
         bool get_radius_success = false;
-        bool get_range_filter_sucess = false;
+        bool get_range_filter_success = false;
         SearchInfo search_info = GetDefaultNormalSearchInfo();
         auto iterator =
             DispatchIterator(std::get<0>(GetParam()), search_info, nullptr);
@@ -158,7 +158,7 @@ class CachedSearchIteratorTest
                 for (size_t i = kBatchSize - 1; i >= 0; --i) {
                     if (search_result.seg_offsets_[i] != -1) {
                         range_filter = search_result.distances_[i];
-                        get_range_filter_sucess = true;
+                        get_range_filter_success = true;
                         break;
                     }
                 }
@@ -172,7 +172,7 @@ class CachedSearchIteratorTest
                 }
             }
         }
-        if (!get_radius_success || !get_range_filter_sucess) {
+        if (!get_radius_success || !get_range_filter_success) {
             throw std::runtime_error("Failed to get radius and range filter");
         }
         return {radius, range_filter};

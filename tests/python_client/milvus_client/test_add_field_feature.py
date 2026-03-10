@@ -63,7 +63,7 @@ class TestMilvusClientAddFieldFeature(TestMilvusClientV2Base):
         self.add_collection_field(client, collection_name, field_name="field_new_int64", data_type=DataType.INT64,
                                   nullable=True, is_clustering_key=True, mmap_enabled=True)
         self.add_collection_field(client, collection_name, field_name="field_new_var", data_type=DataType.VARCHAR,
-                                  nullable=True, default_vaule="field_new_var", max_length=64, mmap_enabled=True)
+                                  nullable=True, default_value="field_new_var", max_length=64, mmap_enabled=True)
         check_items["add_fields"] = ["field_new_int64", "field_new_var"]
         self.describe_collection(client, collection_name,
                                  check_task=CheckTasks.check_describe_collection_property,

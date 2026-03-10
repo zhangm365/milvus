@@ -240,7 +240,7 @@ MakeInternalPropertiesFromStorageConfig(CStorageConfig c_storage_config) {
 }
 
 std::shared_ptr<milvus_storage::api::Properties>
-MakeInternalLocalProperies(const char* c_path) {
+MakeInternalLocalProperties(const char* c_path) {
     auto properties_map = std::make_shared<milvus_storage::api::Properties>();
 
     milvus_storage::api::SetValue(

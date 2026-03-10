@@ -38,7 +38,7 @@ func CntOfFieldData(f *schemapb.FieldData) (int64, error) {
 		return 0, errors.New("count result should be int64 data")
 	}
 	if len(data.GetData()) != 1 {
-		return 0, errors.New("count result shoud only have one row")
+		return 0, errors.New("count result should only have one row")
 	}
 	return data.GetData()[0], nil
 }

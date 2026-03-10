@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	TombValue     = "TOMB_VAULE"
+	TombValue     = "TOMB_VALUE"
 	RuntimeSource = "RuntimeSource"
 )
 

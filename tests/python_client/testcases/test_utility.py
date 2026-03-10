@@ -611,7 +611,7 @@ class TestUtilityBase(TestcaseBase):
     @pytest.mark.tags(CaseLabel.L1)
     def test_has_collection_after_drop(self):
         """
-        target: test has_collection with collection name droped before
+        target: test has_collection with collection name dropped before
         method: input random collection name
         expected: False
         """
@@ -1924,7 +1924,7 @@ class TestUtilityUserPassword(TestcaseBase):
     @pytest.mark.tags(ct.CaseLabel.RBAC)
     def test_delete_user_with_invalid_username(self, host, port):
         """
-        target: test the nonexistant user when deleting credential
+        target: test the nonexistent user when deleting credential
         method: delete a credential with user wrong
         excepted: delete is true
         """
@@ -3575,7 +3575,7 @@ class TestUtilityRBAC(TestcaseBase):
 
     def test_admin_user_after_db_deleted(self, host, port):
         """
-        target: test admin role can opearte after db deleted
+        target: test admin role can operate after db deleted
         method: 1.root connect -> create collection in
                 2.create co
         expected:

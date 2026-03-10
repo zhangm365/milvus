@@ -148,7 +148,7 @@ PhyRescoresNode::GetOutput() {
             eval_ctx.set_offset_input(&offsets);
             expr_set->Eval(0, 1, true, eval_ctx, results);
 
-            // filter result for offsets[i] was resut bitset[i]
+            // filter result for offsets[i] was result bitset[i]
             AssertInfo(!results.empty() && results[0] != nullptr,
                        "PhyRescoresNode: filter expr returned null result, "
                        "offsets size: {}, filter: {}",

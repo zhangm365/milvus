@@ -79,7 +79,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair<std::map<std::string, std::string>, LoadResourceRequest>(
             {{"index_type", "HNSW"},
              {"metric_type", "L2"},
-             {"efConstrcution", "300"},
+             {"efConstruction", "300"},
              {"M", "30"},
              {"mmap", "false"},
              {"field_type", "vector_float"}},
@@ -91,7 +91,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair<std::map<std::string, std::string>, LoadResourceRequest>(
             {{"index_type", "HNSW"},
              {"metric_type", "L2"},
-             {"efConstrcution", "300"},
+             {"efConstruction", "300"},
              {"M", "30"},
              {"mmap", "true"},
              {"field_type", "vector_float"}},
@@ -103,7 +103,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair<std::map<std::string, std::string>, LoadResourceRequest>(
             {{"index_type", "HNSW"},
              {"metric_type", "L2"},
-             {"efConstrcution", "300"},
+             {"efConstruction", "300"},
              {"M", "30"},
              {"mmap", "false"},
              {"field_type", "vector_bf16"}},
@@ -115,7 +115,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair<std::map<std::string, std::string>, LoadResourceRequest>(
             {{"index_type", "HNSW"},
              {"metric_type", "L2"},
-             {"efConstrcution", "300"},
+             {"efConstruction", "300"},
              {"M", "30"},
              {"mmap", "true"},
              {"field_type", "vector_fp16"}},
@@ -127,7 +127,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair<std::map<std::string, std::string>, LoadResourceRequest>(
             {{"index_type", "HNSW"},
              {"metric_type", "L2"},
-             {"efConstrcution", "300"},
+             {"efConstruction", "300"},
              {"M", "30"},
              {"mmap", "false"},
              {"field_type", "vector_int8"}},
@@ -139,7 +139,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair<std::map<std::string, std::string>, LoadResourceRequest>(
             {{"index_type", "HNSW"},
              {"metric_type", "L2"},
-             {"efConstrcution", "300"},
+             {"efConstruction", "300"},
              {"M", "30"},
              {"mmap", "true"},
              {"field_type", "vector_int8"}},

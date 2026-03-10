@@ -85,7 +85,7 @@ pipeline {
         )
         string(
             description: 'Idle Time in Minutes',
-            name: 'idel_time',
+            name: 'idle_time',
             defaultValue: '1'
         )
         booleanParam(
@@ -239,8 +239,8 @@ pipeline {
                 container('main') {
                     dir ('tests/python_client/deploy') {
                         script {
-                        echo "sleep ${params.idel_time}m"
-                        sh "sleep ${params.idel_time}m"
+                        echo "sleep ${params.idle_time}m"
+                        sh "sleep ${params.idle_time}m"
                         }
                     }
                 }
@@ -254,7 +254,7 @@ pipeline {
                         script {
                         echo "get pod status"
                         sh "kubectl get pods -o wide|grep ${env.RELEASE_NAME} || true"
-                        echo "collecte logs"
+                        echo "collective logs"
                         sh "bash ../../scripts/export_log_k8s.sh ${env.NAMESPACE} ${env.RELEASE_NAME} k8s_log/${env.RELEASE_NAME}/first_deployment || echo 'export log failed'"
                         }
                     }
@@ -356,7 +356,7 @@ pipeline {
                     script {
                         echo "get pod status"
                         sh "kubectl get pods -o wide|grep ${env.RELEASE_NAME} || true"
-                        echo "collecte logs"
+                        echo "collective logs"
                         sh "bash ../../scripts/export_log_k8s.sh ${env.NAMESPACE} ${env.RELEASE_NAME} k8s_log/${env.RELEASE_NAME}/second_deployment || echo 'export log failed'"
                         echo "upload logs"
                         sh "tar -zcvf artifacts-${env.RELEASE_NAME}-logs.tar.gz k8s_log/ --remove-files || true"
@@ -370,7 +370,7 @@ pipeline {
         
         }
         success {
-            echo 'I succeeeded!'
+            echo 'I succeeded!'
             container('main') {
                 dir ('tests/python_client/chaos/scripts') {
                     script {

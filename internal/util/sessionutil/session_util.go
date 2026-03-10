@@ -65,8 +65,8 @@ func isNotSessionVersionCheckFailure(err error) bool {
 	return !errors.Is(err, errSessionVersionCheckFailure)
 }
 
-// EnableEmbededQueryNodeLabel set server labels for embedded query node.
-func EnableEmbededQueryNodeLabel() {
+// EnableEmbeddedQueryNodeLabel set server labels for embedded query node.
+func EnableEmbeddedQueryNodeLabel() {
 	os.Setenv(NewServerLabel(typeutil.QueryNodeRole, LabelStreamingNodeEmbeddedQueryNode), "1")
 }
 
@@ -616,7 +616,7 @@ func (s *Session) processKeepAliveResponse() {
 		for range ch {
 		}
 
-		// receive a keep alive response, continue the opeartion.
+		// receive a keep alive response, continue the operation.
 		// the keep alive channel may be closed because of network error, we should retry the keep alive.
 		ch = nil
 		nextKeepaliveInstant = time.Now().Add(time.Duration(s.sessionTTL) * time.Second)

@@ -100,7 +100,7 @@ jobs:
         run: |
           pytest -s -v testcases/test_e2e.py --host 127.0.0.1 --log-cli-level=INFO --capture=no
 
-      - name: Run data presistence test before chaos
+      - name: Run data persistence test before chaos
         timeout-minutes: 5
         shell: bash
         working-directory: tests/python_client/chaos
@@ -151,7 +151,7 @@ jobs:
 
           pytest -s -v testcases/test_e2e.py --host 127.0.0.1 --log-cli-level=INFO --capture=no
 
-      - name: Run data presistence test after chaos
+      - name: Run data persistence test after chaos
         timeout-minutes: 5
         shell: bash
         working-directory: tests/python_client/chaos

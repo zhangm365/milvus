@@ -88,8 +88,8 @@ func NewVoyageAIEmbeddingProvider(fieldSchema *schemapb.FieldSchema, functionSch
 	}
 
 	embdType := models.GetEmbdType(fieldSchema.DataType)
-	if embdType == models.UnsupportEmbd {
-		return nil, fmt.Errorf("Unsupport output type: %s", fieldSchema.DataType)
+	if embdType == models.UnsupportedEmbd {
+		return nil, fmt.Errorf("Unsupported output type: %s", fieldSchema.DataType)
 	}
 
 	outputType := func() string {

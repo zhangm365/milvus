@@ -114,7 +114,7 @@ func (m *messageImpl) WithReplicateHeader(rh *ReplicateHeader) MutableMessage {
 	if rh == nil {
 		return m
 	}
-	if m.properties.Exist(messageReplicateMesssageHeader) {
+	if m.properties.Exist(messageReplicateMessageHeader) {
 		panic("replicate header already set in properties of message")
 	}
 	rhProto, err := EncodeProto(&messagespb.ReplicateHeader{
@@ -127,7 +127,7 @@ func (m *messageImpl) WithReplicateHeader(rh *ReplicateHeader) MutableMessage {
 	if err != nil {
 		panic("should not happen on replicate header proto")
 	}
-	m.properties.Set(messageReplicateMesssageHeader, rhProto)
+	m.properties.Set(messageReplicateMessageHeader, rhProto)
 	return m
 }
 
@@ -307,7 +307,7 @@ func (m *messageImpl) VChannel() string {
 // ReplicateHeader returns the replicate header of current message.
 // If the replicate header is set, it is a replicated message.
 func (m *messageImpl) ReplicateHeader() *ReplicateHeader {
-	value, ok := m.properties.Get(messageReplicateMesssageHeader)
+	value, ok := m.properties.Get(messageReplicateMessageHeader)
 	if !ok {
 		return nil
 	}

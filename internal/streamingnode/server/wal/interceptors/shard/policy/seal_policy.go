@@ -20,7 +20,7 @@ var (
 )
 
 // PolicyPartitionNotFound returns a SealPolicy for partition not found.
-func PolicyParitionNotFound() SealPolicy {
+func PolicyPartitionNotFound() SealPolicy {
 	return SealPolicy{
 		Policy: PolicyNamePartitionNotFound,
 		Extra:  nil,

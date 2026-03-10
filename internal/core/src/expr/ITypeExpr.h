@@ -97,7 +97,7 @@ struct ExprInfo {
                                           GenericValueHasher,
                                           GenericValueEqual>>
         field_id_to_values;
-    // whether the search exression has AND (&&) logical operator only
+    // whether the search expression has AND (&&) logical operator only
     bool is_pure_and = true;
     // whether the search expression has NOT (!) logical unary operator
     bool has_not = false;
@@ -840,11 +840,11 @@ class CompareExpr : public ITypeFilterExpr {
 
 class GISFunctionFilterExpr : public ITypeFilterExpr {
  public:
-    GISFunctionFilterExpr(ColumnInfo cloumn,
+    GISFunctionFilterExpr(ColumnInfo column,
                           GISFunctionType op,
                           const std::string& geometry_wkt,
                           double distance = 0.0)
-        : column_(cloumn),
+        : column_(column),
           op_(op),
           geometry_wkt_(geometry_wkt),
           distance_(distance){};

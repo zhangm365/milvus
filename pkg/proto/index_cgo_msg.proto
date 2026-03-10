@@ -29,7 +29,7 @@ message Binary {
 }
 
 message BinarySet {
-  repeated Binary datas = 1;
+  repeated Binary data = 1;
 }
 
 message FieldInsertFiles {

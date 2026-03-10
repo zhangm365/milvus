@@ -303,7 +303,7 @@ func (t *dropCollectionFunctionTask) Execute(ctx context.Context) error {
 	}
 
 	if t.fSchema.Type == schemapb.FunctionType_BM25 {
-		return fmt.Errorf("Currently does not support droping BM25 function")
+		return fmt.Errorf("Currently does not support dropping BM25 function")
 	}
 
 	var err error

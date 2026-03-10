@@ -11,7 +11,7 @@ import (
 	"github.com/milvus-io/milvus/pkg/v2/streaming/walimpls/impls/rmq"
 )
 
-func TestDeplicatedMessageOnMsgPackHandler(t *testing.T) {
+func TestDeprecatedMessageOnMsgPackHandler(t *testing.T) {
 	messageID := rmq.NewRmqID(1)
 	tt := uint64(100)
 	msg := message.CreateTestInsertMessage(

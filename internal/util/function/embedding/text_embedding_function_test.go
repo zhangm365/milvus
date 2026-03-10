@@ -615,7 +615,7 @@ func (s *TextEmbeddingFunctionSuite) TestNewTextEmbeddings() {
 			InputFieldIds:    []int64{101},
 			OutputFieldIds:   []int64{102},
 			Params: []*commonpb.KeyValuePair{
-				{Key: Provider, Value: "unkownProvider"},
+				{Key: Provider, Value: "unknownProvider"},
 			},
 		}
 
@@ -951,7 +951,7 @@ func (s *TextEmbeddingFunctionSuite) TestProcessBulkInsertFloat32() {
 	}
 }
 
-func (s *TextEmbeddingFunctionSuite) TestParseCredentail() {
+func (s *TextEmbeddingFunctionSuite) TestParseCredential() {
 	{
 		cred := credentials.NewCredentials(map[string]string{})
 		ak, url, err := models.ParseAKAndURL(cred, []*commonpb.KeyValuePair{}, map[string]string{}, "", &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
@@ -962,7 +962,7 @@ func (s *TextEmbeddingFunctionSuite) TestParseCredentail() {
 	{
 		cred := credentials.NewCredentials(map[string]string{})
 		_, _, err := models.ParseAKAndURL(cred, []*commonpb.KeyValuePair{}, map[string]string{"credential": "NotExist"}, "", &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
-		s.ErrorContains(err, "is not a apikey crediential, can not find key")
+		s.ErrorContains(err, "is not a apikey credential, can not find key")
 	}
 	{
 		cred := credentials.NewCredentials(map[string]string{"mock.apikey": "mock"})

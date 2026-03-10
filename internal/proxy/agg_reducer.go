@@ -37,29 +37,29 @@ func (reducer *MilvusAggReducer) Reduce(results []*internalpb.RetrieveResults) (
 		return nil, err
 	}
 	fieldCount := reducer.outputMap.Count()
-	reOrganizedFieldDatas := make([]*schemapb.FieldData, fieldCount)
-	reducedFieldDatas := reducedAggRes.GetFieldDatas()
+	reOrganizedFieldData := make([]*schemapb.FieldData, fieldCount)
+	reducedFieldData := reducedAggRes.GetFieldData()
 	for i := 0; i < fieldCount; i++ {
 		indices := reducer.outputMap.IndexesAt(i)
 		if len(indices) == 0 {
 			return nil, fmt.Errorf("no indices found for output field at index %d", i)
 		} else if len(indices) == 1 {
 			// Single index: direct copy (non-avg aggregation or group-by field)
-			reOrganizedFieldDatas[i] = reducedFieldDatas[indices[0]]
-			reOrganizedFieldDatas[i].FieldName = reducer.outputMap.NameAt(i)
+			reOrganizedFieldData[i] = reducedFieldData[indices[0]]
+			reOrganizedFieldData[i].FieldName = reducer.outputMap.NameAt(i)
 		} else if len(indices) == 2 {
 			// Two indices: avg aggregation (sum and count)
-			sumFieldData := reducedFieldDatas[indices[0]]
-			countFieldData := reducedFieldDatas[indices[1]]
+			sumFieldData := reducedFieldData[indices[0]]
+			countFieldData := reducedFieldData[indices[1]]
 			avgFieldData, err := agg.ComputeAvgFromSumAndCount(sumFieldData, countFieldData)
 			if err != nil {
 				return nil, fmt.Errorf("failed to compute avg for field %s: %w", reducer.outputMap.NameAt(i), err)
 			}
 			avgFieldData.FieldName = reducer.outputMap.NameAt(i)
-			reOrganizedFieldDatas[i] = avgFieldData
+			reOrganizedFieldData[i] = avgFieldData
 		} else {
 			return nil, fmt.Errorf("unexpected number of indices (%d) for output field at index %d, expected 1 or 2", len(indices), i)
 		}
 	}
-	return &milvuspb.QueryResults{FieldsData: reOrganizedFieldDatas, Status: merr.Success()}, nil
+	return &milvuspb.QueryResults{FieldsData: reOrganizedFieldData, Status: merr.Success()}, nil
 }

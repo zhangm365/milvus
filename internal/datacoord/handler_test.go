@@ -71,7 +71,7 @@ func TestGetQueryVChanPositionsRetrieveM2N(t *testing.T) {
 		{800, commonpb.SegmentState_Dropped, datapb.SegmentLevel_L1, false},
 	}
 
-	compactFroms := []int64{400, 401, 402}
+	compactForms := []int64{400, 401, 402}
 	compactTos := []int64{403, 404}
 
 	for _, arg := range segArgs {
@@ -89,7 +89,7 @@ func TestGetQueryVChanPositionsRetrieveM2N(t *testing.T) {
 		})
 
 		if lo.Contains(compactTos, arg.segID) {
-			seg.CompactionFrom = compactFroms
+			seg.CompactionFrom = compactForms
 		}
 		err := svr.meta.AddSegment(context.TODO(), seg)
 		require.NoError(t, err)

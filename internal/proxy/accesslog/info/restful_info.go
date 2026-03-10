@@ -218,7 +218,7 @@ func (i *RestfulInfo) ConsistencyLevel() string {
 	if i.actualConsistencyLevel != nil {
 		return i.actualConsistencyLevel.String()
 	}
-	level, ok := requestutil.GetConsistencyLevelFromRequst(i.req)
+	level, ok := requestutil.GetConsistencyLevelFromRequest(i.req)
 	if ok {
 		return level.String()
 	}

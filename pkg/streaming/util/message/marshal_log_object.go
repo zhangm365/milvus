@@ -145,7 +145,7 @@ func marshalSpecializedHeader(t MessageType, v Version, h string, enc zapcore.Ob
 		encodeIDs("flushedSegmentIDs", header.GetFlushedSegmentIds(), enc)
 	case *AlterCollectionMessageHeader:
 		enc.AddInt64("collectionID", header.GetCollectionId())
-		enc.AddString("udpateMasks", strings.Join(header.UpdateMask.GetPaths(), "|"))
+		enc.AddString("updateMasks", strings.Join(header.UpdateMask.GetPaths(), "|"))
 		encodeIDs("flushedSegmentIDs", header.GetFlushedSegmentIds(), enc)
 	case *AlterLoadConfigMessageHeader:
 		enc.AddInt64("collectionID", header.GetCollectionId())

@@ -43,7 +43,7 @@ func TestCases(t *testing.T) {
 	msgID.EXPECT().WALName().Return(message.WALNameTest).Maybe()
 	message.CreateTestInsertMessage(t, 1, 100, 100, msgID)
 	message.CreateTestCreateCollectionMessage(t, 1, 100, msgID)
-	message.CreateTestEmptyInsertMesage(1, nil)
+	message.CreateTestEmptyInsertMessage(1, nil)
 	message.CreateTestDropCollectionMessage(t, 1, 100, msgID)
 	message.CreateTestTimeTickSyncMessage(t, 1, 100, msgID)
 	message.CreateTestCreateSegmentMessage(t, 1, 100, msgID)

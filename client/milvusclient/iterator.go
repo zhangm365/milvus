@@ -137,9 +137,9 @@ func (it *searchIteratorV2) setupCollectionID(ctx context.Context) error {
 	})
 }
 
-// probeCompatiblity checks if the server support SearchIteratorV2.
+// probeCompatibility checks if the server support SearchIteratorV2.
 // It checks if the search result contains search iterator v2 results info and token.
-func (it *searchIteratorV2) probeCompatiblity(ctx context.Context) error {
+func (it *searchIteratorV2) probeCompatibility(ctx context.Context) error {
 	opt := it.option.SearchOption()
 	opt.annRequest.topK = 1 // ok to leave it here, will be overwritten in next iteration
 	opt.annRequest.WithSearchParam(IteratorSearchBatchSizeKey, "1")
@@ -175,7 +175,7 @@ func newSearchIteratorV2(ctx context.Context, client *Client, option SearchItera
 		return nil, err
 	}
 
-	if err := iter.probeCompatiblity(ctx); err != nil {
+	if err := iter.probeCompatibility(ctx); err != nil {
 		return nil, err
 	}
 

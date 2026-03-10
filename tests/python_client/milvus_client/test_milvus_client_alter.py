@@ -1983,9 +1983,9 @@ class TestMilvusClientWarmup(TestMilvusClientV2Base):
         assert sync_vectors == disable_vectors, "retrieved vectors should be identical"
 
         # disable mode: repeated search consistency (same load, should be deterministic)
-        search_2nd = self.search(client, collection_name, query_vec, limit=20, output_fields=["pk"])[0]
+        search_2and = self.search(client, collection_name, query_vec, limit=20, output_fields=["pk"])[0]
         disable_pks = [hit["pk"] for hit in search_disable[0]]
-        assert disable_pks == [hit["pk"] for hit in search_2nd[0]]
+        assert disable_pks == [hit["pk"] for hit in search_2and[0]]
 
         self.drop_collection(client, collection_name)
 

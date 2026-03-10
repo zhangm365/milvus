@@ -14,7 +14,7 @@ var _ walimpls.ScannerImpls = &scannerImpls{}
 func newScannerImpls(opts walimpls.ReadOption, data *messageLog, offset int) *scannerImpls {
 	s := &scannerImpls{
 		ScannerHelper: helper.NewScannerHelper(opts.Name),
-		datas:         data,
+		data:         data,
 		ch:            make(chan message.ImmutableMessage),
 		offset:        offset,
 	}
@@ -24,7 +24,7 @@ func newScannerImpls(opts walimpls.ReadOption, data *messageLog, offset int) *sc
 
 type scannerImpls struct {
 	*helper.ScannerHelper
-	datas  *messageLog
+	data  *messageLog
 	ch     chan message.ImmutableMessage
 	offset int
 }
@@ -35,7 +35,7 @@ func (s *scannerImpls) executeConsume() {
 		s.Finish(nil)
 	}()
 	for {
-		msg, err := s.datas.ReadAt(s.Context(), s.offset)
+		msg, err := s.data.ReadAt(s.Context(), s.offset)
 		if err != nil {
 			return
 		}

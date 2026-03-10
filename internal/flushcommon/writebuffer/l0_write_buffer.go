@@ -90,7 +90,7 @@ func (wb *l0WriteBuffer) BufferData(insertData []*InsertData, deleteMsgs []*msgs
 	return nil
 }
 
-// bufferInsert function InsertMsg into bufferred InsertData and returns primary key field data for future usage.
+// bufferInsert function InsertMsg into buffered InsertData and returns primary key field data for future usage.
 func (wb *l0WriteBuffer) bufferInsert(inData *InsertData, startPos, endPos *msgpb.MsgPosition) error {
 	wb.CreateNewGrowingSegment(inData.partitionID, inData.segmentID, startPos)
 	segBuf := wb.getOrCreateBuffer(inData.segmentID, startPos.GetTimestamp())

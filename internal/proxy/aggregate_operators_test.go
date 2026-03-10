@@ -1055,7 +1055,7 @@ func (s *AggregateOperatorsSuite) TestAssembleSingleRow_WithMixedNulls() {
 		agg.NewFieldValue(int64(100)),
 	})
 
-	fieldDatas := []*schemapb.FieldData{
+	fieldData := []*schemapb.FieldData{
 		{
 			Type: schemapb.DataType_Int32,
 			Field: &schemapb.FieldData_Scalars{
@@ -1088,20 +1088,20 @@ func (s *AggregateOperatorsSuite) TestAssembleSingleRow_WithMixedNulls() {
 		},
 	}
 
-	err := agg.AssembleSingleRow(3, row, fieldDatas)
+	err := agg.AssembleSingleRow(3, row, fieldData)
 	assert.NoError(t, err)
 
 	// Check first column (non-null int32)
-	assert.True(t, fieldDatas[0].ValidData[0])
-	assert.Equal(t, int32(1), fieldDatas[0].GetScalars().GetIntData().GetData()[0])
+	assert.True(t, fieldData[0].ValidData[0])
+	assert.Equal(t, int32(1), fieldData[0].GetScalars().GetIntData().GetData()[0])
 
 	// Check second column (null int64)
-	assert.False(t, fieldDatas[1].ValidData[0])
-	assert.Equal(t, int64(0), fieldDatas[1].GetScalars().GetLongData().GetData()[0])
+	assert.False(t, fieldData[1].ValidData[0])
+	assert.Equal(t, int64(0), fieldData[1].GetScalars().GetLongData().GetData()[0])
 
 	// Check third column (non-null int64)
-	assert.True(t, fieldDatas[2].ValidData[0])
-	assert.Equal(t, int64(100), fieldDatas[2].GetScalars().GetLongData().GetData()[0])
+	assert.True(t, fieldData[2].ValidData[0])
+	assert.Equal(t, int64(100), fieldData[2].GetScalars().GetLongData().GetData()[0])
 }
 
 // Test Float32FieldAccessor.IsNullAt

@@ -143,7 +143,7 @@ TEST_P(ExprTest, TestBinaryArithOpEvalRangeExpr_forbigint_mod) {
     }
 }
 
-TEST_P(ExprTest, TestMutiInConvert) {
+TEST_P(ExprTest, TestMultiInConvert) {
     auto schema = std::make_shared<Schema>();
     auto pk = schema->AddDebugField("id", DataType::INT64);
     auto bool_fid = schema->AddDebugField("bool", DataType::BOOL);

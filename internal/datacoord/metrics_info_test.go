@@ -655,7 +655,7 @@ func TestServer_getSegmentsJSON(t *testing.T) {
 		assert.Empty(t, result)
 	})
 
-	t.Run("vaild request in dn", func(t *testing.T) {
+	t.Run("valid request in dn", func(t *testing.T) {
 		segments := []*metricsinfo.Segment{
 			{
 				SegmentID:    1,

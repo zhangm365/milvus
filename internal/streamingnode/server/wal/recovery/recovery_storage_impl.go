@@ -614,7 +614,7 @@ func (r *recoveryStorageImpl) detectInconsistency(msg message.ImmutableMessage, 
 	// The log is not fatal in some cases.
 	// because our meta is not atomic-updated, so these error may be logged if crashes when meta updated partially.
 	r.Logger().Warn("inconsistency detected", fields...)
-	r.metrics.ObserveInconsitentEvent()
+	r.metrics.ObserveInconsistentEvent()
 }
 
 // GetFlusherCheckpointByTimeTick returns the minimum flush checkpoint among all vchannels based on time tick.

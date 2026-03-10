@@ -142,7 +142,7 @@ func ParseChannel(virtualName string, mapper ChannelMapper) (Channel, error) {
 	return NewChannel(physicalName, collectionID, shardIdx, mapper), nil
 }
 
-// NewChannel returns a Channel instance with provided physical channel and other informations.
+// NewChannel returns a Channel instance with provided physical channel and other information.
 func NewChannel(physicalName string, collectionID int64, idx int64, mapper ChannelMapper) Channel {
 	c := Channel{
 		ChannelMapper: mapper,

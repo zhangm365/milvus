@@ -302,7 +302,7 @@ class PhyBinaryRangeFilterExpr : public SegmentExpr {
     }
 
  private:
-    // Check overflow and cache result for performace
+    // Check overflow and cache result for performance
     template <
         typename T,
         typename IndexInnerType = std::

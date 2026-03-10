@@ -55,7 +55,7 @@ type DataSyncService struct {
 	vchannelName string
 
 	// TODO: should be equal to paramtable.GetNodeID(), but intergrationtest has 1 paramtable for a minicluster, the NodeID
-	// varies, will cause savebinglogpath check fail. So we pass ServerID into DataSyncService to aviod it failure.
+	// varies, will cause savebinglogpath check fail. So we pass ServerID into DataSyncService to avoid it failure.
 	serverID typeutil.UniqueID
 
 	fg *flowgraph.TimeTickedFlowGraph // internal flowgraph processes insert/delta messages

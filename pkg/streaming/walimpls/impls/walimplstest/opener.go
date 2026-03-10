@@ -21,7 +21,7 @@ func (*opener) Open(ctx context.Context, opt *walimpls.OpenOption) (walimpls.WAL
 	l := getOrCreateLogs(opt.Channel.Name)
 	return &walImpls{
 		WALHelper: *helper.NewWALHelper(opt),
-		datas:     l,
+		data:     l,
 	}, nil
 }
 

@@ -96,13 +96,13 @@ func TestSortFieldDataList(t *testing.T) {
 
 	ls := fieldDataList{
 		IDs:   []FieldID{1, 3, 2},
-		datas: []FieldData{f1, f3, f2},
+		data: []FieldData{f1, f3, f2},
 	}
 
 	assert.Equal(t, 3, ls.Len())
 	sortFieldDataList(ls)
 	assert.ElementsMatch(t, []FieldID{1, 2, 3}, ls.IDs)
-	assert.ElementsMatch(t, []FieldData{f1, f2, f3}, ls.datas)
+	assert.ElementsMatch(t, []FieldData{f1, f2, f3}, ls.data)
 }
 
 func TestTransferColumnBasedInsertDataToRowBased(t *testing.T) {

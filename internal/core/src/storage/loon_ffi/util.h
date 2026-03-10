@@ -63,7 +63,7 @@ MakeInternalPropertiesFromStorageConfig(CStorageConfig c_storage_config);
  * @return Shared pointer to Properties configured for local storage
  */
 std::shared_ptr<milvus_storage::api::Properties>
-MakeInternalLocalProperies(const char* c_path);
+MakeInternalLocalProperties(const char* c_path);
 
 /**
  * @brief Convert StorageConfig to C-style CStorageConfig

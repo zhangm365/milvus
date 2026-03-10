@@ -24,8 +24,8 @@ import (
 	"github.com/milvus-io/milvus/client/v2/entity"
 )
 
-func TestIvfRabitQ(t *testing.T) {
-	idx := NewIvfRabitQIndex(entity.COSINE, 128)
+func TestIvfRabbitQ(t *testing.T) {
+	idx := NewIvfRabbitQIndex(entity.COSINE, 128)
 
 	assert.NotZero(t, idx)
 
@@ -33,7 +33,7 @@ func TestIvfRabitQ(t *testing.T) {
 	assert.NotEmpty(t, result)
 
 	assert.EqualValues(t, entity.COSINE, result[MetricTypeKey])
-	assert.EqualValues(t, IvfRabitQ, result[IndexTypeKey])
+	assert.EqualValues(t, IvfRabbitQ, result[IndexTypeKey])
 	assert.Equal(t, "128", result[ivfNlistKey])
 
 	idx = idx.WithRefineType("SQ8")
@@ -45,12 +45,12 @@ func TestIvfRabitQ(t *testing.T) {
 	assert.Equal(t, "true", result[ivfRefineKey])
 }
 
-func TestIvfRabitQAnnParam(t *testing.T) {
-	ap := NewIvfRabitQAnnParam(16)
+func TestIvfRabbitQAnnParam(t *testing.T) {
+	ap := NewIvfRabbitQAnnParam(16)
 	result := ap.Params()
 	assert.Equal(t, 16, result[ivfNprobeKey])
 
-	ap = ap.WithRabitQueryBits(8)
+	ap = ap.WithRabbitQueryBits(8)
 	result = ap.Params()
 	assert.Equal(t, 8, result[ivfRbqQueryBitsKey])
 

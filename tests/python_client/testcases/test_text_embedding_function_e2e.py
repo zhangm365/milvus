@@ -432,7 +432,7 @@ class TestInsertWithTextEmbeddingNegative(TestcaseBase):
             check_task=CheckTasks.err_res,
             check_items={
                 "err_code": 65535,
-                "err_msg": "Call service faild",
+                "err_msg": "Call service failed",
             },
         )
         assert collection_w.num_entities == 0
@@ -506,7 +506,7 @@ class TestUpsertWithTextEmbedding(TestcaseBase):
 
         # verify embeddings are different
         assert not np.allclose(old_embedding, new_embedding)
-        # caculate cosine similarity
+        # calculate cosine similarity
         sim = np.dot(old_embedding, new_embedding) / (
                 np.linalg.norm(old_embedding) * np.linalg.norm(new_embedding)
         )
@@ -727,7 +727,7 @@ class TestSearchWithTextEmbeddingNegative(TestcaseBase):
             limit=3,
             output_fields=["document"],
             check_task=CheckTasks.err_res,
-            check_items={"err_code": 65535, "err_msg": "Call service faild"},
+            check_items={"err_code": 65535, "err_msg": "Call service failed"},
         )
 
 

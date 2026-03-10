@@ -34,7 +34,7 @@ ParsePksFromFieldData(std::vector<PkType>& pks, const DataArray& data);
 void
 ParsePksFromFieldData(DataType data_type,
                       std::vector<PkType>& pks,
-                      const std::vector<FieldDataPtr>& datas);
+                      const std::vector<FieldDataPtr>& data);
 
 void
 ParsePksFromIDs(std::vector<PkType>& pks,
@@ -162,7 +162,7 @@ LoadArrowReaderFromRemote(const std::vector<std::string>& remote_files,
                           milvus::proto::common::LoadPriority priority);
 
 void
-LoadFieldDatasFromRemote(const std::vector<std::string>& remote_files,
+LoadFieldDataFromRemote(const std::vector<std::string>& remote_files,
                          FieldDataChannelPtr channel,
                          milvus::proto::common::LoadPriority priority);
 /**

@@ -36,9 +36,9 @@ max_limit = ct.max_limit
 default_search_exp = "int64 >= 0"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
-default_invaild_string_exp = "varchar >= 0"
+default_invalid_string_exp = "varchar >= 0"
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 default_search_field = ct.default_float_vec_field_name
 default_search_params = ct.default_search_params
 default_int64_field_name = ct.default_int64_field_name
@@ -301,7 +301,7 @@ class TestSearchString(TestcaseBase):
         vectors = [[random.random() for _ in range(default_dim)] for _ in range(default_nq)]
         collection_w.search(vectors[:default_nq], default_search_field,
                             default_search_params, default_limit,
-                            default_invaild_string_exp,
+                            default_invalid_string_exp,
                             check_task=CheckTasks.err_res,
                             check_items={"err_code": 1100,
                                          "err_msg": "failed to create query plan: cannot "
@@ -497,7 +497,7 @@ class TestSearchString(TestcaseBase):
                             # search all buckets
                             {"metric_type": "L2", "params": {
                                 "nprobe": 100}}, default_limit,
-                            perfix_expr,
+                            prefix_expr,
                             output_fields=output_fields,
                             _async=_async,
                             check_task=CheckTasks.check_search_results,
@@ -538,7 +538,7 @@ class TestSearchString(TestcaseBase):
                             # search all buckets
                             {"metric_type": "L2", "params": {
                                 "nprobe": 100}}, default_limit,
-                            perfix_expr,
+                            prefix_expr,
                             output_fields=output_fields,
                             _async=_async,
                             check_task=CheckTasks.check_search_results,

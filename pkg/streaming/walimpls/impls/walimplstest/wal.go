@@ -36,7 +36,7 @@ func DisableFenced(channel string) {
 
 type walImpls struct {
 	helper.WALHelper
-	datas *messageLog
+	data *messageLog
 }
 
 func (w *walImpls) WALName() message.WALName {
@@ -53,7 +53,7 @@ func (w *walImpls) Append(ctx context.Context, msg message.MutableMessage) (mess
 	if enableFenceError.Load() && rand.Int31n(30) == 0 {
 		return nil, errors.New("random error")
 	}
-	return w.datas.Append(ctx, msg)
+	return w.data.Append(ctx, msg)
 }
 
 func (w *walImpls) Read(ctx context.Context, opts walimpls.ReadOption) (walimpls.ScannerImpls, error) {
@@ -62,7 +62,7 @@ func (w *walImpls) Read(ctx context.Context, opts walimpls.ReadOption) (walimpls
 	case *streamingpb.DeliverPolicy_All:
 		offset = 0
 	case *streamingpb.DeliverPolicy_Latest:
-		offset = w.datas.Len()
+		offset = w.data.Len()
 	case *streamingpb.DeliverPolicy_StartFrom:
 		id, err := unmarshalTestMessageID(t.StartFrom.GetId())
 		if err != nil {
@@ -77,7 +77,7 @@ func (w *walImpls) Read(ctx context.Context, opts walimpls.ReadOption) (walimpls
 		offset = int64(id) + 1
 	}
 	return newScannerImpls(
-		opts, w.datas, int(offset),
+		opts, w.data, int(offset),
 	), nil
 }
 

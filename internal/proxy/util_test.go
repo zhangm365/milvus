@@ -1256,7 +1256,7 @@ func Test_InsertTaskcheckFieldsDataBySchema(t *testing.T) {
 		assert.ErrorIs(t, merr.ErrParameterInvalid, err)
 	})
 
-	t.Run("duplicate field datas", func(t *testing.T) {
+	t.Run("duplicate field data", func(t *testing.T) {
 		task := insertTask{
 			schema: &schemapb.CollectionSchema{
 				Name:        "TestInsertTask_checkFieldsDataBySchema",
@@ -2902,7 +2902,7 @@ func TestValidateModelFunction(t *testing.T) {
 					InputFieldNames:  []string{"input_field"},
 					OutputFieldNames: []string{"output_dense_field"},
 					Params: []*commonpb.KeyValuePair{
-						{Key: "provider", Value: "UnkownProvider"},
+						{Key: "provider", Value: "UnknownProvider"},
 						{Key: "model_name", Value: "text-embedding-ada-002"},
 						{Key: "api_key", Value: "mock"},
 						{Key: "url", Value: "mock_url"},
@@ -3401,7 +3401,7 @@ func TestCheckVarcharFormat(t *testing.T) {
 		},
 	}
 
-	err := checkInputUtf8Compatiable(schema.Fields, data)
+	err := checkInputUtf8Compatible(schema.Fields, data)
 	assert.NoError(t, err)
 
 	// invalid data
@@ -3423,7 +3423,7 @@ func TestCheckVarcharFormat(t *testing.T) {
 			}},
 		},
 	}
-	err = checkInputUtf8Compatiable(schema.Fields, data)
+	err = checkInputUtf8Compatible(schema.Fields, data)
 	assert.Error(t, err)
 }
 
@@ -3466,7 +3466,7 @@ func BenchmarkCheckVarcharFormat(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		checkInputUtf8Compatiable(schema.Fields, data)
+		checkInputUtf8Compatible(schema.Fields, data)
 	}
 }
 

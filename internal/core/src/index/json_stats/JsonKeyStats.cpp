@@ -273,11 +273,11 @@ JsonKeyStats::CollectSingleJsonStatsInfo(
 }
 
 std::map<JsonKey, KeyStatsInfo>
-JsonKeyStats::CollectKeyInfo(const std::vector<FieldDataPtr>& field_datas,
+JsonKeyStats::CollectKeyInfo(const std::vector<FieldDataPtr>& field_data,
                              bool nullable) {
     std::map<JsonKey, KeyStatsInfo> infos;
     int64_t num_rows = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         for (int i = 0; i < n; i++) {
             if (nullable && !data->is_valid(i)) {
@@ -613,10 +613,10 @@ JsonKeyStats::BuildKeyStatsForRow(const char* json_str, uint32_t row_id) {
 }
 
 void
-JsonKeyStats::BuildKeyStats(const std::vector<FieldDataPtr>& field_datas,
+JsonKeyStats::BuildKeyStats(const std::vector<FieldDataPtr>& field_data,
                             bool nullable) {
     uint32_t row_id = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         for (uint32_t i = 0; i < n; i++) {
             if (nullable && !data->is_valid(i)) {
@@ -725,7 +725,7 @@ JsonKeyStats::Build(const Config& config) {
     if (is_built_)
         return;
     auto start_time = std::chrono::steady_clock::now();
-    auto field_datas = mem_file_manager_->CacheRawDataToMemory(config);
+    auto field_data = mem_file_manager_->CacheRawDataToMemory(config);
 
     auto lack_binlog_rows =
         GetValueFromConfig<int64_t>(config, "lack_binlog_rows");
@@ -744,10 +744,10 @@ JsonKeyStats::Build(const Config& config) {
             1,
             lack_binlog_rows.value());
         field_data->FillFieldData(default_value, lack_binlog_rows.value());
-        field_datas.insert(field_datas.begin(), field_data);
+        field_data.insert(field_data.begin(), field_data);
     }
 
-    BuildWithFieldData(field_datas, schema_.nullable());
+    BuildWithFieldData(field_data, schema_.nullable());
     auto end_time = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
                         end_time - start_time)
@@ -765,10 +765,10 @@ JsonKeyStats::AddBucketName(const std::string& remote_prefix) {
 }
 
 void
-JsonKeyStats::BuildWithFieldData(const std::vector<FieldDataPtr>& field_datas,
+JsonKeyStats::BuildWithFieldData(const std::vector<FieldDataPtr>& field_data,
                                  bool nullable) {
     // collect key stats info and classify key type
-    auto infos = CollectKeyInfo(field_datas, nullable);
+    auto infos = CollectKeyInfo(field_data, nullable);
     LOG_INFO("collect key infos: {} for segment {} for field {}",
              PrintKeyInfo(infos),
              segment_id_,
@@ -797,7 +797,7 @@ JsonKeyStats::BuildWithFieldData(const std::vector<FieldDataPtr>& field_datas,
     auto writer_context =
         ParquetWriterFactory::CreateContext(key_types_, remote_prefix);
     parquet_writer_->Init(writer_context);
-    BuildKeyStats(field_datas, nullable);
+    BuildKeyStats(field_data, nullable);
     parquet_writer_->Close();
     bson_inverted_index_->BuildIndex();
 

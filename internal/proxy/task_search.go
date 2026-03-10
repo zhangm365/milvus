@@ -953,7 +953,7 @@ func (t *searchTask) PostExecute(ctx context.Context) error {
 	// call pipeline
 	pipeline, err := newSearchPipeline(t)
 	if err != nil {
-		log.Warn("Faild to create post process pipeline")
+		log.Warn("Failed to create post process pipeline")
 		return err
 	}
 	if t.result, t.storageCost, err = pipeline.Run(ctx, sp, toReduceResults, storageCost); err != nil {

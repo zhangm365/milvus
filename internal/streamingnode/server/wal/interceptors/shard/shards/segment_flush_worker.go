@@ -69,7 +69,7 @@ func (w *segmentFlushWorker) do() {
 			return
 		}
 		if e := status.AsStreamingError(err); e.IsUnrecoverable() {
-			w.Logger().Warn("flush growing segement with unrecoverable error, stop retrying", zap.Error(err))
+			w.Logger().Warn("flush growing segment with unrecoverable error, stop retrying", zap.Error(err))
 			return
 		}
 

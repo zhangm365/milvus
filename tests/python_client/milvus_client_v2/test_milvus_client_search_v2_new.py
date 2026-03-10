@@ -30,7 +30,7 @@ default_search_exp = "int64 >= 0"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 
 default_vector_field_name = "vector"
 
@@ -64,7 +64,7 @@ class TestMilvusClientSearchBasicV2(TestMilvusClientV2Base):
         self.enable_dynamic_field = True
         self.dyna_filed_name1 = "dyna_filed_name1"
         self.dyna_filed_name2 = "dyna_filed_name2"
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -118,7 +118,7 @@ class TestMilvusClientSearchBasicV2(TestMilvusClientV2Base):
                     self.dyna_filed_name1: f"dyna_value_{pk}",
                     self.dyna_filed_name2: pk * 1.0
                 }
-                self.datas.append(row)
+                self.data.append(row)
 
                 # Distribute to partitions based on pk mod 3
                 if pk % 3 == 0:
@@ -189,7 +189,7 @@ class TestMilvusClientSearchBasicV2(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Search with inserted vectors
-        vectors_to_search = [self.datas[i][self.float_vector_field_name] for i in range(default_nq)]
+        vectors_to_search = [self.data[i][self.float_vector_field_name] for i in range(default_nq)]
 
         search_res, _ = self.search(
             client,
@@ -410,7 +410,7 @@ class TestMilvusClientSearchBasicV2(TestMilvusClientV2Base):
                          "limit": default_limit,
                          "metric": self.float_vector_metric,
                          "output_fields": [ct.default_string_field_name, self.dyna_filed_name1, self.dyna_filed_name2],
-                         "original_entities": self.datas,
+                         "original_entities": self.data,
                          "pk_name": self.pk_field_name
                          }
         )
@@ -448,7 +448,7 @@ class TestMilvusClientSearchBasicV2(TestMilvusClientV2Base):
                          "limit": default_limit,
                          "metric": self.float_vector_metric,
                          "output_fields": field_names.extend([self.dyna_filed_name1, self.dyna_filed_name2]),
-                         "original_entities": self.datas,
+                         "original_entities": self.data,
                          "pk_name": self.pk_field_name
                          }
         )

@@ -1898,7 +1898,7 @@ func estimateLogicalResourceUsageOfSegment(schema *schemapb.CollectionSchema, lo
 		}
 	}
 
-	log.Debug("estimate logical resoure usage result",
+	log.Debug("estimate logical resource usage result",
 		zap.Int64("segmentID", loadInfo.GetSegmentID()),
 		zap.Uint64("segmentInevictableMemorySize", segmentInevictableMemorySize),
 		zap.Uint64("segmentEvictableMemorySize", segmentEvictableMemorySize),
@@ -2010,7 +2010,7 @@ func estimateLoadingResourceUsageOfSegment(schema *schemapb.CollectionSchema, lo
 
 		var supportInterimIndexDataType bool
 		var containsTimestampField bool
-		var doubleMomoryDataField bool
+		var doubleMemoryDataField bool
 		var legacyNilSchema bool
 		mmapEnabled := true
 		isVectorType := true
@@ -2040,7 +2040,7 @@ func estimateLoadingResourceUsageOfSegment(schema *schemapb.CollectionSchema, lo
 			isVectorType = isVectorType && typeutil.IsVectorType(fieldSchema.GetDataType())
 			mmapEnabled = mmapEnabled && isDataMmapEnable(fieldSchema)
 			containsTimestampField = containsTimestampField || DoubleMemorySystemField(fieldSchema.GetFieldID())
-			doubleMomoryDataField = doubleMomoryDataField || DoubleMemoryDataType(fieldSchema.GetDataType())
+			doubleMemoryDataField = doubleMemoryDataField || DoubleMemoryDataType(fieldSchema.GetDataType())
 		}
 		// legacy v2 segment without children
 		if legacyNilSchema {
@@ -2081,7 +2081,7 @@ func estimateLoadingResourceUsageOfSegment(schema *schemapb.CollectionSchema, lo
 		if !mmapEnabled {
 			if !multiplyFactor.TieredEvictionEnabled {
 				segMemoryLoadingSize += binlogSize
-				if doubleMomoryDataField {
+				if doubleMemoryDataField {
 					segMemoryLoadingSize += binlogSize
 				}
 			}

@@ -133,7 +133,7 @@ func (s *ErrSuite) TestWrap() {
 	// IO related
 	s.ErrorIs(WrapErrIoKeyNotFound("test_key", "failed to read"), ErrIoKeyNotFound)
 	s.ErrorIs(WrapErrIoFailed("test_key", os.ErrClosed), ErrIoFailed)
-	s.ErrorIs(WrapErrIoUnexpectEOF("test_key", os.ErrClosed), ErrIoUnexpectEOF)
+	s.ErrorIs(WrapErrIoUnexpectedEOF("test_key", os.ErrClosed), ErrIoUnexpectedEOF)
 
 	// Parameter related
 	s.ErrorIs(WrapErrParameterInvalid(8, 1, "failed to create"), ErrParameterInvalid)

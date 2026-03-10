@@ -313,7 +313,7 @@ class TestCreateCollectionWithFullTextSearchNegative(TestcaseBase):
         if valid_input:
             input_field_names = ["text"]
         else:
-            input_field_names = ["invalid_inout"]
+            input_field_names = ["invalid_input"]
         if valid_output:
             output_field_names = ["text_sparse_emb"]
         else:
@@ -3845,7 +3845,7 @@ class TestFullTextSearchMultiAnalyzer(TestcaseBase):
         language_samples = {
             "en": ["The quick brown fox.", "Machine learning is fun."],
             "zh": ["自然语言处理很重要。", "人工智能改变世界。"],
-            "fr": ["L'intelligence artificielle.", "Traitement du langage naturel."],
+            "fr": ["L'intelligence artificielle.", "Traitement du language naturel."],
             "unknown": ["Some random text for default analyzer."],
         }
         data = []

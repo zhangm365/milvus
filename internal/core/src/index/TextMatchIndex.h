@@ -64,7 +64,7 @@ class TextMatchIndex : public InvertedIndexTantivy<std::string> {
                     int64_t offset_begin);
 
     void
-    BuildIndexFromFieldData(const std::vector<FieldDataPtr>& field_datas,
+    BuildIndexFromFieldData(const std::vector<FieldDataPtr>& field_data,
                             bool nullable);
 
     void

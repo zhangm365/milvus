@@ -24,7 +24,7 @@ var (
 )
 
 // newSwitchableScanner creates a new switchable scanner.
-func newSwithableScanner(
+func newSwitchableScanner(
 	scannerName string,
 	logger *log.MLogger,
 	innerWAL walimpls.ROWALImpls,
@@ -134,7 +134,7 @@ func (s *catchupScanner) consumeWithScanner(ctx context.Context, scanner walimpl
 					return nil, err
 				}
 				if err != nil {
-					panic("unrechable: unexpected error found: " + err.Error())
+					panic("unreachable: unexpected error found: " + err.Error())
 				}
 			}
 

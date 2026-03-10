@@ -889,7 +889,7 @@ func GenNullableFieldData(field *schemapb.FieldSchema, upsertIDSize int) (*schem
 			},
 		}, nil
 
-	// the intput data of geometry field is in wkt format
+	// the input data of geometry field is in wkt format
 	case schemapb.DataType_Geometry:
 		return &schemapb.FieldData{
 			FieldId:   field.FieldID,
@@ -1117,7 +1117,7 @@ func (it *upsertTask) insertPreExecute(ctx context.Context) error {
 	}
 
 	// check varchar/text with analyzer was utf-8 format
-	err = checkInputUtf8Compatiable(allFields, it.upsertMsg.InsertMsg)
+	err = checkInputUtf8Compatible(allFields, it.upsertMsg.InsertMsg)
 	if err != nil {
 		log.Warn("check varchar/text format failed", zap.Error(err))
 		return err

@@ -182,7 +182,7 @@ func (impl *WALFlusherImpl) buildFlusherComponents(ctx context.Context, l wal.WA
 		recoveryCheckPointTimeTick: snapshot.Checkpoint.TimeTick,
 		rs:                         impl.RecoveryStorage,
 	}
-	impl.logger.Info("flusher components intiailizing done")
+	impl.logger.Info("flusher components initializing done")
 	if err := fc.recover(ctx, recoverInfos); err != nil {
 		impl.logger.Warn("flusher recovery is canceled before recovery done, recycle the resource", zap.Error(err))
 		fc.Close()

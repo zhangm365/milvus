@@ -1630,8 +1630,8 @@ func (suite *ServiceSuite) TestShowConfigurations() {
 	resp, err := server.ShowConfigurations(ctx, req)
 	suite.NoError(err)
 	suite.Equal(commonpb.ErrorCode_Success, resp.GetStatus().GetErrorCode())
-	suite.Len(resp.Configuations, 1)
-	suite.Equal("querycoord.port", resp.Configuations[0].Key)
+	suite.Len(resp.Configurations, 1)
+	suite.Equal("querycoord.port", resp.Configurations[0].Key)
 
 	// Test when server is not healthy
 	server.UpdateStateCode(commonpb.StateCode_Initializing)

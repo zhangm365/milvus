@@ -377,7 +377,7 @@ func (t *queryTask) createPlanArgs(ctx context.Context, visitorArgs *planparserv
 		metrics.ProxyParseExpressionLatency.WithLabelValues(strconv.FormatInt(paramtable.GetNodeID(), 10), "query", metrics.SuccessLabel).Observe(float64(time.Since(start).Milliseconds()))
 	}
 	// parse output fields names
-	originalOuputFields := t.request.GetOutputFields()
+	originalOutputFields := t.request.GetOutputFields()
 	t.translatedOutputFields, t.userOutputFields, t.userDynamicFields, t.userAggregates, _, err = translateOutputFields(t.request.GetOutputFields(), t.schema, false)
 	if err != nil {
 		return err
@@ -400,7 +400,7 @@ func (t *queryTask) createPlanArgs(ctx context.Context, visitorArgs *planparserv
 		emptyOutputFields := make([]UniqueID, 0)
 		t.RetrieveRequest.OutputFieldsId = emptyOutputFields
 		t.plan.OutputFieldIds = emptyOutputFields
-		t.aggregationFieldMap = agg.NewAggregationFieldMap(originalOuputFields, t.queryParams.groupByFields, t.userAggregates)
+		t.aggregationFieldMap = agg.NewAggregationFieldMap(originalOutputFields, t.queryParams.groupByFields, t.userAggregates)
 	} else {
 		outputFieldIDs, err := translateToOutputFieldIDs(t.translatedOutputFields, schema.CollectionSchema)
 		if err != nil {
@@ -850,7 +850,7 @@ func (t *queryTask) queryShard(ctx context.Context, nodeID int64, qn types.Query
 	return nil
 }
 
-// IDs2Expr converts ids slices to bool expresion with specified field name
+// IDs2Expr converts ids slices to bool expression with specified field name
 func IDs2Expr(fieldName string, ids *schemapb.IDs) string {
 	var idsStr string
 	switch ids.GetIdField().(type) {

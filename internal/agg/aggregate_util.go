@@ -366,20 +366,20 @@ func newStringFieldAccessor() FieldAccessor {
 	return &StringFieldAccessor{hasher: fnv.New64a()}
 }
 
-func AssembleBucket(bucket *Bucket, fieldDatas []*schemapb.FieldData) error {
-	colCount := len(fieldDatas)
+func AssembleBucket(bucket *Bucket, fieldData []*schemapb.FieldData) error {
+	colCount := len(fieldData)
 	for r := 0; r < bucket.RowCount(); r++ {
 		row := bucket.RowAt(r)
-		if err := AssembleSingleRow(colCount, row, fieldDatas); err != nil {
+		if err := AssembleSingleRow(colCount, row, fieldData); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func AssembleSingleRow(colCount int, row *Row, fieldDatas []*schemapb.FieldData) error {
+func AssembleSingleRow(colCount int, row *Row, fieldData []*schemapb.FieldData) error {
 	for c := 0; c < colCount; c++ {
-		err := AssembleSingleValue(row.FieldValueAt(c), fieldDatas[c])
+		err := AssembleSingleValue(row.FieldValueAt(c), fieldData[c])
 		if err != nil {
 			return err
 		}

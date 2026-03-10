@@ -24,7 +24,7 @@ func newPartitionSegmentManager(
 	pchannel types.PChannelInfo,
 	vchannel string,
 	collectionID int64,
-	paritionID int64,
+	partitionID int64,
 	segments map[int64]*segmentAllocManager,
 	txnManager TxnManager,
 	fencedAssignTimeTick uint64,
@@ -42,13 +42,13 @@ func newPartitionSegmentManager(
 		pchannel:             pchannel,
 		vchannel:             vchannel,
 		collectionID:         collectionID,
-		partitionID:          paritionID,
+		partitionID:          partitionID,
 		onAllocating:         nil,
 		segments:             segments,
 		fencedAssignTimeTick: fencedAssignTimeTick,
 		metrics:              metrics,
 	}
-	m.SetLogger(logger.With(zap.String("vchannel", vchannel), zap.Int64("collectionID", collectionID), zap.Int64("partitionID", paritionID)))
+	m.SetLogger(logger.With(zap.String("vchannel", vchannel), zap.Int64("collectionID", collectionID), zap.Int64("partitionID", partitionID)))
 	return m
 }
 

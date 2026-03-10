@@ -116,7 +116,7 @@ func (s *ResourceGroupSuite) TestDescribeResourceGroup() {
 		limit := rand.Int31n(10) + 1
 		request := rand.Int31n(10) + 1
 		rgName := fmt.Sprintf("rg_%s", s.randString(6))
-		transferFroms := []string{s.randString(6), s.randString(6)}
+		transferForms := []string{s.randString(6), s.randString(6)}
 		transferTos := []string{s.randString(6), s.randString(6)}
 		labels := map[string]string{
 			"label1": s.randString(10),
@@ -138,7 +138,7 @@ func (s *ResourceGroupSuite) TestDescribeResourceGroup() {
 						Limits: &rgpb.ResourceGroupLimit{
 							NodeNum: limit,
 						},
-						TransferFrom: lo.Map(transferFroms, func(transfer string, i int) *rgpb.ResourceGroupTransfer {
+						TransferFrom: lo.Map(transferForms, func(transfer string, i int) *rgpb.ResourceGroupTransfer {
 							return &rgpb.ResourceGroupTransfer{
 								ResourceGroup: transfer,
 							}
@@ -164,7 +164,7 @@ func (s *ResourceGroupSuite) TestDescribeResourceGroup() {
 		s.Equal(rgName, rg.Name)
 		s.Equal(limit, rg.Config.Limits.NodeNum)
 		s.Equal(request, rg.Config.Requests.NodeNum)
-		s.ElementsMatch(lo.Map(transferFroms, func(transferFrom string, _ int) *entity.ResourceGroupTransfer {
+		s.ElementsMatch(lo.Map(transferForms, func(transferFrom string, _ int) *entity.ResourceGroupTransfer {
 			return &entity.ResourceGroupTransfer{ResourceGroup: transferFrom}
 		}), rg.Config.TransferFrom)
 		s.ElementsMatch(lo.Map(transferTos, func(transferTo string, _ int) *entity.ResourceGroupTransfer {
@@ -191,7 +191,7 @@ func (s *ResourceGroupSuite) TestUpdateResourceGroup() {
 		limit := rand.Int31n(10) + 1
 		request := rand.Int31n(10) + 1
 		rgName := fmt.Sprintf("rg_%s", s.randString(6))
-		transferFroms := []string{s.randString(6), s.randString(6)}
+		transferForms := []string{s.randString(6), s.randString(6)}
 		transferTos := []string{s.randString(6), s.randString(6)}
 		labels := map[string]string{
 			"label1": s.randString(10),
@@ -201,7 +201,7 @@ func (s *ResourceGroupSuite) TestUpdateResourceGroup() {
 			s.Require().True(ok)
 			s.Equal(request, config.GetRequests().GetNodeNum())
 			s.Equal(limit, config.GetLimits().GetNodeNum())
-			s.ElementsMatch(transferFroms, lo.Map(config.GetTransferFrom(), func(transfer *rgpb.ResourceGroupTransfer, i int) string {
+			s.ElementsMatch(transferForms, lo.Map(config.GetTransferFrom(), func(transfer *rgpb.ResourceGroupTransfer, i int) string {
 				return transfer.GetResourceGroup()
 			}))
 			s.ElementsMatch(transferTos, lo.Map(config.GetTransferTo(), func(transfer *rgpb.ResourceGroupTransfer, i int) string {
@@ -214,8 +214,8 @@ func (s *ResourceGroupSuite) TestUpdateResourceGroup() {
 			Requests: entity.ResourceGroupLimit{NodeNum: request},
 			Limits:   entity.ResourceGroupLimit{NodeNum: limit},
 			TransferFrom: []*entity.ResourceGroupTransfer{
-				{ResourceGroup: transferFroms[0]},
-				{ResourceGroup: transferFroms[1]},
+				{ResourceGroup: transferForms[0]},
+				{ResourceGroup: transferForms[1]},
 			},
 			TransferTo: []*entity.ResourceGroupTransfer{
 				{ResourceGroup: transferTos[0]},

@@ -519,7 +519,7 @@ func (suite *ServiceSuite) TestWatchDmChannels_Failed() {
 func (suite *ServiceSuite) TestUnsubDmChannels_Normal() {
 	ctx := context.Background()
 
-	// prepate
+	// prepare
 	suite.TestWatchDmChannelsInt64()
 
 	// data
@@ -540,7 +540,7 @@ func (suite *ServiceSuite) TestUnsubDmChannels_Normal() {
 
 func (suite *ServiceSuite) TestUnsubDmChannels_Failed() {
 	ctx := context.Background()
-	// prepate
+	// prepare
 	suite.TestWatchDmChannelsInt64()
 
 	// data
@@ -1840,7 +1840,7 @@ func (suite *ServiceSuite) TestShowConfigurations_Normal() {
 	resp, err := suite.node.ShowConfigurations(ctx, req)
 	suite.NoError(err)
 	suite.Equal(commonpb.ErrorCode_Success, resp.GetStatus().GetErrorCode())
-	suite.Equal(1, len(resp.Configuations))
+	suite.Equal(1, len(resp.Configurations))
 }
 
 func (suite *ServiceSuite) TestShowConfigurations_Failed() {
@@ -2026,7 +2026,7 @@ func (suite *ServiceSuite) TestSyncDistribution_Normal() {
 	suite.NoError(err)
 	suite.Equal(commonpb.ErrorCode_Success, status.ErrorCode)
 
-	// test sync targte version
+	// test sync target version
 	syncVersionAction := &querypb.SyncAction{
 		Type:            querypb.SyncType_UpdateVersion,
 		SealedInTarget:  []int64{3},

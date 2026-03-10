@@ -123,7 +123,7 @@ func TestAddCollectionFieldInvalid(t *testing.T) {
 			fieldBuilder: func() *entity.Field {
 				return entity.NewField().WithName(common.DefaultNewField).WithDataType(entity.FieldTypeInt64).WithNullable(true).WithIsAutoID(true)
 			},
-			expectedError: "only primary field can speficy AutoID with true, field name = " + common.DefaultNewField + ": invalid parameter",
+			expectedError: "only primary field can specify AutoID with true, field name = " + common.DefaultNewField + ": invalid parameter",
 		},
 		{
 			name: "addFieldWithDisableNullable",

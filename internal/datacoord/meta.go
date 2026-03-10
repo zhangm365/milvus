@@ -1325,12 +1325,12 @@ func UpdateAsDroppedIfEmptyWhenFlushing(segmentID int64) UpdateOperator {
 	return func(modPack *updateSegmentPack) bool {
 		segment := modPack.Get(segmentID)
 		if segment == nil {
-			log.Ctx(context.TODO()).Warn("meta update: update as dropped if empty when flusing failed - segment not found",
+			log.Ctx(context.TODO()).Warn("meta update: update as dropped if empty when flushing failed - segment not found",
 				zap.Int64("segmentID", segmentID))
 			return false
 		}
 		if segment.Level != datapb.SegmentLevel_L0 && segment.GetNumOfRows() == 0 && (segment.GetState() == commonpb.SegmentState_Flushing || segment.GetState() == commonpb.SegmentState_Flushed) {
-			log.Ctx(context.TODO()).Info("meta update: update as dropped if empty when flusing", zap.Int64("segmentID", segmentID))
+			log.Ctx(context.TODO()).Info("meta update: update as dropped if empty when flushing", zap.Int64("segmentID", segmentID))
 			updateSegStateAndPrepareMetrics(segment, commonpb.SegmentState_Dropped, modPack.metricMutation)
 		}
 		return true

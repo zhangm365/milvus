@@ -47,7 +47,7 @@ func (s *Server) broadcastDropResourceGroup(ctx context.Context, req *milvuspb.D
 		return errors.Wrap(err,
 			fmt.Sprintf("some replicas still loaded in resource group[%s], release it first", req.GetResourceGroup()))
 	}
-	if err := s.meta.ResourceManager.CheckIfResourceGroupDropable(ctx, req.GetResourceGroup()); err != nil {
+	if err := s.meta.ResourceManager.CheckIfResourceGroupDroppable(ctx, req.GetResourceGroup()); err != nil {
 		return err
 	}
 

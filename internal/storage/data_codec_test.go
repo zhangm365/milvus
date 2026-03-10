@@ -1364,7 +1364,7 @@ func TestUpgradeDeleteLog(t *testing.T) {
 		assert.ElementsMatch(t, dData.Tss, deleteData.DeleteTimestamps())
 	})
 
-	t.Run("with split lenth error", func(t *testing.T) {
+	t.Run("with split length error", func(t *testing.T) {
 		binlogWriter := NewDeleteBinlogWriter(schemapb.DataType_String, CollectionID, 1, 1)
 		eventWriter, err := binlogWriter.NextDeleteEventWriter()
 		assert.NoError(t, err)

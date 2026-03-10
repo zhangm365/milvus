@@ -404,7 +404,7 @@ func wrapperPost(newReq newReqFunc, v2 handlerFuncV2) gin.HandlerFunc {
 	}
 }
 
-// restfulSizeMiddleware is the middleware fetchs metrics stats from gin struct.
+// restfulSizeMiddleware is the middleware fetches metrics stats from gin struct.
 func restfulSizeMiddleware(handler gin.HandlerFunc, observeOutbound bool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		h := metrics.WrapRestfulContext(ctx, ctx.Request.ContentLength)

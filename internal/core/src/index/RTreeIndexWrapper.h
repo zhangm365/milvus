@@ -65,13 +65,13 @@ class RTreeIndexWrapper {
     /**
      * @brief Bulk load geometries from field data (WKB strings) into a new R-Tree.
      *        This API will create the R-Tree via createAndBulkLoadNewRTree internally.
-     * @param field_datas Vector of field data blocks containing WKB strings
+     * @param field_data Vector of field data blocks containing WKB strings
      * @param nullable Whether the field allows nulls (null rows are skipped but offset still advances)
      */
     void
     bulk_load_from_field_data(
         const std::vector<std::shared_ptr<::milvus::FieldDataBase>>&
-            field_datas,
+            field_data,
         bool nullable);
 
     /**

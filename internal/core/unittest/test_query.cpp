@@ -485,7 +485,7 @@ TEST(Query, DISABLED_FillSegment) {
     int64_t long_default_value = 20;
     float float_default_value = 20;
     double double_default_value = 20;
-    string varchar_dafualt_vlaue = "20";
+    string varchar_default_value = "20";
 
     {
         auto field = proto.add_fields();
@@ -625,7 +625,7 @@ TEST(Query, DISABLED_FillSegment) {
         auto str_type_params = field->add_type_params();
         str_type_params->set_key(MAX_LENGTH);
         str_type_params->set_value(std::to_string(64));
-        field->mutable_default_value()->set_string_data(varchar_dafualt_vlaue);
+        field->mutable_default_value()->set_string_data(varchar_default_value);
     }
 
     schema = Schema::ParseFrom(proto);

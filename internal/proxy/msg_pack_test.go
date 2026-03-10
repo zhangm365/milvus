@@ -149,12 +149,12 @@ func TestRepackInsertDataWithPartitionKey(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	fieldNameToDatas := make(map[string]*schemapb.FieldData)
-	fieldDatas := make([]*schemapb.FieldData, 0)
+	fieldNameToData := make(map[string]*schemapb.FieldData)
+	fieldData := make([]*schemapb.FieldData, 0)
 	for name, dataType := range fieldName2Types {
 		data := generateFieldData(dataType, name, nb)
-		fieldNameToDatas[name] = data
-		fieldDatas = append(fieldDatas, data)
+		fieldNameToData[name] = data
+		fieldData = append(fieldData, data)
 	}
 
 	insertMsg := &BaseInsertTask{
@@ -170,7 +170,7 @@ func TestRepackInsertDataWithPartitionKey(t *testing.T) {
 			DbName:         dbName,
 			CollectionName: collectionName,
 			NumRows:        uint64(nb),
-			FieldsData:     fieldDatas,
+			FieldsData:     fieldData,
 			Version:        msgpb.InsertDataVersion_ColumnBased,
 		},
 	}

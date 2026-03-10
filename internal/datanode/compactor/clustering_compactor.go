@@ -842,7 +842,7 @@ func (t *clusteringCompactionTask) uploadPartitionStats(ctx context.Context, col
 	return nil
 }
 
-// cleanUp try best to clean all temp datas
+// cleanUp try best to clean all temp data
 func (t *clusteringCompactionTask) cleanUp(ctx context.Context) {
 	if t.mappingPool != nil {
 		t.mappingPool.Release()

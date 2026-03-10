@@ -984,8 +984,8 @@ func TestRootCoord_ShowConfigurations(t *testing.T) {
 		resp, err := c.ShowConfigurations(ctx, req)
 		assert.NoError(t, err)
 		assert.Equal(t, commonpb.ErrorCode_Success, resp.GetStatus().GetErrorCode())
-		assert.Equal(t, 1, len(resp.GetConfiguations()))
-		assert.Equal(t, "rootcoord.port", resp.GetConfiguations()[0].Key)
+		assert.Equal(t, 1, len(resp.GetConfigurations()))
+		assert.Equal(t, "rootcoord.port", resp.GetConfigurations()[0].Key)
 	})
 }
 

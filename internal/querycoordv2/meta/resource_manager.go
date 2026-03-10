@@ -303,14 +303,14 @@ func (rm *ResourceManager) CheckIfTransferNode(ctx context.Context, sourceRGName
 
 // Deprecated: only for compatibility with unittest.
 func (rm *ResourceManager) RemoveResourceGroup(ctx context.Context, rgName string) error {
-	if err := rm.CheckIfResourceGroupDropable(ctx, rgName); err != nil {
+	if err := rm.CheckIfResourceGroupDroppable(ctx, rgName); err != nil {
 		return err
 	}
 	return rm.DropResourceGroup(ctx, rgName)
 }
 
-// CheckIfResourceGroupDropable check if resource group can be dropped.
-func (rm *ResourceManager) CheckIfResourceGroupDropable(ctx context.Context, rgName string) error {
+// CheckIfResourceGroupDroppable check if resource group can be dropped.
+func (rm *ResourceManager) CheckIfResourceGroupDroppable(ctx context.Context, rgName string) error {
 	if rm.groups[rgName] == nil {
 		// Idempotent promise: delete a non-exist rg should be ok
 		return ErrResourceGroupOperationIgnored

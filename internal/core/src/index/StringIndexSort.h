@@ -75,10 +75,10 @@ class StringIndexSort : public StringIndex {
     Build(const Config& config = {}) override;
 
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas) override;
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data) override;
 
     void
-    BuildWithArrayDataNested(const std::vector<FieldDataPtr>& datas);
+    BuildWithArrayDataNested(const std::vector<FieldDataPtr>& data);
 
     // See detailed format in StringIndexSortMemoryImpl::SerializeToBinary
     BinarySet
@@ -247,13 +247,13 @@ class StringIndexSortMemoryImpl : public StringIndexSortImpl {
                      std::vector<int32_t>& idx_to_offsets);
 
     void
-    BuildFromFieldData(const std::vector<FieldDataPtr>& field_datas,
+    BuildFromFieldData(const std::vector<FieldDataPtr>& field_data,
                        size_t total_num_rows,
                        TargetBitmap& valid_bitset,
                        std::vector<int32_t>& idx_to_offsets);
 
     void
-    BuildFromArrayDataNested(const std::vector<FieldDataPtr>& field_datas,
+    BuildFromArrayDataNested(const std::vector<FieldDataPtr>& field_data,
                              size_t total_num_rows,
                              TargetBitmap& valid_bitset,
                              std::vector<int32_t>& idx_to_offsets);

@@ -1263,7 +1263,7 @@ class TestBulkInsert(TestcaseBaseBulkInsert):
         # as there are not many vectors, one partition should only have one segment after bulk insert
         assert segment_num == (ct.default_partition_num - empty_partition_num)
 
-        # verify error when tyring to bulk insert into a specific partition
+        # verify error when trying to bulk insert into a specific partition
         # TODO: enable the error msg assert after issue #25586 fixed
         err_msg = "not allow to set partition name for collection with partition key"
         task_id, _ = self.utility_wrap.do_bulk_insert(

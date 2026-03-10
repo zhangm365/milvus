@@ -545,7 +545,7 @@ func getIntData(fd *schemapb.FieldData) (*schemapb.ScalarField_IntData, bool) {
 	case *schemapb.ScalarField_IntData:
 		return data, true
 	case *schemapb.ScalarField_LongData:
-		// only alway empty LongData for backward compatibility
+		// only always empty LongData for backward compatibility
 		if len(data.LongData.GetData()) == 0 {
 			return &schemapb.ScalarField_IntData{
 				IntData: &schemapb.IntArray{},

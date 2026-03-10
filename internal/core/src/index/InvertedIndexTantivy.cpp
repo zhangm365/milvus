@@ -201,9 +201,9 @@ InvertedIndexTantivy<T>::Upload(const Config& config) {
 template <typename T>
 void
 InvertedIndexTantivy<T>::Build(const Config& config) {
-    auto field_datas =
+    auto field_data =
         storage::CacheRawDataAndFillMissing(mem_file_manager_, config);
-    BuildWithFieldData(field_datas);
+    BuildWithFieldData(field_data);
 }
 
 template <typename T>
@@ -264,10 +264,10 @@ InvertedIndexTantivy<T>::LoadIndexMetas(
 
     if (null_offset_file_itr != index_files.end()) {
         // null offset file is not sliced
-        auto index_datas = mem_file_manager_->LoadIndexToMemory(
+        auto index_data = mem_file_manager_->LoadIndexToMemory(
             {*null_offset_file_itr}, load_priority);
         auto null_offset_data =
-            std::move(index_datas.at(INDEX_NULL_OFFSET_FILE_NAME));
+            std::move(index_data.at(INDEX_NULL_OFFSET_FILE_NAME));
         fill_null_offsets(null_offset_data->PayloadData(),
                           null_offset_data->PayloadSize());
         return;
@@ -287,10 +287,10 @@ InvertedIndexTantivy<T>::LoadIndexMetas(
 
     if (null_offset_files.size() > 0) {
         // null offset file is sliced
-        auto index_datas = mem_file_manager_->LoadIndexToMemory(
+        auto index_data = mem_file_manager_->LoadIndexToMemory(
             null_offset_files, load_priority);
 
-        auto null_offsets_data = CompactIndexDatas(index_datas);
+        auto null_offsets_data = CompactIndexData(index_data);
         auto null_offsets_data_codecs =
             std::move(null_offsets_data.at(INDEX_NULL_OFFSET_FILE_NAME));
         for (auto&& null_offsets_codec : null_offsets_data_codecs.codecs_) {
@@ -630,10 +630,10 @@ InvertedIndexTantivy<T>::BuildWithRawDataForUT(size_t n,
 template <typename T>
 void
 InvertedIndexTantivy<T>::BuildWithFieldData(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     if (schema_.nullable()) {
         int64_t total = 0;
-        for (const auto& data : field_datas) {
+        for (const auto& data : field_data) {
             total += data->get_null_count();
         }
         null_offset_.reserve(total);
@@ -653,7 +653,7 @@ InvertedIndexTantivy<T>::BuildWithFieldData(
             if (!inverted_index_single_segment_) {
                 int64_t offset = 0;
                 if (schema_.nullable()) {
-                    for (const auto& data : field_datas) {
+                    for (const auto& data : field_data) {
                         auto n = data->get_num_rows();
                         for (int i = 0; i < n; i++) {
                             if (!data->is_valid(i)) {
@@ -666,7 +666,7 @@ InvertedIndexTantivy<T>::BuildWithFieldData(
                         }
                     }
                 } else {
-                    for (const auto& data : field_datas) {
+                    for (const auto& data : field_data) {
                         auto n = data->get_num_rows();
                         wrapper_->add_data<T>(
                             static_cast<const T*>(data->Data()), n, offset);
@@ -675,7 +675,7 @@ InvertedIndexTantivy<T>::BuildWithFieldData(
                 }
             } else {
                 int64_t offset = 0;
-                for (const auto& data : field_datas) {
+                for (const auto& data : field_data) {
                     auto n = data->get_num_rows();
                     if (schema_.nullable()) {
                         for (int i = 0; i < n; i++) {
@@ -699,15 +699,15 @@ InvertedIndexTantivy<T>::BuildWithFieldData(
 
         case proto::schema::DataType::Array: {
             if (is_nested_index_) {
-                build_index_for_array_nested(field_datas);
+                build_index_for_array_nested(field_data);
             } else {
-                build_index_for_array(field_datas);
+                build_index_for_array(field_data);
             }
             break;
         }
 
         case proto::schema::DataType::JSON: {
-            build_index_for_json(field_datas);
+            build_index_for_json(field_data);
             break;
         }
 
@@ -721,13 +721,13 @@ InvertedIndexTantivy<T>::BuildWithFieldData(
 template <typename T>
 void
 InvertedIndexTantivy<T>::build_index_for_array(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     using ElementType = std::conditional_t<std::is_same<T, int8_t>::value ||
                                                std::is_same<T, int16_t>::value,
                                            int32_t,
                                            T>;
     int64_t offset = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         auto array_column = static_cast<const Array*>(data->Data());
         for (int64_t i = 0; i < n; i++) {
@@ -755,9 +755,9 @@ InvertedIndexTantivy<T>::build_index_for_array(
 template <>
 void
 InvertedIndexTantivy<std::string>::build_index_for_array(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     int64_t offset = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         auto array_column = static_cast<const Array*>(data->Data());
         for (int64_t i = 0; i < n; i++) {
@@ -788,7 +788,7 @@ InvertedIndexTantivy<std::string>::build_index_for_array(
 template <typename T>
 void
 InvertedIndexTantivy<T>::build_index_for_array_nested(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     using ElementType = std::conditional_t<std::is_same<T, int8_t>::value ||
                                                std::is_same<T, int16_t>::value,
                                            int32_t,
@@ -796,7 +796,7 @@ InvertedIndexTantivy<T>::build_index_for_array_nested(
 
     int64_t offset = 0;
     int64_t row_offset = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         auto array_column = static_cast<const Array*>(data->Data());
         for (int64_t i = 0; i < n; i++, row_offset++) {
@@ -818,10 +818,10 @@ InvertedIndexTantivy<T>::build_index_for_array_nested(
 template <>
 void
 InvertedIndexTantivy<std::string>::build_index_for_array_nested(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     int64_t offset = 0;
     int64_t row_offset = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         auto array_column = static_cast<const Array*>(data->Data());
         for (int64_t i = 0; i < n; i++, row_offset++) {

@@ -62,7 +62,7 @@ func (w *walImpl) Append(ctx context.Context, msg message.MutableMessage) (messa
 
 func (w *walImpl) Read(ctx context.Context, opt walimpls.ReadOption) (s walimpls.ScannerImpls, err error) {
 	// The scanner is stateless, so we can create a scanner with an anonymous consumer.
-	// and there's no commit opeartions.
+	// and there's no commit operations.
 	consumerConfig := cloneKafkaConfig(w.consumerConfig)
 	consumerConfig.SetKey("group.id", opt.Name)
 	c, err := kafka.NewConsumer(&consumerConfig)

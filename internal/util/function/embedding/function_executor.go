@@ -227,7 +227,7 @@ func (executor *FunctionExecutor) processSingleSearch(ctx context.Context, runne
 	return proto.Marshal(res)
 }
 
-func (executor *FunctionExecutor) prcessSearch(ctx context.Context, req *internalpb.SearchRequest) error {
+func (executor *FunctionExecutor) processSearch(ctx context.Context, req *internalpb.SearchRequest) error {
 	runner, exist := executor.runners[req.FieldId]
 	if !exist {
 		return fmt.Errorf("Can not found function in field %d", req.FieldId)
@@ -243,7 +243,7 @@ func (executor *FunctionExecutor) prcessSearch(ctx context.Context, req *interna
 	return nil
 }
 
-func (executor *FunctionExecutor) prcessAdvanceSearch(ctx context.Context, req *internalpb.SearchRequest) error {
+func (executor *FunctionExecutor) processAdvanceSearch(ctx context.Context, req *internalpb.SearchRequest) error {
 	outputs := make(chan map[int64][]byte, len(req.GetSubReqs()))
 	errChan := make(chan error, len(req.GetSubReqs()))
 	var wg sync.WaitGroup
@@ -280,9 +280,9 @@ func (executor *FunctionExecutor) prcessAdvanceSearch(ctx context.Context, req *
 
 func (executor *FunctionExecutor) ProcessSearch(ctx context.Context, req *internalpb.SearchRequest) error {
 	if !req.IsAdvanced {
-		return executor.prcessSearch(ctx, req)
+		return executor.processSearch(ctx, req)
 	}
-	return executor.prcessAdvanceSearch(ctx, req)
+	return executor.processAdvanceSearch(ctx, req)
 }
 
 func (executor *FunctionExecutor) processSingleBulkInsert(ctx context.Context, runner Runner, data *storage.InsertData) (map[storage.FieldID]storage.FieldData, error) {

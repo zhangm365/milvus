@@ -86,11 +86,11 @@ func (s *VertexAITextEmbeddingProviderSuite) TestEmbedding() {
 	ts := CreateVertexAIEmbeddingServer()
 
 	defer ts.Close()
-	provder, err := createVertexAIProvider(ts.URL, s.schema.Fields[2])
+	provider, err := createVertexAIProvider(ts.URL, s.schema.Fields[2])
 	s.NoError(err)
 	{
 		data := []string{"sentence"}
-		r, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+		r, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 		ret := r.([][]float32)
 		s.NoError(err2)
 		s.Equal(1, len(ret))
@@ -99,7 +99,7 @@ func (s *VertexAITextEmbeddingProviderSuite) TestEmbedding() {
 	}
 	{
 		data := []string{"sentence 1", "sentence 2", "sentence 3"}
-		ret, _ := provder.CallEmbedding(context.Background(), data, models.SearchMode)
+		ret, _ := provider.CallEmbedding(context.Background(), data, models.SearchMode)
 		s.Equal([][]float32{{0.0, 1.0, 2.0, 3.0}, {1.0, 2.0, 3.0, 4.0}, {2.0, 3.0, 4.0, 5.0}}, ret)
 	}
 }
@@ -136,16 +136,16 @@ func (s *VertexAITextEmbeddingProviderSuite) TestEmbeddingDimNotMatch() {
 	}))
 
 	defer ts.Close()
-	provder, err := createVertexAIProvider(ts.URL, s.schema.Fields[2])
+	provider, err := createVertexAIProvider(ts.URL, s.schema.Fields[2])
 	s.NoError(err)
 
 	// embedding dim not match
 	data := []string{"sentence", "sentence"}
-	_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+	_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 	s.Error(err2)
 }
 
-func (s *VertexAITextEmbeddingProviderSuite) TestEmbeddingNubmerNotMatch() {
+func (s *VertexAITextEmbeddingProviderSuite) TestEmbeddingNumberNotMatch() {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var res vertexai.EmbeddingResponse
 		res.Predictions = append(res.Predictions, vertexai.Prediction{
@@ -167,13 +167,13 @@ func (s *VertexAITextEmbeddingProviderSuite) TestEmbeddingNubmerNotMatch() {
 	}))
 
 	defer ts.Close()
-	provder, err := createVertexAIProvider(ts.URL, s.schema.Fields[2])
+	provider, err := createVertexAIProvider(ts.URL, s.schema.Fields[2])
 
 	s.NoError(err)
 
 	// embedding dim not match
 	data := []string{"sentence", "sentence2"}
-	_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+	_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 	s.Error(err2)
 }
 
@@ -245,12 +245,12 @@ func (s *VertexAITextEmbeddingProviderSuite) TestNewVertexAIEmbeddingProvider() 
 	s.Equal(provider.FieldDim(), int64(4))
 }
 
-func (s *VertexAITextEmbeddingProviderSuite) TestParseCredentail() {
+func (s *VertexAITextEmbeddingProviderSuite) TestParseCredential() {
 	{
 		cred := credentials.NewCredentials(map[string]string{})
 		data, err := parseGcpCredentialInfo(cred, []*commonpb.KeyValuePair{}, map[string]string{})
 		s.Nil(data)
-		s.ErrorContains(err, "VetexAI credentials file path is empty")
+		s.ErrorContains(err, "VertexAI credentials file path is empty")
 	}
 	{
 		os.Setenv(models.VertexServiceAccountJSONEnv, "mock.json")
@@ -263,7 +263,7 @@ func (s *VertexAITextEmbeddingProviderSuite) TestParseCredentail() {
 	{
 		cred := credentials.NewCredentials(map[string]string{})
 		_, err := parseGcpCredentialInfo(cred, []*commonpb.KeyValuePair{}, map[string]string{"credential": "noExist"})
-		s.ErrorContains(err, "is not a gcp crediential, can not find key")
+		s.ErrorContains(err, "is not a gcp credential, can not find key")
 	}
 	{
 		cred := credentials.NewCredentials(map[string]string{"mock.credential_json": "NotBase64"})

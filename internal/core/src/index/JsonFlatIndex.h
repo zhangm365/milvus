@@ -199,7 +199,7 @@ class JsonFlatIndex : public InvertedIndexTantivy<std::string> {
 
     void
     build_index_for_json(const std::vector<std::shared_ptr<FieldDataBase>>&
-                             field_datas) override;
+                             field_data) override;
 
     template <typename T>
     std::shared_ptr<JsonFlatIndexQueryExecutor<T>>

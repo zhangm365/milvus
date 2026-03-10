@@ -317,7 +317,7 @@ func (s *VoyageAITextEmbeddingProviderSuite) TestNewVoyageAIEmbeddingProvider() 
 
 	// Invalid dim type
 	{
-		functionSchema.Params[2] = &commonpb.KeyValuePair{Key: models.DimParamKey, Value: "Invalied"}
+		functionSchema.Params[2] = &commonpb.KeyValuePair{Key: models.DimParamKey, Value: "Invalid"}
 		_, err := NewVoyageAIEmbeddingProvider(s.schema.Fields[2], functionSchema, map[string]string{}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.Error(err)
 	}

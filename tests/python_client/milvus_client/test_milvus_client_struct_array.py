@@ -1827,7 +1827,7 @@ class TestMilvusClientStructArraySearch(TestMilvusClientV2Base):
     @pytest.mark.tags(CaseLabel.L1)
     def test_search_struct_array_not_support_search_by_pk(self):
         """
-        target: test searching with multiple vectors (EmbeddingList) in struct array does not supprt search by pk
+        target: test searching with multiple vectors (EmbeddingList) in struct array does not support search by pk
         method: search using EmbeddingList by pk
         expected: search failed with error
         """

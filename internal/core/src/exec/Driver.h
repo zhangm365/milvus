@@ -178,7 +178,7 @@ struct DriverFactory {
                  // std::shared_ptr<ExchangeClient> exchange_client,
                  const std::function<int(int pipilineid)>& num_driver);
 
-    // TODO: support ditribution compute
+    // TODO: support distribution compute
     bool
     SupportSingleThreadExecution() const {
         return true;

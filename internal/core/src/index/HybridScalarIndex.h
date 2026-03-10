@@ -183,13 +183,13 @@ class HybridScalarIndex : public ScalarIndex<T> {
  private:
     ScalarIndexType
     SelectBuildTypeForPrimitiveType(
-        const std::vector<FieldDataPtr>& field_datas);
+        const std::vector<FieldDataPtr>& field_data);
 
     ScalarIndexType
-    SelectBuildTypeForArrayType(const std::vector<FieldDataPtr>& field_datas);
+    SelectBuildTypeForArrayType(const std::vector<FieldDataPtr>& field_data);
 
     ScalarIndexType
-    SelectIndexBuildType(const std::vector<FieldDataPtr>& field_datas);
+    SelectIndexBuildType(const std::vector<FieldDataPtr>& field_data);
 
     ScalarIndexType
     SelectIndexBuildType(size_t n, const T* values);
@@ -204,7 +204,7 @@ class HybridScalarIndex : public ScalarIndex<T> {
     DeserializeIndexType(const BinarySet& binary_set);
 
     void
-    BuildInternal(const std::vector<FieldDataPtr>& field_datas);
+    BuildInternal(const std::vector<FieldDataPtr>& field_data);
 
     std::shared_ptr<ScalarIndex<T>>
     GetInternalIndex();

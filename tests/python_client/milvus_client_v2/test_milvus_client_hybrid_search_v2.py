@@ -76,7 +76,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
         self.float_vector_dim = 128
         self.primary_keys = []
         self.enable_dynamic_field = True
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -156,7 +156,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                     self.dynamic_field_name1: f"dynamic_value_{pk}",
                     self.dynamic_field_name2: pk * 1.0,
                 }
-                self.datas.append(row)
+                self.data.append(row)
 
                 # Distribute to partitions based on pk mod 3
                 if pk % 3 == 0:
@@ -250,7 +250,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                                         "ids": self.primary_keys,
                                         "limit": default_limit,
                                         "pk_name": self.primary_key_field_name,
-                                        "original_entities": self.datas,
+                                        "original_entities": self.data,
                                         "output_fields": [self.primary_key_field_name,
                                                           self.string_field_name]})
 
@@ -293,7 +293,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                                                           "limit": default_limit,
                                                           "enable_milvus_client_api": True,
                                                           "pk_name": self.primary_key_field_name,
-                                                          "original_entities": self.datas,
+                                                          "original_entities": self.data,
                                                           "output_fields": [self.primary_key_field_name,
                                                                             self.string_field_name]})[0]
 
@@ -308,7 +308,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                                                           "limit": default_limit,
                                                           "enable_milvus_client_api": True,
                                                           "pk_name": self.primary_key_field_name,
-                                                          "original_entities": self.datas,
+                                                          "original_entities": self.data,
                                                           "output_fields": [self.primary_key_field_name,
                                                                             self.string_field_name]})[0]
         # verify the hybrid search results are consistent
@@ -348,14 +348,14 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
         res = self.hybrid_search(client, self.collection_name, reqs=req_list,
                                  ranker=ranker,
                                  limit=default_limit,
-                                 # fitler=f"{default_primary_key_field_name} <= {filter_max_value}",
+                                 # filter=f"{default_primary_key_field_name} <= {filter_max_value}",
                                  output_fields=[self.primary_key_field_name, self.string_field_name],
                                  check_task=CheckTasks.check_search_results,
                                  check_items={"nq": nq,
                                               "ids": self.primary_keys,
                                               "limit": default_limit,
                                               "pk_name": self.primary_key_field_name,
-                                              "original_entities": self.datas,
+                                              "original_entities": self.data,
                                               "output_fields": [self.primary_key_field_name,
                                                                 self.string_field_name]})[0]
 
@@ -370,14 +370,14 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
         res2 = self.hybrid_search(client, self.collection_name, reqs=req_list,
                                   ranker=ranker,
                                   limit=default_limit,
-                                  fitler=filter,
+                                  filter=filter,
                                   output_fields=[self.primary_key_field_name, self.string_field_name],
                                   check_task=CheckTasks.check_search_results,
                                   check_items={"nq": nq,
                                                "ids": self.primary_keys,
                                                "limit": default_limit,
                                                "pk_name": self.primary_key_field_name,
-                                               "original_entities": self.datas,
+                                               "original_entities": self.data,
                                                "output_fields": [self.primary_key_field_name,
                                                                  self.string_field_name]})[0]
         # verify filter in hybrid search is not effective
@@ -423,7 +423,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                            "ids": self.primary_keys,
                            "limit": default_limit,
                            "pk_name": self.primary_key_field_name,
-                           "original_entities": self.datas,
+                           "original_entities": self.data,
                            "output_fields": [self.primary_key_field_name, self.string_field_name]}
         self.hybrid_search(client, self.collection_name, reqs=req_list,
                            ranker=ranker,
@@ -582,14 +582,14 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
         self.hybrid_search(client, self.collection_name, reqs=req_list,
                            ranker=ranker,
                            limit=ct.default_limit,
-                           fitler=f"{self.int64_field_name} <= 18000",
+                           filter=f"{self.int64_field_name} <= 18000",
                            output_fields=[self.primary_key_field_name, self.string_field_name],
                            check_task=CheckTasks.check_search_results,
                            check_items={"nq": nq,
                                         "ids": self.primary_keys,
                                         "limit": expected_limit,
                                         "pk_name": self.primary_key_field_name,
-                                        "original_entities": self.datas,
+                                        "original_entities": self.data,
                                         "output_fields": [self.primary_key_field_name,
                                                           self.string_field_name]})
 
@@ -629,7 +629,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                                                          "limit": default_limit,
                                                          "pk_name": self.primary_key_field_name,
                                                          "enable_milvus_client_api": True,
-                                                         "original_entities": self.datas,
+                                                         "original_entities": self.data,
                                                          "output_fields": [self.primary_key_field_name,
                                                                            self.string_field_name]})[0]
             search_res = self.search(client, self.collection_name, data=search_data,
@@ -643,7 +643,7 @@ class TestMilvusClientHybridSearch(TestMilvusClientV2Base):
                                                   "limit": default_limit,
                                                   "enable_milvus_client_api": True,
                                                   "pk_name": self.primary_key_field_name,
-                                                  "original_entities": self.datas,
+                                                  "original_entities": self.data,
                                                   "output_fields": [self.primary_key_field_name,
                                                                     self.string_field_name]})[0]
             for i in range(nq):

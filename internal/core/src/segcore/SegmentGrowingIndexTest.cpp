@@ -252,23 +252,23 @@ TEST_P(GrowingIndexTest, Correctness) {
     auto plan_str = plan_node.SerializeAsString();
 
     milvus::proto::plan::PlanNode range_query_plan_node;
-    auto vector_range_querys = range_query_plan_node.mutable_vector_anns();
+    auto vector_range_queries = range_query_plan_node.mutable_vector_anns();
     if (is_sparse) {
-        vector_range_querys->set_vector_type(
+        vector_range_queries->set_vector_type(
             milvus::proto::plan::VectorType::SparseFloatVector);
     } else if (data_type == DataType::VECTOR_FLOAT16) {
-        vector_range_querys->set_vector_type(
+        vector_range_queries->set_vector_type(
             milvus::proto::plan::VectorType::Float16Vector);
     } else if (data_type == DataType::VECTOR_BFLOAT16) {
-        vector_range_querys->set_vector_type(
+        vector_range_queries->set_vector_type(
             milvus::proto::plan::VectorType::BFloat16Vector);
     } else {
-        vector_range_querys->set_vector_type(
+        vector_range_queries->set_vector_type(
             milvus::proto::plan::VectorType::FloatVector);
     }
-    vector_range_querys->set_placeholder_tag("$0");
-    vector_range_querys->set_field_id(102);
-    auto range_query_info = vector_range_querys->mutable_query_info();
+    vector_range_queries->set_placeholder_tag("$0");
+    vector_range_queries->set_field_id(102);
+    auto range_query_info = vector_range_queries->mutable_query_info();
     range_query_info->set_topk(5);
     range_query_info->set_round_decimal(3);
     range_query_info->set_metric_type(metric_type);
@@ -322,8 +322,8 @@ TEST_P(GrowingIndexTest, Correctness) {
             EXPECT_EQ(field_data->num_chunk(), 0);
         }
         auto num_queries = 5;
-        namespace ser = milvus::proto::common;
-        ser::PlaceholderGroup ph_group_raw;
+        namespace set = milvus::proto::common;
+        set::PlaceholderGroup ph_group_raw;
         if (is_sparse) {
             ph_group_raw = CreateSparseFloatPlaceholderGroup(num_queries);
         } else if (data_type == DataType::VECTOR_FLOAT16) {

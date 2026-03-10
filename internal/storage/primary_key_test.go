@@ -211,7 +211,7 @@ func TestParsePrimaryKeysBatch2IDs(t *testing.T) {
 		assert.ElementsMatch(t, []string{"1", "2", "3"}, ids.GetStrId().GetData())
 	})
 
-	t.Run("unsupport_type", func(t *testing.T) {
+	t.Run("unsupported_type", func(t *testing.T) {
 		intPks := NewInt64PrimaryKeys(3)
 		intPks.AppendRaw(1, 2, 3)
 

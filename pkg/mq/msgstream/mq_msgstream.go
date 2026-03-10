@@ -302,7 +302,7 @@ func (ms *mqMsgStream) Produce(ctx context.Context, msgPack *MsgPack) error {
 					return err
 				}
 
-				msg := &common.ProducerMessage{Payload: m, Properties: GetPorperties(v.Msgs[i])}
+				msg := &common.ProducerMessage{Payload: m, Properties: GetProperties(v.Msgs[i])}
 				InjectCtx(spanCtx, msg.Properties)
 
 				if _, err := producer.Send(spanCtx, msg); err != nil {
@@ -337,7 +337,7 @@ func (ms *mqMsgStream) Broadcast(ctx context.Context, msgPack *MsgPack) (map[str
 			return ids, err
 		}
 
-		msg := &common.ProducerMessage{Payload: m, Properties: GetPorperties(v)}
+		msg := &common.ProducerMessage{Payload: m, Properties: GetProperties(v)}
 		InjectCtx(spanCtx, msg.Properties)
 
 		ms.producerLock.RLock()
@@ -858,7 +858,7 @@ func (ms *MqTtMsgStream) Seek(ctx context.Context, msgPositions []*MsgPosition, 
 		var ok bool
 		consumer, ok = ms.consumers[mp.ChannelName]
 		if !ok {
-			return false, fmt.Errorf("please subcribe the channel, channel name =%s", mp.ChannelName)
+			return false, fmt.Errorf("please subscribe the channel, channel name =%s", mp.ChannelName)
 		}
 
 		if consumer == nil {

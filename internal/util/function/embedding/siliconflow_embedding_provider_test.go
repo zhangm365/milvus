@@ -87,12 +87,12 @@ func (s *SiliconflowTextEmbeddingProviderSuite) TestEmbedding() {
 	ts := CreateSiliconflowEmbeddingServer(4)
 
 	defer ts.Close()
-	for _, provderName := range s.providers {
-		provder, err := createSiliconflowProvider(ts.URL, s.schema.Fields[2], provderName)
+	for _, providerName := range s.providers {
+		provider, err := createSiliconflowProvider(ts.URL, s.schema.Fields[2], providerName)
 		s.NoError(err)
 		{
 			data := []string{"sentence"}
-			r, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+			r, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 			ret := r.([][]float32)
 			s.NoError(err2)
 			s.Equal(1, len(ret))
@@ -100,7 +100,7 @@ func (s *SiliconflowTextEmbeddingProviderSuite) TestEmbedding() {
 		}
 		{
 			data := []string{"sentence 1", "sentence 2", "sentence 3"}
-			_, err := provder.CallEmbedding(context.Background(), data, models.SearchMode)
+			_, err := provider.CallEmbedding(context.Background(), data, models.SearchMode)
 			s.NoError(err)
 		}
 	}
@@ -130,12 +130,12 @@ func (s *SiliconflowTextEmbeddingProviderSuite) TestEmbeddingDimNotMatch() {
 
 	defer ts.Close()
 	for _, providerName := range s.providers {
-		provder, err := createSiliconflowProvider(ts.URL, s.schema.Fields[2], providerName)
+		provider, err := createSiliconflowProvider(ts.URL, s.schema.Fields[2], providerName)
 		s.NoError(err)
 
 		// embedding dim not match
 		data := []string{"sentence", "sentence"}
-		_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+		_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 		s.Error(err2)
 	}
 }
@@ -157,14 +157,14 @@ func (s *SiliconflowTextEmbeddingProviderSuite) TestEmbeddingNumberNotMatch() {
 	}))
 
 	defer ts.Close()
-	for _, provderName := range s.providers {
-		provder, err := createSiliconflowProvider(ts.URL, s.schema.Fields[2], provderName)
+	for _, providerName := range s.providers {
+		provider, err := createSiliconflowProvider(ts.URL, s.schema.Fields[2], providerName)
 
 		s.NoError(err)
 
 		// embedding dim not match
 		data := []string{"sentence", "sentence2"}
-		_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+		_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 		s.Error(err2)
 	}
 }

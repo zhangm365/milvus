@@ -65,14 +65,14 @@ func newListenerManager(ctx context.Context) (l *listenerManager, err error) {
 		externalGrpcListener: externalGrpcListener,
 		internalGrpcListener: internalGrpcListener,
 	}
-	if err = newHTTPListner(ctx, l); err != nil {
+	if err = newHTTPListener(ctx, l); err != nil {
 		return
 	}
 	return
 }
 
-// newHTTPListner creates a new http listener
-func newHTTPListner(ctx context.Context, l *listenerManager) error {
+// newHTTPListener creates a new http listener
+func newHTTPListener(ctx context.Context, l *listenerManager) error {
 	log := log.Ctx(ctx)
 	HTTPParams := &paramtable.Get().HTTPCfg
 	if !HTTPParams.Enabled.GetAsBool() {

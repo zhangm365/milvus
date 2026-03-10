@@ -87,10 +87,10 @@ ScalarIndexSort<T>::Build(const Config& config) {
     if (is_built_) {
         return;
     }
-    auto field_datas =
+    auto field_data =
         storage::CacheRawDataAndFillMissing(file_manager_, config);
 
-    BuildWithFieldData(field_datas);
+    BuildWithFieldData(field_data);
 }
 
 template <typename T>
@@ -129,16 +129,16 @@ ScalarIndexSort<T>::Build(size_t n, const T* values, const bool* valid_data) {
 template <typename T>
 void
 ScalarIndexSort<T>::BuildWithFieldData(
-    const std::vector<milvus::FieldDataPtr>& field_datas) {
+    const std::vector<milvus::FieldDataPtr>& field_data) {
     index_build_begin_ = std::chrono::system_clock::now();
 
     if (is_nested_index_) {
-        BuildWithArrayDataNested(field_datas);
+        BuildWithArrayDataNested(field_data);
         return;
     }
 
     int64_t length = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         total_num_rows_ += data->get_num_rows();
         length += data->get_num_rows() - data->get_null_count();
     }
@@ -149,7 +149,7 @@ ScalarIndexSort<T>::BuildWithFieldData(
     data_.reserve(length);
     valid_bitset_ = TargetBitmap(total_num_rows_, false);
     int64_t offset = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto slice_num = data->get_num_rows();
         for (size_t i = 0; i < slice_num; ++i) {
             if (data->is_valid(i)) {
@@ -178,9 +178,9 @@ ScalarIndexSort<T>::BuildWithFieldData(
 template <typename T>
 void
 ScalarIndexSort<T>::BuildWithArrayDataNested(
-    const std::vector<FieldDataPtr>& datas) {
+    const std::vector<FieldDataPtr>& data) {
     // calculate total_num_rows_
-    for (const auto& data : datas) {
+    for (const auto& data : data) {
         auto n = data->get_num_rows();
         auto array_column = static_cast<const Array*>(data->Data());
         for (int64_t i = 0; i < n; i++) {
@@ -198,7 +198,7 @@ ScalarIndexSort<T>::BuildWithArrayDataNested(
     // all values are valid for nested index because any given slot in a valid_bitset_ denotes one element in a valid row
     valid_bitset_ = TargetBitmap(total_num_rows_, true);
     int64_t offset = 0;
-    for (const auto& data : datas) {
+    for (const auto& data : data) {
         auto n = data->get_num_rows();
         auto array_column = static_cast<const Array*>(data->Data());
         for (int64_t i = 0; i < n; i++) {
@@ -399,12 +399,12 @@ ScalarIndexSort<T>::Load(milvus::tracer::TraceContext ctx,
         GetValueFromConfig<milvus::proto::common::LoadPriority>(
             config, milvus::LOAD_PRIORITY)
             .value_or(milvus::proto::common::LoadPriority::HIGH);
-    auto index_datas =
+    auto index_data =
         file_manager_->LoadIndexToMemory(index_files.value(), load_priority);
     BinarySet binary_set;
-    AssembleIndexDatas(index_datas, binary_set);
-    // clear index_datas to free memory early
-    index_datas.clear();
+    AssembleIndexData(index_data, binary_set);
+    // clear index_data to free memory early
+    index_data.clear();
     LoadWithoutAssemble(binary_set, config);
 }
 

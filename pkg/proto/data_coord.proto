@@ -438,9 +438,9 @@ message SegmentInfo {
   bool is_created_by_streaming = 30;
   bool is_sorted_by_namespace = 31;
 
-  // manifest_path stores the fullpath of LOON manifest file of segemnt data files.
+  // manifest_path stores the fullpath of LOON manifest file of segment data files.
   // we could keep the fullpath since one segment shall only have one active manifest
-  // and we could keep the possiblity that manifest stores out side of collection/partition/segment path
+  // and we could keep the possibility that manifest stores out side of collection/partition/segment path
   string manifest_path = 32;
 
   // expirQuantiles records the expiration timestamptz values of the segment
@@ -490,7 +490,7 @@ message DeltaLogInfo {
 }
 
 enum ChannelWatchState {
-  Uncomplete = 0; // deprecated, keep it for compatibility
+  Incomplete = 0; // deprecated, keep it for compatibility
   Complete = 1; // deprecated, keep it for compatibility
   ToWatch = 2;
   WatchSuccess = 3;

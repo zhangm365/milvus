@@ -203,7 +203,7 @@ func (s *PackWriterV2Suite) TestNoPkField() {
 	s.Error(err)
 }
 
-func (s *PackWriterV2Suite) TestAllocIDExhausedError() {
+func (s *PackWriterV2Suite) TestAllocIDExhaustedError() {
 	s.logIDAlloc = allocator.NewLocalAllocator(1, 1)
 	collectionID := int64(123)
 	partitionID := int64(456)

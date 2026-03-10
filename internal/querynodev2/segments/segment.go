@@ -292,7 +292,7 @@ type LocalSegment struct {
 	manager SegmentManager
 	ptrLock *state.LoadStateLock
 	ptr     C.CSegmentInterface // TODO: Remove in future, after move load index into segcore package.
-	// always keep same with csegment.RawPtr(), for eaiser to access,
+	// always keep same with csegment.RawPtr(), for easier to access,
 	csegment segcore.CSegment
 
 	// cached results, to avoid too many CGO calls

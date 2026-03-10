@@ -330,7 +330,7 @@ func (suite *SimulationSuite) TestSplit() {
 	suite.Eventually(func() bool {
 		for pchannel := range suite.pchannel2Producer {
 			manager, ok := suite.client.(*client).managers.Get(pchannel)
-			suite.T().Logf("verifing dispatchers merged, dispatcherNum = %d, pchannel = %s\n", manager.NumConsumer(), pchannel)
+			suite.T().Logf("verifying dispatchers merged, dispatcherNum = %d, pchannel = %s\n", manager.NumConsumer(), pchannel)
 			suite.True(ok)
 			if manager.NumConsumer() != 1 { // expected all merged, only mainDispatcher exist
 				return false
@@ -377,7 +377,7 @@ func (suite *SimulationSuite) TestSplit() {
 		for pchannel := range suite.pchannel2Producer {
 			manager, ok := suite.client.(*client).managers.Get(pchannel)
 			suite.True(ok)
-			suite.T().Logf("verifing split, dispatcherNum = %d, splitNum+1 = %d, pchannel = %s\n",
+			suite.T().Logf("verifying split, dispatcherNum = %d, splitNum+1 = %d, pchannel = %s\n",
 				manager.NumConsumer(), splitNumPerPchannel+1, pchannel)
 			if manager.NumConsumer() < 1 { // expected 1 mainDispatcher and 1 or more split deputyDispatchers
 				return false
@@ -400,7 +400,7 @@ func (suite *SimulationSuite) TestSplit() {
 	suite.Eventually(func() bool {
 		for pchannel := range suite.pchannel2Producer {
 			manager, ok := suite.client.(*client).managers.Get(pchannel)
-			suite.T().Logf("verifing dispatchers merged again, dispatcherNum = %d, pchannel = %s\n", manager.NumConsumer(), pchannel)
+			suite.T().Logf("verifying dispatchers merged again, dispatcherNum = %d, pchannel = %s\n", manager.NumConsumer(), pchannel)
 			suite.True(ok)
 			if manager.NumConsumer() != 1 { // expected all merged, only mainDispatcher exist
 				return false

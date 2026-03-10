@@ -21,14 +21,14 @@ class TestQueryIterator(TestcaseBase):
         target: test query iterator normal
         method: 1. query iterator
                 2. check the result, expect pk
-                verify: no pk lost in interator results
+                verify: no pk lost in iterator results
                 3. query iterator with checkpoint file
                 4. iterator.next() for 10 times
                 5. delete some entities before calling a new query iterator
                 6. call a new query iterator with the same checkpoint file, with diff batch_size and output_fields
                 7. iterator.next() until the end
                 verify:
-                  1. no pk lost in interator results for the 2 iterators
+                  1. no pk lost in iterator results for the 2 iterators
                   2. no dup pk in the 2 iterators
         expected: query iterators successfully
         """

@@ -52,9 +52,9 @@ max_limit = ct.max_limit
 default_search_exp = "int64 >= 0"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
-default_invaild_string_exp = "varchar >= 0"
+default_invalid_string_exp = "varchar >= 0"
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 default_search_field = ct.default_float_vec_field_name
 default_search_params = ct.default_search_params
 default_int64_field_name = ct.default_int64_field_name
@@ -178,7 +178,7 @@ class TestSparseSearch(TestcaseBase):
         collection_w.alter_index(index, {'mmap.enabled': True})
         assert collection_w.index()[0].params["mmap.enabled"] == 'True'
         data2 = cf.gen_default_list_sparse_data(nb=2000, start=first_nb)  # id shall be continuous
-        all_data = []  # combine 2 insert datas for next checking
+        all_data = []  # combine 2 insert data for next checking
         for i in range(len(data2)):
             all_data.append(data[i] + data2[i])
         collection_w.insert(data2)

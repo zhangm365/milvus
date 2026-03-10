@@ -63,7 +63,7 @@ func (s *ClusteringCompactionTaskStorageV2Suite) TearDownTest() {
 }
 
 func (s *ClusteringCompactionTaskStorageV2Suite) TestScalarCompactionNormal() {
-	s.preparScalarCompactionNormalTask()
+	s.prepareScalarCompactionNormalTask()
 	compactionResult, err := s.task.Compact()
 	s.Require().NoError(err)
 	s.Equal(len(compactionResult.GetSegments()), len(compactionResult.GetSegments()))

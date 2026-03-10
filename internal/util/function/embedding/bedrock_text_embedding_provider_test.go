@@ -81,12 +81,12 @@ func createBedrockProvider(schema *schemapb.FieldSchema, providerName string, di
 }
 
 func (s *BedrockTextEmbeddingProviderSuite) TestEmbedding() {
-	for _, provderName := range s.providers {
-		provder, err := createBedrockProvider(s.schema.Fields[2], provderName, 4)
+	for _, providerName := range s.providers {
+		provider, err := createBedrockProvider(s.schema.Fields[2], providerName, 4)
 		s.NoError(err)
 		{
 			data := []string{"sentence"}
-			r, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+			r, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 			ret := r.([][]float32)
 			s.NoError(err2)
 			s.Equal(1, len(ret))
@@ -95,25 +95,25 @@ func (s *BedrockTextEmbeddingProviderSuite) TestEmbedding() {
 		}
 		{
 			data := []string{"sentence 1", "sentence 2", "sentence 3"}
-			ret, _ := provder.CallEmbedding(context.Background(), data, models.SearchMode)
+			ret, _ := provider.CallEmbedding(context.Background(), data, models.SearchMode)
 			s.Equal([][]float32{{0.0, 1.0, 2.0, 3.0}, {0.0, 1.0, 2.0, 3.0}, {0.0, 1.0, 2.0, 3.0}}, ret)
 		}
 	}
 }
 
 func (s *BedrockTextEmbeddingProviderSuite) TestEmbeddingDimNotMatch() {
-	for _, provderName := range s.providers {
-		provder, err := createBedrockProvider(s.schema.Fields[2], provderName, 2)
+	for _, providerName := range s.providers {
+		provider, err := createBedrockProvider(s.schema.Fields[2], providerName, 2)
 		s.NoError(err)
 
 		// embedding dim not match
 		data := []string{"sentence", "sentence"}
-		_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+		_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 		s.Error(err2)
 	}
 }
 
-func (s *BedrockTextEmbeddingProviderSuite) TestParseCredentail() {
+func (s *BedrockTextEmbeddingProviderSuite) TestParseCredential() {
 	{
 		cred := credentials.NewCredentials(map[string]string{})
 		ak, sk, err := parseAKSKInfo(cred, []*commonpb.KeyValuePair{}, map[string]string{})
@@ -124,12 +124,12 @@ func (s *BedrockTextEmbeddingProviderSuite) TestParseCredentail() {
 	{
 		cred := credentials.NewCredentials(map[string]string{})
 		_, _, err := parseAKSKInfo(cred, []*commonpb.KeyValuePair{}, map[string]string{"credential": "NotExist"})
-		s.ErrorContains(err, "is not a aksk crediential, can not find key")
+		s.ErrorContains(err, "is not a aksk credential, can not find key")
 	}
 	{
 		cred := credentials.NewCredentials(map[string]string{"mock.apikey": "mock"})
 		_, _, err := parseAKSKInfo(cred, []*commonpb.KeyValuePair{}, map[string]string{"credential": "mock"})
-		s.ErrorContains(err, "is not a aksk crediential, can not find key")
+		s.ErrorContains(err, "is not a aksk credential, can not find key")
 	}
 	{
 		cred := credentials.NewCredentials(map[string]string{"mock.access_key_id": "mock", "mock.secret_access_key": "mock"})

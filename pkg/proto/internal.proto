@@ -295,7 +295,7 @@ message ShowConfigurationsRequest {
 
 message ShowConfigurationsResponse {
   common.Status status = 1;
-  repeated common.KeyValuePair configuations = 2;
+  repeated common.KeyValuePair configurations = 2;
 }
 
 enum RateScope {

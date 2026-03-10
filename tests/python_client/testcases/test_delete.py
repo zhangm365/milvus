@@ -936,7 +936,7 @@ class TestDeleteOperation(TestcaseBase):
         target: test insert same id entity after delete from sealed data
         method: 1.create and insert with flush
                 2.load and query with the id
-                3.delte the id entity
+                3.delete the id entity
                 4.insert new entity with the same id and flush
                 5.query the id
         expected: Verify that the query gets the newly inserted entity
@@ -2329,7 +2329,7 @@ class TestDeleteComplexExpr(TestcaseBase):
     @pytest.mark.tags(CaseLabel.L2)
     @pytest.mark.parametrize("expressions", cf.gen_json_field_expressions_and_templates())
     @pytest.mark.parametrize("enable_dynamic_field", [True, False])
-    def test_delete_expr_templtes_json_field(self, expressions, enable_dynamic_field):
+    def test_delete_expr_templates_json_field(self, expressions, enable_dynamic_field):
         """
         target: test delete entities using normal expression
         method: delete using normal expression

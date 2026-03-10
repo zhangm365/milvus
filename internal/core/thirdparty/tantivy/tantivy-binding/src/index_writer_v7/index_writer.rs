@@ -172,9 +172,9 @@ impl IndexWriterWrapperImpl {
         self.add_document(document, offset)
     }
 
-    pub fn add_array_keywords(&mut self, datas: &[*const c_char], offset: u32) -> Result<()> {
+    pub fn add_array_keywords(&mut self, data: &[*const c_char], offset: u32) -> Result<()> {
         let mut document = TantivyDocument::default();
-        for element in datas {
+        for element in data {
             let data = c_ptr_to_str(*element)?;
             document.add_field_value(self.field, data);
         }
@@ -190,9 +190,9 @@ impl IndexWriterWrapperImpl {
         self.add_document(document, offset)
     }
 
-    pub fn add_array_json(&mut self, datas: &[*const c_char], offset: u32) -> Result<()> {
+    pub fn add_array_json(&mut self, data: &[*const c_char], offset: u32) -> Result<()> {
         let mut document = TantivyDocument::default();
-        for element in datas {
+        for element in data {
             let data = c_ptr_to_str(*element)?;
             let j = serde_json::from_str::<serde_json::Value>(data)?;
             j.add_to_document(self.field.field_id(), &mut document);

@@ -101,7 +101,7 @@ InitGoogleLoggingWithZapSink() {
     google::InitGoogleLogging("milvus");
     google::AddLogSink(&g_sink);
 
-    // log is catched by zap, so we don't need to log to stderr/stdout/files anymore.
+    // log is caught by zap, so we don't need to log to stderr/stdout/files anymore.
     FLAGS_logtostdout = false;
     FLAGS_logtostderr = false;
     FLAGS_alsologtostderr = false;
@@ -115,7 +115,7 @@ InitGoogleLoggingWithoutZapSink() {
         return;
     }
     google::InitGoogleLogging("milvus");
-    // log is catched by zap, so we don't need to log to stderr/stdout/files anymore.
+    // log is caught by zap, so we don't need to log to stderr/stdout/files anymore.
     FLAGS_logtostdout = true;
     FLAGS_logtostderr = false;
     FLAGS_alsologtostderr = false;

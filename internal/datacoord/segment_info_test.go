@@ -47,7 +47,7 @@ func TestCompactionTo(t *testing.T) {
 		assert.NotNil(t, compactTos)
 		assert.ElementsMatch(t, []int64{3}, getCompactToIDs(compactTos))
 
-		// should be droped.
+		// should be dropped.
 		segments.DropSegment(1)
 		compactTos, ok = segments.GetCompactionTo(1)
 		assert.False(t, ok)

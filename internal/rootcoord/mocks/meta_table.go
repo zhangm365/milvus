@@ -1087,12 +1087,12 @@ func (_c *IMetaTable_CheckIfPrivilegeGroupCreatable_Call) RunAndReturn(run func(
 	return _c
 }
 
-// CheckIfPrivilegeGroupDropable provides a mock function with given fields: ctx, req
-func (_m *IMetaTable) CheckIfPrivilegeGroupDropable(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest) error {
+// CheckIfPrivilegeGroupDroppable provides a mock function with given fields: ctx, req
+func (_m *IMetaTable) CheckIfPrivilegeGroupDroppable(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest) error {
 	ret := _m.Called(ctx, req)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CheckIfPrivilegeGroupDropable")
+		panic("no return value specified for CheckIfPrivilegeGroupDroppable")
 	}
 
 	var r0 error
@@ -1105,31 +1105,31 @@ func (_m *IMetaTable) CheckIfPrivilegeGroupDropable(ctx context.Context, req *mi
 	return r0
 }
 
-// IMetaTable_CheckIfPrivilegeGroupDropable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckIfPrivilegeGroupDropable'
-type IMetaTable_CheckIfPrivilegeGroupDropable_Call struct {
+// IMetaTable_CheckIfPrivilegeGroupDroppable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckIfPrivilegeGroupDroppable'
+type IMetaTable_CheckIfPrivilegeGroupDroppable_Call struct {
 	*mock.Call
 }
 
-// CheckIfPrivilegeGroupDropable is a helper method to define mock.On call
+// CheckIfPrivilegeGroupDroppable is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req *milvuspb.DropPrivilegeGroupRequest
-func (_e *IMetaTable_Expecter) CheckIfPrivilegeGroupDropable(ctx interface{}, req interface{}) *IMetaTable_CheckIfPrivilegeGroupDropable_Call {
-	return &IMetaTable_CheckIfPrivilegeGroupDropable_Call{Call: _e.mock.On("CheckIfPrivilegeGroupDropable", ctx, req)}
+func (_e *IMetaTable_Expecter) CheckIfPrivilegeGroupDroppable(ctx interface{}, req interface{}) *IMetaTable_CheckIfPrivilegeGroupDroppable_Call {
+	return &IMetaTable_CheckIfPrivilegeGroupDroppable_Call{Call: _e.mock.On("CheckIfPrivilegeGroupDroppable", ctx, req)}
 }
 
-func (_c *IMetaTable_CheckIfPrivilegeGroupDropable_Call) Run(run func(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest)) *IMetaTable_CheckIfPrivilegeGroupDropable_Call {
+func (_c *IMetaTable_CheckIfPrivilegeGroupDroppable_Call) Run(run func(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest)) *IMetaTable_CheckIfPrivilegeGroupDroppable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(*milvuspb.DropPrivilegeGroupRequest))
 	})
 	return _c
 }
 
-func (_c *IMetaTable_CheckIfPrivilegeGroupDropable_Call) Return(_a0 error) *IMetaTable_CheckIfPrivilegeGroupDropable_Call {
+func (_c *IMetaTable_CheckIfPrivilegeGroupDroppable_Call) Return(_a0 error) *IMetaTable_CheckIfPrivilegeGroupDroppable_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *IMetaTable_CheckIfPrivilegeGroupDropable_Call) RunAndReturn(run func(context.Context, *milvuspb.DropPrivilegeGroupRequest) error) *IMetaTable_CheckIfPrivilegeGroupDropable_Call {
+func (_c *IMetaTable_CheckIfPrivilegeGroupDroppable_Call) RunAndReturn(run func(context.Context, *milvuspb.DropPrivilegeGroupRequest) error) *IMetaTable_CheckIfPrivilegeGroupDroppable_Call {
 	_c.Call.Return(run)
 	return _c
 }

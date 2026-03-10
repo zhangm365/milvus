@@ -138,11 +138,11 @@ func (suite *QueryNodeSuite) TestInit_RemoteChunkManagerFailed() {
 	suite.Error(err)
 }
 
-func (suite *QueryNodeSuite) TestInit_VactorChunkManagerFailed() {
+func (suite *QueryNodeSuite) TestInit_VectorChunkManagerFailed() {
 	var err error
 	suite.node.SetEtcdClient(suite.etcd)
 
-	// init vactor chunk manager failed
+	// init vector chunk manager failed
 	suite.factory.EXPECT().Init(mock.Anything).Return()
 	suite.factory.EXPECT().NewPersistentStorageChunkManager(mock.Anything).Return(nil, errors.New("mock error")).Once()
 	err = suite.node.Init()

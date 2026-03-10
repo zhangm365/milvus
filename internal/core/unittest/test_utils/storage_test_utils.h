@@ -155,20 +155,20 @@ PrepareSingleFieldInsertBinlog(int64_t collection_id,
                                int64_t partition_id,
                                int64_t segment_id,
                                int64_t field_id,
-                               std::vector<FieldDataPtr> field_datas,
+                               std::vector<FieldDataPtr> field_data,
                                const ChunkManagerPtr cm,
                                const std::string& mmap_dir_path = "") {
     bool enable_mmap = !mmap_dir_path.empty();
     LoadFieldDataInfo load_info;
     std::vector<std::string> files;
-    files.reserve(field_datas.size());
+    files.reserve(field_data.size());
     std::vector<int64_t> row_counts;
-    row_counts.reserve(field_datas.size());
+    row_counts.reserve(field_data.size());
     std::vector<int64_t> serialized_insert_sizes;
-    serialized_insert_sizes.reserve(field_datas.size());
+    serialized_insert_sizes.reserve(field_data.size());
     int64_t row_count = 0;
-    for (auto i = 0; i < field_datas.size(); ++i) {
-        auto& field_data = field_datas[i];
+    for (auto i = 0; i < field_data.size(); ++i) {
+        auto& field_data = field_data[i];
         row_count += field_data->get_num_rows();
         auto file = TestRemotePath + "data/test/" +
                     std::to_string(collection_id) + "/" +

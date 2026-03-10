@@ -249,7 +249,7 @@ TEST_F(DiskAnnFileManagerTest, ReadAndWriteWithStream) {
     std::string small_index_file_path_read =
         TestLocalPath + "diskann/index_files/1000/1/2/3/small_index_file_read";
     lcm->CreateFile(small_index_file_path_read);
-    int fd_read = open(small_index_file_path_read.c_str(), O_WRONLY);
+    int fd_read = open(small_index_file_path_read.c_str(), O_WRONGLY);
     ASSERT_NE(fd_read, -1);
     is->Read(fd_read, small_index_size);
     close(fd_read);

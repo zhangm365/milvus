@@ -272,7 +272,7 @@ func EncodeSearchResultData(ctx context.Context, searchResultData *schemapb.Sear
 
 func MergeInternalRetrieveResult(ctx context.Context, retrieveResults []*internalpb.RetrieveResults, param *mergeParam) (*internalpb.RetrieveResults, error) {
 	log := log.Ctx(ctx)
-	log.Debug("mergeInternelRetrieveResults",
+	log.Debug("mergeInternalRetrieveResults",
 		zap.Int64("limit", param.limit),
 		zap.Int("resultNum", len(retrieveResults)),
 	)

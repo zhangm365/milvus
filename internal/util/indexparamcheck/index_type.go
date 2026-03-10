@@ -48,7 +48,7 @@ func IsGpuIndex(indexType IndexType) bool {
 	return vecindexmgr.GetVecIndexMgrInstance().IsGPUVecIndex(indexType)
 }
 
-// IsVectorMmapIndex check if the vector index can be mmaped
+// IsVectorMmapIndex check if the vector index can be mapped
 func IsVectorMmapIndex(indexType IndexType) bool {
 	return vecindexmgr.GetVecIndexMgrInstance().IsMMapSupported(indexType)
 }

@@ -22,9 +22,9 @@ default_search_exp = "id >= 0"
 exp_res = "exp_res"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
-default_invaild_string_exp = "varchar >= 0"
+default_invalid_string_exp = "varchar >= 0"
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 default_search_field = ct.default_float_vec_field_name
 default_search_params = ct.default_search_params
 default_primary_key_field_name = "id"
@@ -556,7 +556,7 @@ class TestMilvusClientDatabaseValid(TestMilvusClientV2Base):
     def test_milvus_client_use_database_default(self):
         """
         target: test use_database
-        method: 1. create another database 2. create collection in defalut db & another db 3. list collections
+        method: 1. create another database 2. create collection in default db & another db 3. list collections
         expected: run successfully
         """
         client = self._client()

@@ -44,8 +44,8 @@ PrepareVectorIteratorsFromIndex(const SearchInfo& search_info,
                                 SearchResult& search_result,
                                 const BitsetView& bitset,
                                 const index::VectorIndex& index) {
-    // when we use group by, we will use vector iterator to continously get results and group on them
-    // when we use iterative filtered search, we will use vector iterator to continously get results and check scalar attr on them
+    // when we use group by, we will use vector iterator to continuously get results and group on them
+    // when we use iterative filtered search, we will use vector iterator to continuously get results and check scalar attr on them
     // until we get valid topk results
     if (UseVectorIterator(search_info)) {
         try {

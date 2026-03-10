@@ -54,8 +54,8 @@ type RBACChecker interface {
 	// CheckIfPrivilegeGroupAlterable checks if the privilege group can be altered.
 	CheckIfPrivilegeGroupAlterable(ctx context.Context, req *milvuspb.OperatePrivilegeGroupRequest) error
 
-	// CheckIfPrivilegeGroupDropable checks if the privilege group can be dropped.
-	CheckIfPrivilegeGroupDropable(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest) error
+	// CheckIfPrivilegeGroupDroppable checks if the privilege group can be dropped.
+	CheckIfPrivilegeGroupDroppable(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest) error
 
 	// CheckIfRBACRestorable checks if the rbac meta data can be restored.
 	CheckIfRBACRestorable(ctx context.Context, req *milvuspb.RestoreRBACMetaRequest) error

@@ -606,7 +606,7 @@ func TestExpr_PhraseMatch(t *testing.T) {
 		`phrase_match(StringField, "phrase", 4294967296)`,
 	}
 	errMsgs := []string{
-		`"slop" should not be a negative interger. "slop" passed: -1`,
+		`"slop" should not be a negative integer. "slop" passed: -1`,
 		`"slop" should be a const integer expression with "uint32" value. "slop" expression passed: a`,
 		`"slop" should be a const integer expression with "uint32" value. "slop" expression passed: -a`,
 		`"slop" exceeds the range of "uint32". "slop" expression passed: 4294967296`,

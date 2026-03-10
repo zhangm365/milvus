@@ -1174,7 +1174,7 @@ class TestCompactionOperation(TestcaseBase):
         collection_w.get_compaction_plans()
         t.join()
 
-        # waitting for new segment index and compact
+        # waiting for new segment index and compact
         index_cost = 240
         start = time()
         while True:
@@ -1194,7 +1194,7 @@ class TestCompactionOperation(TestcaseBase):
         collection_w.wait_for_compaction_completed()
         collection_w.get_compaction_plans()
 
-        # waitting for new segment index and compact
+        # waiting for new segment index and compact
         compact_cost = 180
         start = time()
         while True:

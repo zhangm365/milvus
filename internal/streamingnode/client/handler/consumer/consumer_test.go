@@ -182,7 +182,7 @@ func newConsumeResponse(id message.MessageID, msg message.MutableMessage) *strea
 	immutableMsg := msg.IntoImmutableMessage(id)
 	return &streamingpb.ConsumeResponse{
 		Response: &streamingpb.ConsumeResponse_Consume{
-			Consume: &streamingpb.ConsumeMessageReponse{
+			Consume: &streamingpb.ConsumeMessageResponse{
 				Message: immutableMsg.IntoImmutableMessageProto(),
 			},
 		},

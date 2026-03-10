@@ -74,7 +74,7 @@ func validateGeometryFieldSearchResult(fieldData **schemapb.FieldData) error {
 		}
 		wktStr, err := common.ConvertWKBToWKT(data)
 		if err != nil {
-			log.Error("translate the geomery  into its wkt failed")
+			log.Error("translate the geometry  into its wkt failed")
 			return err
 		}
 		wktArray[i] = wktStr

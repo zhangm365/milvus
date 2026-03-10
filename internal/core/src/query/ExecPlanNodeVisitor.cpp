@@ -280,7 +280,7 @@ ExecPlanNodeVisitor::visit(RetrievePlanNode& node) {
 
     // Set query context
     auto query_context = std::make_shared<milvus::exec::QueryContext>(
-        DEAFULT_QUERY_ID,
+        DEFAULT_QUERY_ID,
         segment,
         active_count,
         timestamp_,
@@ -379,7 +379,7 @@ ExecPlanNodeVisitor::visit(VectorPlanNode& node) {
 
     // Set query context
     auto query_context = std::make_shared<milvus::exec::QueryContext>(
-        DEAFULT_QUERY_ID,
+        DEFAULT_QUERY_ID,
         segment,
         active_count,
         timestamp_,

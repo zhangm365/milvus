@@ -251,7 +251,7 @@ func (s *PackedBinlogRecordSuite) TestGenerateBM25Stats() {
 	s.Positive(bm25StatsLog[102].Binlogs[0].MemorySize)
 }
 
-func (s *PackedBinlogRecordSuite) TestUnsuportedStorageVersion() {
+func (s *PackedBinlogRecordSuite) TestUnsupportedStorageVersion() {
 	wOption := []RwOption{
 		WithVersion(-1),
 		WithStorageConfig(s.storageConfig),
@@ -313,7 +313,7 @@ func (s *PackedBinlogRecordSuite) TestEmptyBinlog() {
 	s.Error(err)
 }
 
-func (s *PackedBinlogRecordSuite) TestAllocIDExhausedError() {
+func (s *PackedBinlogRecordSuite) TestAllocIDExhaustedError() {
 	columnGroups := []storagecommon.ColumnGroup{
 		{
 			GroupID: 0,

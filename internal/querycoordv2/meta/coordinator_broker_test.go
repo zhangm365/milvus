@@ -362,7 +362,7 @@ func (s *CoordinatorBrokerDataCoordSuite) TestListIndexes() {
 		s.mixcoord.EXPECT().ListIndexes(mock.Anything, mock.Anything).
 			Return(nil, merr.ErrServiceUnimplemented).Once()
 
-		// mock retry on old version datacoord descibe index
+		// mock retry on old version datacoord describe index
 		indexIDs := []int64{1, 2}
 		s.mixcoord.EXPECT().DescribeIndex(mock.Anything, mock.Anything).
 			Return(&indexpb.DescribeIndexResponse{

@@ -320,6 +320,6 @@ func (s *GrpcAccessInfoSuite) TestTemplateValueLength() {
 	s.Equal(`map[store_id:2]`, Get(s.info, "$template_value_length")[0])
 }
 
-func TestGrpcAccssInfo(t *testing.T) {
+func TestGrpcAccessInfo(t *testing.T) {
 	suite.Run(t, new(GrpcAccessInfoSuite))
 }

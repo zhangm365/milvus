@@ -2131,7 +2131,7 @@ func TestDelegatorCatchingUpStreamingData(t *testing.T) {
 
 // MinHash Function test
 func (s *DelegatorSuite) TestDelegatorSearchWithMinHashFunction() {
-	// miss parametres
+	// miss parameters
 	minHashFunctionSchema := &schemapb.FunctionSchema{
 		Type:           schemapb.FunctionType_MinHash,
 		InputFieldIds:  []int64{102},

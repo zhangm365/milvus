@@ -219,7 +219,7 @@ func TestBinlog_Compress(t *testing.T) {
 		assert.Equal(t, unmarshaledSegmentInfo.GetBinlogs()[0].Binlogs[i].LogPath, unmarshaledSegmentInfoCompressed.GetBinlogs()[0].Binlogs[i].LogPath)
 	}
 
-	// test compress erorr path
+	// test compress error path
 	fakeBinlogs := make([]*datapb.Binlog, 1)
 	fakeBinlogs[0] = &datapb.Binlog{
 		EntriesNum: 10000,
@@ -284,7 +284,7 @@ func TestBinlog_Compress(t *testing.T) {
 	segmentInfo = &datapb.SegmentInfo{
 		Binlogs: fieldBinLogs,
 	}
-	invaildType := storage.BinlogType(100)
-	err = DecompressBinLog(invaildType, 1, 1, 1, segmentInfo.Binlogs)
+	invalidType := storage.BinlogType(100)
+	err = DecompressBinLog(invalidType, 1, 1, 1, segmentInfo.Binlogs)
 	assert.ErrorIs(t, err, merr.ErrParameterInvalid)
 }

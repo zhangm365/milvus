@@ -158,7 +158,7 @@ class TestDiskannSearchParams(TestMilvusClientV2Base):
         self.float_vector_dim = dim
         self.primary_keys = []
         self.enable_dynamic_field = False
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -179,7 +179,7 @@ class TestDiskannSearchParams(TestMilvusClientV2Base):
                     pk_field_name: pk,
                     self.float_vector_field_name: list(float_vectors[pk])
                 }
-                self.datas.append(row)
+                self.data.append(row)
                 rows.append(row)
             self.insert(client, self.collection_name, data=rows)
             self.primary_keys.extend([i + j * default_nb for i in range(default_nb)])

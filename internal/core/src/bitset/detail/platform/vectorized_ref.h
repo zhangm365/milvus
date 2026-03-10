@@ -35,7 +35,7 @@ namespace detail {
 //   that it uses available appropriate hardware instructions. No specialized
 //   implementation is used under the hood.
 // The default vectorizer provides no vectorized implementation, forcing the
-//   caller to use a defaut non-vectorized implementation every time.
+//   caller to use a default non-vectorized implementation every time.
 struct VectorizedRef {
     // Fills a bitmask by comparing two arrays element-wise.
     // API requirement: size % 8 == 0

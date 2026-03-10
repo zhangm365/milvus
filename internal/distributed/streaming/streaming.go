@@ -55,13 +55,13 @@ type TxnOption struct {
 	// Keepalive is the time to keepalive of the transaction.
 	// If the txn don't append message in the keepalive time, the txn will be expired.
 	// Only make sense when keepalive is greater than 1ms.
-	// The default value is 0, which means the keepalive is setted by the wal at streaming node.
+	// The default value is 0, which means the keepalive is set by the wal at streaming node.
 	Keepalive time.Duration
 }
 
 type ReadOption struct {
 	// PChannel is the target pchannel to read, if the pchannel is not set.
-	// It will be parsed from setted `VChannel`.
+	// It will be parsed from set `VChannel`.
 	PChannel string
 
 	// VChannel is the target vchannel to read.
@@ -207,7 +207,7 @@ type Broadcast interface {
 	Append(ctx context.Context, msg message.BroadcastMutableMessage) (*types.BroadcastAppendResult, error)
 
 	// Ack acknowledges a broadcast message at the specified vchannel.
-	// It must be called after the message is comsumed by the unique-consumer.
+	// It must be called after the message is consumed by the unique-consumer.
 	// It will only return error when the ctx is canceled.
 	Ack(ctx context.Context, msg message.ImmutableMessage) error
 }

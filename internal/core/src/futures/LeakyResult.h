@@ -25,13 +25,13 @@ namespace milvus::futures {
 template <class R>
 class LeakyResult {
  public:
-    /// @brief default construct a empty Result, which is just used for easy contruction.
+    /// @brief default construct a empty Result, which is just used for easy construction.
     LeakyResult() {
     }
 
     /// @brief create a LeakyResult with error code and error message which means failure.
-    /// @param error_code see CStatus difinition.
-    /// @param error_msg see CStatus difinition.
+    /// @param error_code see CStatus definition.
+    /// @param error_msg see CStatus definition.
     LeakyResult(int error_code, const std::string& error_msg) {
         auto msg = strdup(error_msg.c_str());
         status_ = std::make_optional(CStatus{error_code, msg});

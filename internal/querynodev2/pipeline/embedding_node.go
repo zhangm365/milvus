@@ -85,8 +85,8 @@ func (eNode *embeddingNode) Name() string {
 	return fmt.Sprintf("embeddingNode-%s", eNode.channel)
 }
 
-func (eNode *embeddingNode) addInsertData(insertDatas map[UniqueID]*delegator.InsertData, msg *InsertMsg, collection *Collection) error {
-	iData, ok := insertDatas[msg.SegmentID]
+func (eNode *embeddingNode) addInsertData(insertData map[UniqueID]*delegator.InsertData, msg *InsertMsg, collection *Collection) error {
+	iData, ok := insertData[msg.SegmentID]
 	if !ok {
 		iData = &delegator.InsertData{
 			PartitionID: msg.PartitionID,
@@ -96,7 +96,7 @@ func (eNode *embeddingNode) addInsertData(insertDatas map[UniqueID]*delegator.In
 				ChannelName: msg.GetShardName(),
 			},
 		}
-		insertDatas[msg.SegmentID] = iData
+		insertData[msg.SegmentID] = iData
 	}
 
 	err := eNode.embedding(msg, iData.BM25Stats)
@@ -146,12 +146,12 @@ func (eNode *embeddingNode) bm25Embedding(runner function.FunctionRunner, msg *m
 	outputField := runner.GetOutputFields()[0]
 
 	outputFieldID := outputField.GetFieldID()
-	datas, err := getEmbeddingFieldDatas(msg.FieldsData, lo.Map(inputFields, func(field *schemapb.FieldSchema, _ int) int64 { return field.GetFieldID() })...)
+	data, err := getEmbeddingFieldData(msg.FieldsData, lo.Map(inputFields, func(field *schemapb.FieldSchema, _ int) int64 { return field.GetFieldID() })...)
 	if err != nil {
 		return err
 	}
 
-	output, err := runner.BatchRun(datas...)
+	output, err := runner.BatchRun(data...)
 	if err != nil {
 		return err
 	}
@@ -177,12 +177,12 @@ func (eNode *embeddingNode) minhashEmbedding(runner function.FunctionRunner, msg
 	inputFields := runner.GetInputFields()
 	outputField := runner.GetOutputFields()[0]
 
-	datas, err := getEmbeddingFieldDatas(msg.FieldsData, lo.Map(inputFields, func(field *schemapb.FieldSchema, _ int) int64 { return field.GetFieldID() })...)
+	data, err := getEmbeddingFieldData(msg.FieldsData, lo.Map(inputFields, func(field *schemapb.FieldSchema, _ int) int64 { return field.GetFieldID() })...)
 	if err != nil {
 		return err
 	}
 
-	output, err := runner.BatchRun(datas...)
+	output, err := runner.BatchRun(data...)
 	if err != nil {
 		return err
 	}
@@ -248,7 +248,7 @@ func (eNode *embeddingNode) embedding(msg *msgstream.InsertMsg, stats map[int64]
 
 func (eNode *embeddingNode) Operate(in Msg) Msg {
 	nodeMsg := in.(*insertNodeMsg)
-	nodeMsg.insertDatas = make(map[int64]*delegator.InsertData)
+	nodeMsg.insertData = make(map[int64]*delegator.InsertData)
 
 	collection := eNode.manager.Collection.Get(eNode.collectionID)
 	if collection == nil {
@@ -257,7 +257,7 @@ func (eNode *embeddingNode) Operate(in Msg) Msg {
 	}
 
 	for _, msg := range nodeMsg.insertMsgs {
-		err := eNode.addInsertData(nodeMsg.insertDatas, msg, collection)
+		err := eNode.addInsertData(nodeMsg.insertData, msg, collection)
 		if err != nil {
 			panic(err)
 		}
@@ -276,10 +276,10 @@ func (eNode *embeddingNode) Close() {
 	}
 }
 
-func getEmbeddingFieldDatas(datas []*schemapb.FieldData, fieldIDs ...int64) ([]any, error) {
+func getEmbeddingFieldData(data []*schemapb.FieldData, fieldIDs ...int64) ([]any, error) {
 	result := []any{}
 	for _, fieldID := range fieldIDs {
-		data, err := getEmbeddingFieldData(datas, fieldID)
+		data, err := getEmbeddingFieldData(data, fieldID)
 		if err != nil {
 			return nil, err
 		}
@@ -288,8 +288,8 @@ func getEmbeddingFieldDatas(datas []*schemapb.FieldData, fieldIDs ...int64) ([]a
 	return result, nil
 }
 
-func getEmbeddingFieldData(datas []*schemapb.FieldData, fieldID int64) ([]string, error) {
-	for _, data := range datas {
+func getEmbeddingFieldData(data []*schemapb.FieldData, fieldID int64) ([]string, error) {
+	for _, data := range data {
 		if data.GetFieldId() == fieldID {
 			return data.GetScalars().GetStringData().GetData(), nil
 		}

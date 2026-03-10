@@ -58,7 +58,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         self.c9_field_name = "c9_float"
         self.c10_field_name = "c10_nullable_varchar"
         self.c11_field_name = "c11_nullable_int16"
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_data(self, request):
@@ -164,7 +164,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         self.load_collection(client, self.collection_name)
 
         # Store data for ground truth verification (on class, not instance)
-        self.__class__.datas = pd.DataFrame(rows)
+        self.__class__.data = pd.DataFrame(rows)
 
         log.info(f"Prepared collection {self.collection_name} with {default_nb} entities")
 
@@ -195,7 +195,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
         # Calculate ground truth
-        ground_truth = self.datas.groupby(self.c1_field_name).agg(
+        ground_truth = self.data.groupby(self.c1_field_name).agg(
             count_c2=(self.c2_field_name, "count")
         ).reset_index()
 
@@ -231,7 +231,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
         # Calculate ground truth
-        ground_truth = self.datas.groupby(self.c1_field_name).agg(
+        ground_truth = self.data.groupby(self.c1_field_name).agg(
             count_c2=(self.c2_field_name, "count"),
             sum_c3=(self.c3_field_name, "sum")
         ).reset_index()
@@ -272,7 +272,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         log.info(f"Got {len(results)} groups from multi-column GROUP BY")
 
         # Calculate ground truth
-        ground_truth = self.datas.groupby([self.c1_field_name, self.c6_field_name]).agg(
+        ground_truth = self.data.groupby([self.c1_field_name, self.c6_field_name]).agg(
             min_c2=(self.c2_field_name, "min"),
             max_c2=(self.c2_field_name, "max")
         ).reset_index()
@@ -314,7 +314,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
         # Calculate ground truth
-        ground_truth = self.datas.groupby(self.c1_field_name).agg(
+        ground_truth = self.data.groupby(self.c1_field_name).agg(
             avg_c2=(self.c2_field_name, "mean"),
             avg_c3=(self.c3_field_name, "mean"),
             avg_c4=(self.c4_field_name, "mean")
@@ -361,7 +361,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         )
 
         # Filter data first
-        filtered_data = self.datas[self.datas[self.c2_field_name] < 10]
+        filtered_data = self.data[self.data[self.c2_field_name] < 10]
         ground_truth = filtered_data.groupby(self.c1_field_name).agg(
             count_c2=(self.c2_field_name, "count"),
             max_c3=(self.c3_field_name, "max")
@@ -452,7 +452,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
         # Calculate ground truth
-        ground_truth = self.datas.groupby(self.c1_field_name).agg(
+        ground_truth = self.data.groupby(self.c1_field_name).agg(
             min_c6=(self.c6_field_name, "min"),
             max_c6=(self.c6_field_name, "max")
         ).reset_index()
@@ -493,7 +493,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
 
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
-        ground_truth = self.datas.groupby(self.c1_field_name).agg(
+        ground_truth = self.data.groupby(self.c1_field_name).agg(
             count_ts=(self.ts_field_name, "count"),
             max_ts=(self.ts_field_name, "max")
         ).reset_index()
@@ -641,9 +641,9 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
 
         # Calculate ground truth for all data
         # Note: c2 is nullable, so pandas count() excludes NULL, matching SQL behavior
-        expected_count = self.datas[self.c2_field_name].count()  # COUNT excludes NULL
-        expected_sum = self.datas[self.c2_field_name].sum()  # SUM excludes NULL
-        expected_avg = self.datas[self.c3_field_name].mean()
+        expected_count = self.data[self.c2_field_name].count()  # COUNT excludes NULL
+        expected_sum = self.data[self.c2_field_name].sum()  # SUM excludes NULL
+        expected_avg = self.data[self.c3_field_name].mean()
 
         result = results[0]
         assert result["count(c2)"] == expected_count, \
@@ -681,7 +681,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
 
         # Calculate ground truth
         # Filter excludes NULL c2 rows, then COUNT(c2) counts non-NULL c2 values
-        filtered_data = self.datas[self.datas[self.c2_field_name] >= 0]  # Excludes NULL
+        filtered_data = self.data[self.data[self.c2_field_name] >= 0]  # Excludes NULL
         expected_count = filtered_data[self.c2_field_name].count()  # COUNT excludes NULL
         expected_sum = filtered_data[self.c2_field_name].sum()  # SUM excludes NULL
         expected_avg = filtered_data[self.c3_field_name].mean()
@@ -720,7 +720,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 1, f"Expected 1 row for count(*), got {len(results)}"
 
         # count(*) should equal total number of entities (3000)
-        expected_count = len(self.datas)  # 3000
+        expected_count = len(self.data)  # 3000
         assert results[0]["count(*)"] == expected_count, \
             f"count(*) mismatch: {results[0]['count(*)']} != {expected_count}"
 
@@ -759,12 +759,12 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         count_field = results_field[0]["count(c2)"]
 
         # Verify count(*) equals total entities
-        expected_total = len(self.datas)  # 3000
+        expected_total = len(self.data)  # 3000
         assert count_star == expected_total, \
             f"count(*) should equal total entities: {count_star} != {expected_total}"
 
         # Verify count(c2) excludes NULL (should be less than count(*))
-        expected_non_null = self.datas[self.c2_field_name].count()  # ~2550
+        expected_non_null = self.data[self.c2_field_name].count()  # ~2550
         assert count_field == expected_non_null, \
             f"count(c2) should exclude NULL: {count_field} != {expected_non_null}"
 
@@ -798,8 +798,8 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         count_star = results_together[0]["count(*)"]
         count_field = results_together[0]["count(c2)"]
 
-        expected_total = len(self.datas)  # 3000
-        expected_non_null = self.datas[self.c2_field_name].count()
+        expected_total = len(self.data)  # 3000
+        expected_non_null = self.data[self.c2_field_name].count()
 
         # count(*) must return total entities, not non-NULL count
         assert count_star == expected_total, \
@@ -839,7 +839,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
         # Verify count(*) for each group against pandas ground truth
-        ground_truth = self.datas.groupby(self.c1_field_name).size().reset_index(name='count_star')
+        ground_truth = self.data.groupby(self.c1_field_name).size().reset_index(name='count_star')
         for result in results:
             c1_value = result[self.c1_field_name]
             expected_count = int(ground_truth[ground_truth[self.c1_field_name] == c1_value].iloc[0]['count_star'])
@@ -870,7 +870,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(results) == 7, f"Expected 7 groups, got {len(results)}"
 
         # Ground truth from pandas
-        ground_truth = self.datas.groupby(self.c1_field_name).agg(
+        ground_truth = self.data.groupby(self.c1_field_name).agg(
             count_star=(self.c1_field_name, 'size'),
             count_c2=(self.c2_field_name, 'count')
         ).reset_index()
@@ -1025,7 +1025,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         )
 
         # Verify against ground truth
-        ground_truth = self.datas.groupby(self.c7_field_name).agg(
+        ground_truth = self.data.groupby(self.c7_field_name).agg(
             count_c2=(self.c2_field_name, "count"),
             sum_c3=(self.c3_field_name, "sum")
         ).reset_index()
@@ -1064,7 +1064,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         )
 
         # Verify against ground truth
-        ground_truth = self.datas.groupby(self.c8_field_name).agg(
+        ground_truth = self.data.groupby(self.c8_field_name).agg(
             count_c2=(self.c2_field_name, "count"),
             avg_c4=(self.c4_field_name, "mean")
         ).reset_index()
@@ -1313,7 +1313,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(null_groups) == 1, f"Expected exactly 1 NULL group, got {len(null_groups)}"
 
         # Verify aggregation values against pandas ground truth
-        ground_truth = self.datas.groupby(self.c10_field_name).agg(
+        ground_truth = self.data.groupby(self.c10_field_name).agg(
             count_c3=(self.c3_field_name, "count"),
             sum_c3=(self.c3_field_name, "sum")
         ).reset_index()
@@ -1358,7 +1358,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert len(null_groups) == 1, f"Expected 1 NULL group, got {len(null_groups)}"
 
         # Verify aggregation against pandas
-        ground_truth = self.datas.groupby(self.c11_field_name).agg(
+        ground_truth = self.data.groupby(self.c11_field_name).agg(
             count_c3=(self.c3_field_name, "count"),
             sum_c3=(self.c3_field_name, "sum")
         ).reset_index()
@@ -1413,7 +1413,7 @@ class TestQueryAggregationSharedV2(TestMilvusClientV2Base):
         assert has_null_c10, "Expected at least one NULL group for nullable c10 since ~15% of data is NULL"
 
         # Verify aggregation against pandas (for non-null c10 groups only)
-        non_null_df = self.datas[self.datas[self.c10_field_name].notna()]
+        non_null_df = self.data[self.data[self.c10_field_name].notna()]
         ground_truth = non_null_df.groupby([self.c1_field_name, self.c10_field_name]).agg(
             count_c3=(self.c3_field_name, "count"),
             sum_c3=(self.c3_field_name, "sum")

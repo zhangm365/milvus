@@ -501,5 +501,5 @@ func TestSearchGroupByRangeSearch(t *testing.T) {
 
 // groupBy + advanced search
 func TestSearchGroupByHybridSearch(t *testing.T) {
-	t.Skipf("Waiting for HybridSearch implemention")
+	t.Skipf("Waiting for HybridSearch implementation")
 }

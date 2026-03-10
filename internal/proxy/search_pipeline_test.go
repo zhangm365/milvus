@@ -434,10 +434,10 @@ func (s *SearchPipelineSuite) TestSemanticHighlightOp() {
 
 	highlightResult := result.Results.HighlightResults[0]
 	s.Equal(testVarCharField, highlightResult.FieldName)
-	s.Len(highlightResult.Datas, 3)
-	s.Equal([]string{"<em>highlighted</em> text 1"}, highlightResult.Datas[0].Fragments)
-	s.Equal([]string{"<em>highlighted</em> text 2"}, highlightResult.Datas[1].Fragments)
-	s.Equal([]string{"<em>highlighted</em> text 3"}, highlightResult.Datas[2].Fragments)
+	s.Len(highlightResult.Data, 3)
+	s.Equal([]string{"<em>highlighted</em> text 1"}, highlightResult.Data[0].Fragments)
+	s.Equal([]string{"<em>highlighted</em> text 2"}, highlightResult.Data[1].Fragments)
+	s.Equal([]string{"<em>highlighted</em> text 3"}, highlightResult.Data[2].Fragments)
 }
 
 func (s *SearchPipelineSuite) TestSemanticHighlightOpMissingField() {
@@ -566,11 +566,11 @@ func (s *SearchPipelineSuite) TestSemanticHighlightOpMultipleFields() {
 
 	// Verify first field
 	s.Equal("field1", result.Results.HighlightResults[0].FieldName)
-	s.Len(result.Results.HighlightResults[0].Datas, 2)
+	s.Len(result.Results.HighlightResults[0].Data, 2)
 
 	// Verify second field
 	s.Equal("field2", result.Results.HighlightResults[1].FieldName)
-	s.Len(result.Results.HighlightResults[1].Datas, 2)
+	s.Len(result.Results.HighlightResults[1].Data, 2)
 }
 
 func (s *SearchPipelineSuite) TestSemanticHighlightOpEmptyResults() {
@@ -630,7 +630,7 @@ func (s *SearchPipelineSuite) TestSemanticHighlightOpEmptyResults() {
 	s.NotNil(result.Results.HighlightResults)
 	s.Len(result.Results.HighlightResults, 1)
 	s.Equal(testVarCharField, result.Results.HighlightResults[0].FieldName)
-	s.Len(result.Results.HighlightResults[0].Datas, 0)
+	s.Len(result.Results.HighlightResults[0].Data, 0)
 }
 
 func (s *SearchPipelineSuite) TestSemanticHighlightOpDynamicField() {
@@ -707,9 +707,9 @@ func (s *SearchPipelineSuite) TestSemanticHighlightOpDynamicField() {
 
 	highlightResult := result.Results.HighlightResults[0]
 	s.Equal("dyn_content", highlightResult.FieldName)
-	s.Len(highlightResult.Datas, 2)
-	s.Equal([]string{"<em>dynamic</em> content 1"}, highlightResult.Datas[0].Fragments)
-	s.Equal([]string{"<em>dynamic</em> content 2"}, highlightResult.Datas[1].Fragments)
+	s.Len(highlightResult.Data, 2)
+	s.Equal([]string{"<em>dynamic</em> content 1"}, highlightResult.Data[0].Fragments)
+	s.Equal([]string{"<em>dynamic</em> content 2"}, highlightResult.Data[1].Fragments)
 }
 
 func (s *SearchPipelineSuite) TestSemanticHighlightOpMixedFields() {
@@ -803,11 +803,11 @@ func (s *SearchPipelineSuite) TestSemanticHighlightOpMixedFields() {
 
 	// Schema field result
 	s.Equal(testVarCharField, result.Results.HighlightResults[0].FieldName)
-	s.Equal([]string{"<em>schema</em> text"}, result.Results.HighlightResults[0].Datas[0].Fragments)
+	s.Equal([]string{"<em>schema</em> text"}, result.Results.HighlightResults[0].Data[0].Fragments)
 
 	// Dynamic field result
 	s.Equal("dyn_content", result.Results.HighlightResults[1].FieldName)
-	s.Equal([]string{"<em>dynamic</em> text"}, result.Results.HighlightResults[1].Datas[0].Fragments)
+	s.Equal([]string{"<em>dynamic</em> text"}, result.Results.HighlightResults[1].Data[0].Fragments)
 }
 
 func (s *SearchPipelineSuite) TestExtractMultipleDynamicFieldTexts() {

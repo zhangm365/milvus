@@ -42,7 +42,7 @@ func OpenManager() (Manager, error) {
 // newManager create a wal manager.
 func newManager(opener wal.Opener) Manager {
 	return &managerImpl{
-		lifetime: typeutil.NewGenericLifetime[managerState](managerOpenable | managerRemoveable | managerGetable),
+		lifetime: typeutil.NewGenericLifetime[managerState](managerOpenable | managerRemovable | managerGetable),
 		wltMap:   typeutil.NewConcurrentMap[string, *walLifetime](),
 		opener:   opener,
 		logger:   resource.Resource().Logger().With(log.FieldComponent("wal-manager")),
@@ -79,7 +79,7 @@ func (m *managerImpl) Open(ctx context.Context, channel types.PChannelInfo) (err
 // Remove removes the wal instance for the channel.
 func (m *managerImpl) Remove(ctx context.Context, channel types.PChannelInfo) (err error) {
 	// reject operation if manager is closing.
-	if !m.lifetime.AddIf(isRemoveable) {
+	if !m.lifetime.AddIf(isRemovable) {
 		return errWALManagerClosed
 	}
 	defer func() {
@@ -137,7 +137,7 @@ func (m *managerImpl) Metrics() (*types.StreamingNodeMetrics, error) {
 
 // Close these manager and release all managed WAL.
 func (m *managerImpl) Close() {
-	m.lifetime.SetState(managerRemoveable)
+	m.lifetime.SetState(managerRemovable)
 	m.lifetime.Wait()
 	// close all underlying walLifetime.
 	m.wltMap.Range(func(channel string, wlt *walLifetime) bool {
@@ -172,7 +172,7 @@ type managerState int32
 const (
 	managerStopped    managerState = 0
 	managerOpenable   managerState = 0x1
-	managerRemoveable managerState = 0x1 << 1
+	managerRemovable managerState = 0x1 << 1
 	managerGetable    managerState = 0x1 << 2
 )
 
@@ -180,8 +180,8 @@ func isGetable(state managerState) bool {
 	return state&managerGetable != 0
 }
 
-func isRemoveable(state managerState) bool {
-	return state&managerRemoveable != 0
+func isRemovable(state managerState) bool {
+	return state&managerRemovable != 0
 }
 
 func isOpenable(state managerState) bool {

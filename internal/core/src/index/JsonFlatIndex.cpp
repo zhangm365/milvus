@@ -26,13 +26,13 @@ namespace milvus::index {
 
 void
 JsonFlatIndex::build_index_for_json(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     int64_t offset = 0;
     auto tokens = parse_json_pointer(nested_path_);
     // Scratch buffer for nested JSON serialization - reused across iterations
     // to avoid repeated heap allocations
     simdjson::padded_string scratch_buffer(256);
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         for (int i = 0; i < n; i++) {
             if (schema_.nullable() && !data->is_valid(i)) {

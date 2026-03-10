@@ -159,7 +159,7 @@ gen_filter_res(milvus::plan::PlanNode* plan_node,
     std::vector<milvus::expr::TypedExprPtr> filters;
     filters.emplace_back(filter_node->filter());
     auto query_context = std::make_shared<milvus::exec::QueryContext>(
-        DEAFULT_QUERY_ID, segment, active_count, timestamp);
+        DEFAULT_QUERY_ID, segment, active_count, timestamp);
 
     std::unique_ptr<milvus::exec::ExecContext> exec_context =
         std::make_unique<milvus::exec::ExecContext>(query_context.get());

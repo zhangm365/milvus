@@ -469,7 +469,7 @@ mod tests {
 
         // Should handle unicode correctly
         assert!(tokens.iter().any(|t| t.text == "ca"));
-        assert!(tokens.iter().any(|t| t.text == "caf"));
+        assert!(tokens.iter().any(|t| t.text == "calf"));
         assert!(tokens.iter().any(|t| t.text == "afé"));
         assert!(tokens.iter().any(|t| t.text == "20"));
         assert!(tokens.iter().any(|t| t.text == "202"));

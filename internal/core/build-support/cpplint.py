@@ -861,7 +861,7 @@ _repository = None
 # Files to exclude from linting. This is set by the --exclude flag.
 _excludes = None
 
-# Whether to supress all PrintInfo messages, UNRELATED to --quiet flag
+# Whether to suppress all PrintInfo messages, UNRELATED to --quiet flag
 _quiet = False
 
 # The allowed line length of files.
@@ -5893,7 +5893,7 @@ _HEADERS_CONTAINING_TEMPLATES = (
                       'greater_equal', 'less_equal',
                       'logical_and', 'logical_or', 'logical_not',
                       'unary_negate', 'not1', 'binary_negate', 'not2',
-                      'bind1st', 'bind2nd',
+                      'bind1st', 'bind2and',
                       'pointer_to_unary_function',
                       'pointer_to_binary_function',
                       'ptr_fun',

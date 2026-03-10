@@ -83,7 +83,7 @@ func getCandidatesKey(segmentID int64, timestamp uint64) string {
 	return fmt.Sprintf("%d-%d", segmentID, timestamp)
 }
 
-func newCheckpointCandiates() *checkpointCandidates {
+func newCheckpointCandidates() *checkpointCandidates {
 	return &checkpointCandidates{
 		candidates: typeutil.NewConcurrentMap[string, *checkpointCandidate](), // segmentID-ts
 	}
@@ -165,7 +165,7 @@ func newWriteBufferBase(channel string, metacache metacache.MetaCache, syncMgr s
 		allocator:            option.idAllocator,
 		buffers:              make(map[int64]*segmentBuffer),
 		metaCache:            metacache,
-		syncCheckpoint:       newCheckpointCandiates(),
+		syncCheckpoint:       newCheckpointCandidates(),
 		syncPolicies:         option.syncPolicies,
 		flushTimestamp:       flushTs,
 		errHandler:           option.errorHandler,
@@ -479,7 +479,7 @@ func (id *InsertData) SetBM25Stats(bm25Stats map[int64]*storage.BM25Stats) {
 	id.bm25Stats = bm25Stats
 }
 
-func (id *InsertData) GetDatas() []*storage.InsertData {
+func (id *InsertData) GetData() []*storage.InsertData {
 	return id.data
 }
 

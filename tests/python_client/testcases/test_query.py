@@ -2133,7 +2133,7 @@ class TestQueryTextMatch(TestcaseBase):
         }
 
         origin_texts = [
-            "Die tägliche Dampfschifffahrt von Hamburg nach Oslo startet um sechs Uhr morgens.",
+            "Die tägliche Dampfschifffahrt von Hamburg nach Oslo started um sechs Uhr morgens.",
             "Unser altes Dampfschiff macht eine dreistündige Rundfahrt durch den Hafen.",
             "Der erfahrene Dampfschifffahrtskapitän kennt jede Route auf dem Fluss.",
             "Die internationale Dampfschifffahrtsgesellschaft erweitert ihre Flotte.",

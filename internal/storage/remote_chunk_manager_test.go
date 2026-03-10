@@ -1259,7 +1259,7 @@ func TestToMilvusIoError(t *testing.T) {
 
 	t.Run("io.ErrUnexpectedEOF", func(t *testing.T) {
 		err := ToMilvusIoError(fileName, io.ErrUnexpectedEOF)
-		assert.ErrorIs(t, err, merr.ErrIoUnexpectEOF)
+		assert.ErrorIs(t, err, merr.ErrIoUnexpectedEOF)
 	})
 
 	t.Run("syscall.ECONNRESET", func(t *testing.T) {

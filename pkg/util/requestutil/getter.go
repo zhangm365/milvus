@@ -166,7 +166,7 @@ type ConsistencyLevelGetter interface {
 	GetConsistencyLevel() commonpb.ConsistencyLevel
 }
 
-func GetConsistencyLevelFromRequst(req interface{}) (commonpb.ConsistencyLevel, bool) {
+func GetConsistencyLevelFromRequest(req interface{}) (commonpb.ConsistencyLevel, bool) {
 	getter, ok := req.(ConsistencyLevelGetter)
 	if !ok {
 		return 0, false

@@ -162,11 +162,11 @@ class ScalarIndexSort : public ScalarIndex<T> {
     }
 
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas) override;
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data) override;
 
  private:
     void
-    BuildWithArrayDataNested(const std::vector<FieldDataPtr>& datas);
+    BuildWithArrayDataNested(const std::vector<FieldDataPtr>& data);
 
     bool
     ShouldSkip(const T lower_value, const T upper_value, const OpType op);
@@ -187,7 +187,7 @@ class ScalarIndexSort : public ScalarIndex<T> {
                         const Config& config) override;
 
  public:
-    // zero-cost data acess api
+    // zero-cost data access api
     ALWAYS_INLINE const IndexStructure<T>&
     operator[](size_t idx) const {
         assert(idx < size_);

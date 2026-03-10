@@ -76,9 +76,9 @@ BitmapIndex<T>::Build(const Config& config) {
         return;
     }
 
-    auto field_datas =
+    auto field_data =
         storage::CacheRawDataAndFillMissing(file_manager_, config);
-    BuildWithFieldData(field_datas);
+    BuildWithFieldData(field_data);
 }
 
 template <typename T>
@@ -118,9 +118,9 @@ BitmapIndex<T>::Build(size_t n, const T* data, const bool* valid_data) {
 template <typename T>
 void
 BitmapIndex<T>::BuildPrimitiveField(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     int64_t offset = 0;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto slice_row_num = data->get_num_rows();
         for (size_t i = 0; i < slice_row_num; ++i) {
             if (data->is_valid(i)) {
@@ -136,9 +136,9 @@ BitmapIndex<T>::BuildPrimitiveField(
 template <typename T>
 void
 BitmapIndex<T>::BuildWithFieldData(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     int total_num_rows = 0;
-    for (auto& field_data : field_datas) {
+    for (auto& field_data : field_data) {
         total_num_rows += field_data->get_num_rows();
     }
     if (total_num_rows == 0) {
@@ -157,10 +157,10 @@ BitmapIndex<T>::BuildWithFieldData(
         case proto::schema::DataType::Double:
         case proto::schema::DataType::String:
         case proto::schema::DataType::VarChar:
-            BuildPrimitiveField(field_datas);
+            BuildPrimitiveField(field_data);
             break;
         case proto::schema::DataType::Array:
-            BuildArrayField(field_datas);
+            BuildArrayField(field_data);
             break;
         default:
             ThrowInfo(
@@ -174,14 +174,14 @@ BitmapIndex<T>::BuildWithFieldData(
 
 template <typename T>
 void
-BitmapIndex<T>::BuildArrayField(const std::vector<FieldDataPtr>& field_datas) {
+BitmapIndex<T>::BuildArrayField(const std::vector<FieldDataPtr>& field_data) {
     int64_t offset = 0;
     using GetType = std::conditional_t<std::is_same_v<T, int8_t> ||
                                            std::is_same_v<T, int16_t> ||
                                            std::is_same_v<T, int32_t>,
                                        int32_t,
                                        T>;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto slice_row_num = data->get_num_rows();
         for (size_t i = 0; i < slice_row_num; ++i) {
             if (data->is_valid(i)) {
@@ -479,7 +479,7 @@ BitmapIndex<T>::MMapIndexData(const std::string& file_name,
                 valid_bitset_.set(v);
             }
 
-            // convert roaring vaule to frozen mode
+            // convert roaring value to frozen mode
             int32_t frozen_size = value.getFrozenSizeInBytes();
             auto aligned_size =
                 ((frozen_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
@@ -585,12 +585,12 @@ BitmapIndex<T>::Load(milvus::tracer::TraceContext ctx, const Config& config) {
         GetValueFromConfig<milvus::proto::common::LoadPriority>(
             config, milvus::LOAD_PRIORITY)
             .value_or(milvus::proto::common::LoadPriority::HIGH);
-    auto index_datas =
+    auto index_data =
         file_manager_->LoadIndexToMemory(index_files.value(), load_priority);
     BinarySet binary_set;
-    AssembleIndexDatas(index_datas, binary_set);
-    // clear index_datas to free memory early
-    index_datas.clear();
+    AssembleIndexData(index_data, binary_set);
+    // clear index_data to free memory early
+    index_data.clear();
     LoadWithoutAssemble(binary_set, config);
 }
 

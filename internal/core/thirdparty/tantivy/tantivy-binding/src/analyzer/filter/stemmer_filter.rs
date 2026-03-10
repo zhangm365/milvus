@@ -53,7 +53,7 @@ impl StemmerLanguageParser for &str {
             "tamil" => Ok(Language::Tamil),
             "turkish" => Ok(Language::Turkish),
             other => Err(TantivyBindingError::InternalError(format!(
-                "unsupport language: {}",
+                "unsupported language: {}",
                 other
             ))),
         }

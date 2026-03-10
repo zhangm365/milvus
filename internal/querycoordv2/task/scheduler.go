@@ -828,10 +828,10 @@ func (scheduler *taskScheduler) schedule(node int64) {
 
 	// The scheduler doesn't limit the number of tasks,
 	// to commit tasks to executors as soon as possible, to reach higher merge possibility
-	commmittedNum := atomic.NewInt32(0)
+	committedNum := atomic.NewInt32(0)
 	funcutil.ProcessFuncParallel(len(toProcess), hardware.GetCPUNum(), func(idx int) error {
 		if scheduler.process(toProcess[idx]) {
-			commmittedNum.Inc()
+			committedNum.Inc()
 		}
 		return nil
 	}, "process")
@@ -845,7 +845,7 @@ func (scheduler *taskScheduler) schedule(node int64) {
 
 	log.Info("processed tasks",
 		zap.Int("toProcessNum", len(toProcess)),
-		zap.Int32("committedNum", commmittedNum.Load()),
+		zap.Int32("committedNum", committedNum.Load()),
 		zap.Int("toRemoveNum", len(toRemove)),
 		zap.Duration("promoteDur", promoteDur),
 		zap.Duration("preprocessDUr", preprocessDur),

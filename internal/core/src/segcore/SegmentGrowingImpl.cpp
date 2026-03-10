@@ -490,7 +490,7 @@ SegmentGrowingImpl::Insert(int64_t reserved_offset,
     AssertInfo(insert_record_proto->num_rows() == num_rows,
                "Entities_raw count not equal to insert size");
     // protect schema being changed during insert
-    // schema change cannot happends during insertion,
+    // schema change cannot happens during insertion,
     // otherwise, there might be some data not following new schema
     std::shared_lock lck(sch_mutex_);
 
@@ -721,7 +721,7 @@ SegmentGrowingImpl::load_field_data_internal(const LoadFieldDataInfo& infos) {
                  this->get_segment_id(),
                  field_id.get(),
                  num_rows);
-        auto load_future = pool.Submit(LoadFieldDatasFromRemote,
+        auto load_future = pool.Submit(LoadFieldDataFromRemote,
                                        insert_files,
                                        channel,
                                        infos.load_priority);
@@ -786,7 +786,7 @@ SegmentGrowingImpl::load_field_data_common(
     // update average row data size
     if (IsVariableDataType(field_meta.get_data_type())) {
         SegmentInternalInterface::set_field_avg_size(
-            field_id, num_rows, storage::GetByteSizeOfFieldDatas(field_data));
+            field_id, num_rows, storage::GetByteSizeOfFieldData(field_data));
     }
 
     // build text match index
@@ -817,7 +817,7 @@ SegmentGrowingImpl::load_field_data_common(
     }
 
     // update the mem size
-    stats_.mem_size += storage::GetByteSizeOfFieldDatas(field_data);
+    stats_.mem_size += storage::GetByteSizeOfFieldData(field_data);
 
     LOG_INFO("segment {} loads field {} done",
              this->get_segment_id(),

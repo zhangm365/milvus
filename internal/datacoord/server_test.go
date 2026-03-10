@@ -810,8 +810,8 @@ func TestServer_ShowConfigurations(t *testing.T) {
 	resp, err = svr.ShowConfigurations(svr.ctx, req)
 	assert.NoError(t, err)
 	assert.Equal(t, commonpb.ErrorCode_Success, resp.GetStatus().GetErrorCode())
-	assert.Equal(t, 1, len(resp.Configuations))
-	assert.Equal(t, "datacoord.port", resp.Configuations[0].Key)
+	assert.Equal(t, 1, len(resp.Configurations))
+	assert.Equal(t, "datacoord.port", resp.Configurations[0].Key)
 }
 
 func TestServer_GetMetrics(t *testing.T) {

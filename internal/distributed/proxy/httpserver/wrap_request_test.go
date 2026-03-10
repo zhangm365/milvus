@@ -446,12 +446,12 @@ func TestVectorsArray_AsPbVectorArray(t *testing.T) {
 	t.Run("ids_ok", func(t *testing.T) {
 		ids := []int64{1, 2, 3}
 		cn := "collection"
-		paritions := []string{"p1", "p2"}
+		partitions := []string{"p1", "p2"}
 		field := "field"
 		v := VectorsArray{
 			IDs: &VectorIDs{
 				CollectionName: cn,
-				PartitionNames: paritions,
+				PartitionNames: partitions,
 				FieldName:      field,
 				IDArray:        ids,
 			},
@@ -460,7 +460,7 @@ func TestVectorsArray_AsPbVectorArray(t *testing.T) {
 		ia, ok := ret.Array.(*milvuspb.VectorsArray_IdArray)
 		assert.True(t, ok)
 		assert.Equal(t, cn, ia.IdArray.CollectionName)
-		assert.Equal(t, paritions, ia.IdArray.PartitionNames)
+		assert.Equal(t, partitions, ia.IdArray.PartitionNames)
 		assert.Equal(t, field, ia.IdArray.FieldName)
 		ints, ok := ia.IdArray.IdArray.IdField.(*schemapb.IDs_IntId)
 		assert.True(t, ok)

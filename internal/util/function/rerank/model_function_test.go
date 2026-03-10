@@ -282,9 +282,9 @@ func (s *RerankModelSuite) TestCallVllm() {
 			{Key: providerParamName, Value: "vllm"},
 			{Key: models.EndpointParamKey, Value: ts.URL},
 		}
-		provder, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		_, err = provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		_, err = provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.ErrorContains(err, "Call service failed")
 	}
 	{
@@ -298,9 +298,9 @@ func (s *RerankModelSuite) TestCallVllm() {
 			{Key: providerParamName, Value: "vllm"},
 			{Key: models.EndpointParamKey, Value: ts.URL},
 		}
-		provder, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		_, err = provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		_, err = provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.ErrorContains(err, "Call service failed")
 	}
 	{
@@ -314,9 +314,9 @@ func (s *RerankModelSuite) TestCallVllm() {
 			{Key: providerParamName, Value: "vllm"},
 			{Key: models.EndpointParamKey, Value: ts.URL},
 		}
-		provder, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		scores, err := provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		scores, err := provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.NoError(err)
 		s.Equal([]float32{0.0, 0.1, 0.2}, scores)
 	}
@@ -334,9 +334,9 @@ func (s *RerankModelSuite) TestCallTEI() {
 			{Key: providerParamName, Value: "tei"},
 			{Key: models.EndpointParamKey, Value: ts.URL},
 		}
-		provder, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		scores, err := provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		scores, err := provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.NoError(err)
 		s.Equal([]float32{0.0, 0.2, 0.1}, scores)
 	}
@@ -351,9 +351,9 @@ func (s *RerankModelSuite) TestCallTEI() {
 			{Key: providerParamName, Value: "tei"},
 			{Key: models.EndpointParamKey, Value: ts.URL},
 		}
-		provder, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newProvider(params, &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		_, err = provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		_, err = provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.ErrorContains(err, "Call service failed")
 	}
 }
@@ -370,9 +370,9 @@ func (s *RerankModelSuite) TestCallSiliconFlow() {
 			{Key: models.ModelNameParamKey, Value: "siliconflow-test"},
 			{Key: models.CredentialParamKey, Value: "mock"},
 		}
-		provder, err := newSiliconflowProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newSiliconflowProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		scores, err := provder.rerank(context.Background(), "mytest", []string{"t1", "t2"})
+		scores, err := provider.rerank(context.Background(), "mytest", []string{"t1", "t2"})
 		s.NoError(err)
 		s.Equal([]float32{0.1, 0.2}, scores)
 	}
@@ -390,9 +390,9 @@ func (s *RerankModelSuite) TestCallCohere() {
 			{Key: models.ModelNameParamKey, Value: "cohere-test"},
 			{Key: models.CredentialParamKey, Value: "mock"},
 		}
-		provder, err := newCohereProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newCohereProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		scores, err := provder.rerank(context.Background(), "mytest", []string{"t1", "t2"})
+		scores, err := provider.rerank(context.Background(), "mytest", []string{"t1", "t2"})
 		s.NoError(err)
 		s.Equal([]float32{0.1, 0.2}, scores)
 	}
@@ -414,9 +414,9 @@ func (s *RerankModelSuite) TestCallVoyageAI() {
 			{Key: models.ModelNameParamKey, Value: "voyageai-test"},
 			{Key: models.CredentialParamKey, Value: "mock"},
 		}
-		provder, err := newVoyageaiProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newVoyageaiProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		scores, err := provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		scores, err := provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.NoError(err)
 		s.Equal([]float32{0.0, 0.1, 0.2}, scores)
 	}
@@ -436,9 +436,9 @@ func (s *RerankModelSuite) TestCallAli() {
 			{Key: models.ModelNameParamKey, Value: "ali-test"},
 			{Key: models.CredentialParamKey, Value: "mock"},
 		}
-		provder, err := newAliProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
+		provider, err := newAliProvider(params, map[string]string{models.URLParamKey: ts.URL}, credentials.NewCredentials(map[string]string{"mock.apikey": "mock"}), &models.ModelExtraInfo{ClusterID: "test-cluster", DBName: "test-db"})
 		s.NoError(err)
-		scores, err := provder.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
+		scores, err := provider.rerank(context.Background(), "mytest", []string{"t1", "t2", "t3"})
 		s.NoError(err)
 		s.Equal([]float32{0.0, 0.1, 0.2}, scores)
 	}

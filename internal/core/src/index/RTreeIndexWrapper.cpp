@@ -104,7 +104,7 @@ RTreeIndexWrapper::add_geometry(const uint8_t* wkb_data,
 
 void
 RTreeIndexWrapper::bulk_load_from_field_data(
-    const std::vector<std::shared_ptr<::milvus::FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<::milvus::FieldDataBase>>& field_data,
     bool nullable) {
     // Acquire write lock to protect rtree_ creation and modification
     std::unique_lock<std::shared_mutex> guard(rtree_mutex_);
@@ -128,7 +128,7 @@ RTreeIndexWrapper::bulk_load_from_field_data(
     std::vector<Value> local_values;
     local_values.reserve(1024);
     int64_t absolute_offset = 0;
-    for (const auto& fd : field_datas) {
+    for (const auto& fd : field_data) {
         const auto n = fd->get_num_rows();
         for (int64_t i = 0; i < n; ++i, ++absolute_offset) {
             const bool is_nullable_effective = nullable || fd->IsNullable();

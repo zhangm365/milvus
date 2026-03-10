@@ -242,13 +242,13 @@ func TestConcurrentStasManager(t *testing.T) {
 	assert.NotEmpty(t, m.sealOperators)
 }
 
-func createSegmentStats(row uint64, binarySize uint64, maxBinarSize uint64) *SegmentStats {
+func createSegmentStats(row uint64, binarySize uint64, maxBinarySize uint64) *SegmentStats {
 	return &SegmentStats{
 		Modified: ModifiedMetrics{
 			Rows:       row,
 			BinarySize: binarySize,
 		},
-		MaxBinarySize:    maxBinarSize,
+		MaxBinarySize:    maxBinarySize,
 		CreateTime:       time.Now(),
 		LastModifiedTime: time.Now(),
 		BinLogCounter:    0,

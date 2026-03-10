@@ -625,7 +625,7 @@ func (r *rowParser) parseEntity(fieldID int64, obj any) (any, error) {
 
 	default:
 		return nil, merr.WrapErrImportFailed(
-			fmt.Sprintf("parse json failed, unsupport data type: %s",
+			fmt.Sprintf("parse json failed, unsupported data type: %s",
 				field.GetDataType().String()))
 	}
 }

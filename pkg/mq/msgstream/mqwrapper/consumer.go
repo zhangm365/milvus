@@ -59,6 +59,6 @@ type Consumer interface {
 	// GetLatestMsgID return the latest message ID
 	GetLatestMsgID() (common.MessageID, error)
 
-	// check created topic whether vaild or not
+	// check created topic whether valid or not
 	CheckTopicValid(channel string) error
 }

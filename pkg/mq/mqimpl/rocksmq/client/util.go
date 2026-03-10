@@ -36,7 +36,7 @@ func UnmarshalHeader(headerbyte []byte) (*commonpb.MsgHeader, error) {
 		return &header, err
 	}
 	if header.Base == nil {
-		return nil, errors.New("failed to unmarshal message, header is uncomplete")
+		return nil, errors.New("failed to unmarshal message, header is incomplete")
 	}
 	return &header, nil
 }

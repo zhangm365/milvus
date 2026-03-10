@@ -37,7 +37,7 @@ import (
 
 type PipelineTestSuite struct {
 	suite.Suite
-	// datas
+	// data
 	collectionName   string
 	collectionID     int64
 	partitionIDs     []int64
@@ -141,7 +141,7 @@ func (suite *PipelineTestSuite) TestBasic() {
 	}).Return()
 	suite.delegator.EXPECT().GetLatestRequiredMVCCTimeTick().Return(0).Maybe()
 
-	// build pipleine
+	// build pipeline
 	manager := &segments.Manager{
 		Collection: suite.collectionManager,
 		Segment:    suite.segmentManager,

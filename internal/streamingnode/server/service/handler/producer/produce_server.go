@@ -28,7 +28,7 @@ import (
 func CreateProduceServer(walManager walmanager.Manager, streamServer streamingpb.StreamingNodeHandlerService_ProduceServer) (*ProduceServer, error) {
 	createReq, err := contextutil.GetCreateProducer(streamServer.Context())
 	if err != nil {
-		return nil, status.NewInvaildArgument("create producer request is required")
+		return nil, status.NewInvalidArgument("create producer request is required")
 	}
 	l, err := walManager.GetAvailableWAL(types.NewPChannelInfoFromProto(createReq.GetPchannel()))
 	if err != nil {
@@ -205,7 +205,7 @@ func (p *ProduceServer) handleProduce(req *streamingpb.ProduceMessageRequest) {
 func (p *ProduceServer) validateMessage(msg message.MutableMessage) error {
 	// validate the msg.
 	if !msg.MessageType().Valid() {
-		return status.NewInvaildArgument("unsupported message type")
+		return status.NewInvalidArgument("unsupported message type")
 	}
 	return nil
 }

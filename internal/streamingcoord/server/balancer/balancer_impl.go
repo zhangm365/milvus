@@ -243,7 +243,7 @@ func (b *balancerImpl) sendRequestAndWaitFinish(ctx context.Context, newReq *req
 func (b *balancerImpl) Close() {
 	b.lifetime.SetState(typeutil.LifetimeStateStopped)
 	b.provider.Close()
-	// cancel all watch opeartion by context.
+	// cancel all watch operation by context.
 	b.cancel(ErrBalancerClosed)
 	b.lifetime.Wait()
 
@@ -600,7 +600,7 @@ func (b *balancerImpl) applyBalanceResultToStreamingNode(ctx context.Context, mo
 		})
 	}
 	// TODO: Current implementation recovery will wait for all node reply,
-	// huge unavaiable time may be caused by this,
+	// huge unavailable time may be caused by this,
 	// should be fixed in future.
 	return g.Wait()
 }

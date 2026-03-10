@@ -114,7 +114,7 @@ func (c *Client) handleSearchResult(schema *entity.Schema, outputFields []string
 
 func (c *Client) parseSearchResult(sch *entity.Schema, outputFields []string, fieldDataList []*schemapb.FieldData, _, from, to int) ([]column.Column, error) {
 	var wildcard bool
-	// serveral cases shall be handled here
+	// several cases shall be handled here
 	// 1. output fields contains "*" wildcard => the schema shall be checked
 	// 2. dynamic schema $meta column, with field name not exist in schema
 	// 3. explicitly specified json column name

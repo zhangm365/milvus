@@ -171,7 +171,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: milvusNamespace,
 			Subsystem: typeutil.DataCoordRole,
-			Name:      "watched_dml_chanel_num",
+			Name:      "watched_dml_channel_num",
 			Help:      "the num of dml channel watched by datanode",
 		}, []string{
 			nodeIDLabelName,

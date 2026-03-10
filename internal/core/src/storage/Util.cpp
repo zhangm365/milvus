@@ -1058,9 +1058,9 @@ PutIndexData(ChunkManager* remote_chunk_manager,
 }
 
 int64_t
-GetTotalNumRowsForFieldDatas(const std::vector<FieldDataPtr>& field_datas) {
+GetTotalNumRowsForFieldData(const std::vector<FieldDataPtr>& field_data) {
     int64_t count = 0;
-    for (auto& field_data : field_datas) {
+    for (auto& field_data : field_data) {
         count += field_data->get_num_rows();
     }
 
@@ -1258,9 +1258,9 @@ CreateFieldData(const DataType& type,
 }
 
 int64_t
-GetByteSizeOfFieldDatas(const std::vector<FieldDataPtr>& field_datas) {
+GetByteSizeOfFieldData(const std::vector<FieldDataPtr>& field_data) {
     int64_t result = 0;
-    for (auto& data : field_datas) {
+    for (auto& data : field_data) {
         result += data->Size();
     }
 
@@ -1316,12 +1316,12 @@ MergeFieldData(std::vector<FieldDataPtr>& data_array) {
 
 std::vector<FieldDataPtr>
 FetchFieldData(ChunkManager* cm, const std::vector<std::string>& remote_files) {
-    std::vector<FieldDataPtr> field_datas;
+    std::vector<FieldDataPtr> field_data;
     std::vector<std::string> batch_files;
     auto FetchRawData = [&]() {
         auto fds = GetObjectData(cm, batch_files);
         ProcessFuturesInOrder(fds, [&](std::unique_ptr<DataCodec> codec) {
-            field_datas.emplace_back(codec->GetFieldData());
+            field_data.emplace_back(codec->GetFieldData());
         });
     };
 
@@ -1338,11 +1338,11 @@ FetchFieldData(ChunkManager* cm, const std::vector<std::string>& remote_files) {
     if (batch_files.size() > 0) {
         FetchRawData();
     }
-    return field_datas;
+    return field_data;
 }
 
 std::vector<FieldDataPtr>
-GetFieldDatasFromStorageV2(std::vector<std::vector<std::string>>& remote_files,
+GetFieldDataFromStorageV2(std::vector<std::vector<std::string>>& remote_files,
                            int64_t field_id,
                            DataType data_type,
                            DataType element_type,
@@ -1498,7 +1498,7 @@ GetFieldDatasFromStorageV2(std::vector<std::vector<std::string>>& remote_files,
 }
 
 std::vector<FieldDataPtr>
-GetFieldDatasFromManifest(
+GetFieldDataFromManifest(
     const std::string& manifest_path,
     const std::shared_ptr<milvus_storage::api::Properties>& loon_ffi_properties,
     const FieldDataMeta& field_meta,
@@ -1572,7 +1572,7 @@ GetFieldDatasFromManifest(
     auto record_batch_reader = reader_result.ValueOrDie();
 
     // Read all record batches and convert to FieldDataPtr
-    std::vector<FieldDataPtr> field_datas;
+    std::vector<FieldDataPtr> field_data;
     while (true) {
         std::shared_ptr<arrow::RecordBatch> batch;
         auto status = record_batch_reader->ReadNext(&batch);
@@ -1596,22 +1596,22 @@ GetFieldDatasFromManifest(
                                           dim,
                                           num_rows);
         field_data->FillFieldData(chunked_array);
-        field_datas.push_back(field_data);
+        field_data.push_back(field_data);
     }
 
-    return field_datas;
+    return field_data;
 }
 
 std::vector<FieldDataPtr>
 CacheRawDataAndFillMissing(const MemFileManagerImplPtr& file_manager,
                            const Config& config) {
     // download field data
-    auto field_datas = file_manager->CacheRawDataToMemory(config);
+    auto field_data = file_manager->CacheRawDataToMemory(config);
 
     int64_t lack_binlog_rows =
         index::GetValueFromConfig<int64_t>(config, INDEX_NUM_ROWS_KEY)
             .value_or(0);
-    for (auto& field_data : field_datas) {
+    for (auto& field_data : field_data) {
         lack_binlog_rows -= field_data->get_num_rows();
     }
 
@@ -1632,10 +1632,10 @@ CacheRawDataAndFillMissing(const MemFileManagerImplPtr& file_manager,
             1,
             lack_binlog_rows);
         field_data->FillFieldData(default_value, lack_binlog_rows);
-        field_datas.insert(field_datas.begin(), field_data);
+        field_data.insert(field_data.begin(), field_data);
     }
 
-    return field_datas;
+    return field_data;
 }
 
 int64_t

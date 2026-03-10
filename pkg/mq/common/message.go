@@ -71,7 +71,7 @@ const (
 	// SubscriptionPositionEarliest is earliest position which means the start consuming position will be the first message
 	SubscriptionPositionEarliest
 
-	// SubscriptionPositionUnkown indicates we don't care about the consumer location, since we are doing another seek or only some meta api over that
+	// SubscriptionPositionUnknown indicates we don't care about the consumer location, since we are doing another seek or only some meta api over that
 	SubscriptionPositionUnknown
 )
 
@@ -106,7 +106,7 @@ func GetMsgTypeFromRaw(payload []byte, properties map[string]string) (commonpb.M
 			return msgType, fmt.Errorf("failed to unmarshal message header, err %s", err.Error())
 		}
 		if header.Base == nil {
-			return msgType, errors.New("failed to unmarshal message, header is uncomplete")
+			return msgType, errors.New("failed to unmarshal message, header is incomplete")
 		}
 		msgType = header.Base.MsgType
 	}

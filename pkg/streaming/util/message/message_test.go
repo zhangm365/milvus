@@ -97,7 +97,7 @@ func TestBroadcast(t *testing.T) {
 	MustAsBroadcastCreateCollectionMessageV1(msg)
 }
 
-func TestCiper(t *testing.T) {
+func TestCipher(t *testing.T) {
 	// Not broadcast.
 	builder := NewInsertMessageBuilderV1().
 		WithHeader(&InsertMessageHeader{}).

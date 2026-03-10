@@ -260,7 +260,7 @@ const (
 	IndexNonEncoding           = "index.nonEncoding"
 	EnableDynamicSchemaKey     = `dynamicfield.enabled`
 
-	// timezone releated
+	// timezone related
 	TimezoneKey             = "timezone"
 	AllowInsertAutoIDKey    = "allow_insert_auto_id"
 	DisableFuncRuntimeCheck = "disable_func_runtime_check"
@@ -483,7 +483,7 @@ func IsPartitionKeyIsolationPropEnabled(props map[string]string) (bool, error) {
 }
 
 const (
-	// LatestVerision is the magic number for watch latest revision
+	// LatestVersion is the magic number for watch latest revision
 	LatestRevision = int64(-1)
 )
 

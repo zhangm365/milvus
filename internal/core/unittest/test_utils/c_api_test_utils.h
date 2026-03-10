@@ -82,12 +82,12 @@ namespace {
 std::string
 generate_max_float_query_data(int all_nq, int max_float_nq) {
     assert(max_float_nq <= all_nq);
-    namespace ser = milvus::proto::common;
+    namespace set = milvus::proto::common;
     int dim = DIM;
-    ser::PlaceholderGroup raw_group;
+    set::PlaceholderGroup raw_group;
     auto value = raw_group.add_placeholders();
     value->set_tag("$0");
-    value->set_type(ser::PlaceholderType::FloatVector);
+    value->set_type(set::PlaceholderType::FloatVector);
     for (int i = 0; i < all_nq; ++i) {
         std::vector<float> vec;
         if (i < max_float_nq) {
@@ -108,13 +108,13 @@ generate_max_float_query_data(int all_nq, int max_float_nq) {
 template <class TraitType = milvus::FloatVector>
 std::string
 generate_query_data(int nq) {
-    namespace ser = milvus::proto::common;
+    namespace set = milvus::proto::common;
     GET_ELEM_TYPE_FOR_VECTOR_TRAIT
 
     std::default_random_engine e(67);
     int dim = DIM;
     std::uniform_int_distribution<int8_t> dis(-128, 127);
-    ser::PlaceholderGroup raw_group;
+    set::PlaceholderGroup raw_group;
     auto value = raw_group.add_placeholders();
     value->set_tag("$0");
     value->set_type(TraitType::placeholder_type);

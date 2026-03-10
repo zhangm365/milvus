@@ -302,8 +302,8 @@ func TestRbacSelect(t *testing.T) {
 
 		expectedOutLength int
 	}{
-		{true, "no user entitiy, no role info", nil, false, 4},
-		{true, "no user entitiy, with role info", nil, true, 4},
+		{true, "no user entity, no role info", nil, false, 4},
+		{true, "no user entity, with role info", nil, true, 4},
 		{false, "not exist user", &milvuspb.UserEntity{Name: "not_exist"}, false, 0},
 		{true, "user1, no role info", &milvuspb.UserEntity{Name: "user1"}, false, 1},
 		{true, "user1, with role info", &milvuspb.UserEntity{Name: "user1"}, true, 1},
@@ -340,8 +340,8 @@ func TestRbacSelect(t *testing.T) {
 
 		expectedOutLength int
 	}{
-		{true, "no role entitiy, no user info", nil, false, 3},
-		{true, "no role entitiy, with user info", nil, true, 3},
+		{true, "no role entity, no user info", nil, false, 3},
+		{true, "no role entity, with user info", nil, true, 3},
 		{false, "not exist role", &milvuspb.RoleEntity{Name: "not_exist"}, false, 0},
 		{true, "role1, no user info", &milvuspb.RoleEntity{Name: "role1"}, false, 1},
 		{true, "role1, with user info", &milvuspb.RoleEntity{Name: "role1"}, true, 1},
@@ -2238,7 +2238,7 @@ func TestAlterDatabase(t *testing.T) {
 	})
 }
 
-func TestMetaTable_EmtpyDatabaseName(t *testing.T) {
+func TestMetaTable_EmptyDatabaseName(t *testing.T) {
 	t.Run("getDatabaseByNameInternal with empty db", func(t *testing.T) {
 		mt := &MetaTable{
 			dbName2Meta: map[string]*model.Database{
@@ -2497,11 +2497,11 @@ func TestMetaTable_PrivilegeGroup(t *testing.T) {
 	err = mt.CreatePrivilegeGroup(context.TODO(), "pg1")
 	assert.NoError(t, err)
 
-	err = mt.CheckIfPrivilegeGroupDropable(context.TODO(), &milvuspb.DropPrivilegeGroupRequest{
+	err = mt.CheckIfPrivilegeGroupDroppable(context.TODO(), &milvuspb.DropPrivilegeGroupRequest{
 		GroupName: "",
 	})
 	assert.Error(t, err)
-	err = mt.CheckIfPrivilegeGroupDropable(context.TODO(), &milvuspb.DropPrivilegeGroupRequest{
+	err = mt.CheckIfPrivilegeGroupDroppable(context.TODO(), &milvuspb.DropPrivilegeGroupRequest{
 		GroupName: "pg1",
 	})
 	assert.NoError(t, err)

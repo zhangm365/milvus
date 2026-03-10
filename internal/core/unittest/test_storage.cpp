@@ -215,9 +215,9 @@ TEST_F(StorageUtilTest, CreateArrowScalarFromDefaultValue) {
         ASSERT_TRUE(scalar->Equals(*arrow::MakeScalar("bar")));
     }
     {
-        FieldMeta unsupport_field(
+        FieldMeta unsupported_field(
             FieldName("f"), FieldId(100), DataType::JSON, false, std::nullopt);
-        ASSERT_ANY_THROW(CreateArrowScalarFromDefaultValue(unsupport_field));
+        ASSERT_ANY_THROW(CreateArrowScalarFromDefaultValue(unsupported_field));
     }
 }
 

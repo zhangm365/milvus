@@ -1775,7 +1775,7 @@ func (data *BFloat16VectorFieldData) GetMemorySize() int {
 }
 
 func (data *SparseFloatVectorFieldData) GetMemorySize() int {
-	// TODO(SPARSE): should this be the memory size of serialzied size?
+	// TODO(SPARSE): should this be the memory size of serialized size?
 	// SparseFloatArray + ValidData + Nullable(1) + L2PMapping
 	return proto.Size(&data.SparseFloatArray) + binary.Size(data.ValidData) + 1 + data.L2PMapping.GetMemorySize()
 }

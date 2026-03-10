@@ -39,7 +39,7 @@ TEST(VectorArray, TestSchema) {
     int64_t long_default_value = 20;
     float float_default_value = 20;
     double double_default_value = 20;
-    std::string varchar_dafualt_vlaue = "20";
+    std::string varchar_default_value = "20";
 
     {
         auto field = proto.add_fields();

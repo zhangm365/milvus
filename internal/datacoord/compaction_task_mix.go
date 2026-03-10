@@ -217,7 +217,7 @@ func newMixCompactionTask(t *datapb.CompactionTask,
 func (t *mixCompactionTask) processMetaSaved() bool {
 	log := log.With(zap.Int64("triggerID", t.GetTaskProto().GetTriggerID()), zap.Int64("PlanID", t.GetTaskProto().GetPlanID()), zap.Int64("collectionID", t.GetTaskProto().GetCollectionID()))
 	if err := t.updateAndSaveTaskMeta(setState(datapb.CompactionTaskState_completed)); err != nil {
-		log.Warn("mixCompactionTask failed to proccessMetaSaved", zap.Error(err))
+		log.Warn("mixCompactionTask failed to processMetaSaved", zap.Error(err))
 		return false
 	}
 

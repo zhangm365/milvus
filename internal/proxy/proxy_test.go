@@ -544,12 +544,12 @@ func constructTestCreateIndexRequest(dbName, collectionName string, dataType sch
 	return req
 }
 
-func constructTestVectorsPlaceholderGroup(nq int, dim int, isEmbedingList bool) *commonpb.PlaceholderGroup {
+func constructTestVectorsPlaceholderGroup(nq int, dim int, isEmbeddingList bool) *commonpb.PlaceholderGroup {
 	values := make([][]byte, 0, nq)
 	for i := 0; i < nq; i++ {
 		bs := make([]byte, 0, dim*4)
 		count := dim
-		if isEmbedingList {
+		if isEmbeddingList {
 			count = (rand.Intn(5) + 2) * dim
 		}
 
@@ -566,7 +566,7 @@ func constructTestVectorsPlaceholderGroup(nq int, dim int, isEmbedingList bool) 
 	}
 
 	vectorType := commonpb.PlaceholderType_FloatVector
-	if isEmbedingList {
+	if isEmbeddingList {
 		vectorType = commonpb.PlaceholderType_EmbListFloatVector
 	}
 

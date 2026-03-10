@@ -1114,7 +1114,7 @@ func (mt *MetaTable) TruncateCollection(ctx context.Context, result message.Broa
 
 	oldColl := coll.Clone()
 
-	// remmove the truncating key from the properties and update the last truncate time tick of the shard infos
+	// remove the truncating key from the properties and update the last truncate time tick of the shard infos
 	newColl := coll.Clone()
 	newProperties := common.CloneKeyValuePairs(coll.Properties).ToMap()
 	delete(newProperties, common.CollectionOnTruncatingKey)
@@ -2092,7 +2092,7 @@ func (mt *MetaTable) CreatePrivilegeGroup(ctx context.Context, groupName string)
 	return mt.catalog.SavePrivilegeGroup(ctx, data)
 }
 
-func (mt *MetaTable) CheckIfPrivilegeGroupDropable(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest) error {
+func (mt *MetaTable) CheckIfPrivilegeGroupDroppable(ctx context.Context, req *milvuspb.DropPrivilegeGroupRequest) error {
 	if funcutil.IsEmptyString(req.GetGroupName()) {
 		return errEmptyPrivilegeGroupName
 	}

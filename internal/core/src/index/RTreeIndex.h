@@ -189,7 +189,7 @@ class RTreeIndex : public ScalarIndex<T> {
     Query(const DatasetPtr& dataset) override;
 
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas) override;
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data) override;
 
  protected:
     void

@@ -406,11 +406,11 @@ func (t *sortCompactionTask) Compact() (*datapb.CompactionPlanResult, error) {
 		}, nil
 	}
 	sortSegmentCost := time.Since(stepStart)
-	targetSegemntID := res.GetSegments()[0].GetSegmentID()
+	targetSegmentID := res.GetSegments()[0].GetSegmentID()
 	insertLogs := res.GetSegments()[0].GetInsertLogs()
 	if len(insertLogs) == 0 || res.GetSegments()[0].GetNumOfRows() == 0 {
 		log.Info("compact done, but target segment is zero num rows",
-			zap.Int64("targetSegmentID", targetSegemntID),
+			zap.Int64("targetSegmentID", targetSegmentID),
 			zap.Duration("sortSegmentCost", sortSegmentCost),
 			zap.Duration("compact cost", time.Since(compactStart)))
 		return res, nil
@@ -418,10 +418,10 @@ func (t *sortCompactionTask) Compact() (*datapb.CompactionPlanResult, error) {
 	stepStart = time.Now()
 	for _, resultSegment := range res.GetSegments() {
 		textStatsLogs, err := t.createTextIndex(ctx,
-			t.collectionID, t.partitionID, targetSegemntID, t.GetPlanID(),
+			t.collectionID, t.partitionID, targetSegmentID, t.GetPlanID(),
 			resultSegment)
 		if err != nil {
-			log.Warn("failed to create text indexes", zap.Int64("targetSegmentID", targetSegemntID),
+			log.Warn("failed to create text indexes", zap.Int64("targetSegmentID", targetSegmentID),
 				zap.Error(err))
 			return &datapb.CompactionPlanResult{
 				PlanID: t.GetPlanID(),
@@ -433,7 +433,7 @@ func (t *sortCompactionTask) Compact() (*datapb.CompactionPlanResult, error) {
 	createTextIndexCost := time.Since(stepStart)
 
 	totalCost := time.Since(compactStart)
-	log.Info("compact done", zap.Int64("targetSegmentID", targetSegemntID),
+	log.Info("compact done", zap.Int64("targetSegmentID", targetSegmentID),
 		zap.Duration("sortSegmentCost", sortSegmentCost),
 		zap.Duration("createTextIndexCost", createTextIndexCost),
 		zap.Duration("compact cost", totalCost))

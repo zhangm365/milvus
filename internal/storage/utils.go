@@ -108,14 +108,14 @@ func checkRowIDField(data *InsertData) bool {
 	return ok
 }
 
-func checkNumRows(fieldDatas ...FieldData) bool {
-	if len(fieldDatas) <= 0 {
+func checkNumRows(fieldData ...FieldData) bool {
+	if len(fieldData) <= 0 {
 		return true
 	}
 
-	numRows := fieldDatas[0].RowNum()
-	for i := 1; i < len(fieldDatas); i++ {
-		if numRows != fieldDatas[i].RowNum() {
+	numRows := fieldData[0].RowNum()
+	for i := 1; i < len(fieldData); i++ {
+		if numRows != fieldData[i].RowNum() {
 			return false
 		}
 	}
@@ -125,7 +125,7 @@ func checkNumRows(fieldDatas ...FieldData) bool {
 
 type fieldDataList struct {
 	IDs   []FieldID
-	datas []FieldData
+	data []FieldData
 }
 
 func (ls fieldDataList) Len() int {
@@ -138,7 +138,7 @@ func (ls fieldDataList) Less(i, j int) bool {
 
 func (ls fieldDataList) Swap(i, j int) {
 	ls.IDs[i], ls.IDs[j] = ls.IDs[j], ls.IDs[i]
-	ls.datas[i], ls.datas[j] = ls.datas[j], ls.datas[i]
+	ls.data[i], ls.data[j] = ls.data[j], ls.data[i]
 }
 
 func sortFieldDataList(ls fieldDataList) {
@@ -177,12 +177,12 @@ func TransferColumnBasedInsertDataToRowBased(data *InsertData) (
 		}
 
 		ls.IDs = append(ls.IDs, fieldID)
-		ls.datas = append(ls.datas, data.Data[fieldID])
+		ls.data = append(ls.data, data.Data[fieldID])
 	}
 
-	// checkNumRows(tss, rowIDs, ls.datas...) // don't work
+	// checkNumRows(tss, rowIDs, ls.data...) // don't work
 	all := []FieldData{tss, rowIDs}
-	all = append(all, ls.datas...)
+	all = append(all, ls.data...)
 	if !checkNumRows(all...) {
 		return nil, nil, nil,
 			errors.New("columns of insert data have different length")
@@ -197,7 +197,7 @@ func TransferColumnBasedInsertDataToRowBased(data *InsertData) (
 		var buffer bytes.Buffer
 
 		for j := 0; j < ls.Len(); j++ {
-			d := ls.datas[j].GetRow(i)
+			d := ls.data[j].GetRow(i)
 			err := binary.Write(&buffer, common.Endian, d)
 			if err != nil {
 				return nil, nil, nil,
@@ -534,7 +534,7 @@ func RowBasedInsertMsgToInsertData(msg *msgstream.InsertMsg, collSchema *schemap
 // This function checks whether all fields are provided in the collSchema.Fields and not function output.
 // If any field is missing in the msg, an error will be returned.
 //
-// This funcion also checks the length of each column. All columns shall have the same length.
+// This function also checks the length of each column. All columns shall have the same length.
 // Also, the InsertData.Infos shall have BlobInfo with this length returned.
 // When the length is not aligned, an error will be returned.
 func ColumnBasedInsertMsgToInsertData(msg *msgstream.InsertMsg, collSchema *schemapb.CollectionSchema) (idata *InsertData, err error) {
@@ -1177,14 +1177,14 @@ func MergeFieldData(data *InsertData, fid FieldID, field FieldData) {
 	}
 }
 
-// MergeInsertData append the insert datas to the original buffer.
-func MergeInsertData(buffer *InsertData, datas ...*InsertData) {
+// MergeInsertData append the insert data to the original buffer.
+func MergeInsertData(buffer *InsertData, data ...*InsertData) {
 	if buffer == nil {
 		log.Warn("Attempt to merge data into a nil buffer, skip the data merge.")
 		return
 	}
 
-	for _, data := range datas {
+	for _, data := range data {
 		if data != nil {
 			for fid, field := range data.Data {
 				MergeFieldData(buffer, fid, field)

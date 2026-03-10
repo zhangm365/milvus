@@ -23,7 +23,7 @@ type ReadOption struct {
 	// If the message handler is nil (no redundant operation need to apply),
 	// the default message handler will be used, and the receiver will be returned from Chan.
 	// Otherwise, Chan will panic.
-	// vaild every message will be passed to this handler before being delivered to the consumer.
+	// valid every message will be passed to this handler before being delivered to the consumer.
 
 	// IgnorePauseConsumption is the flag to ignore the consumption pause of the scanner.
 	IgnorePauseConsumption bool

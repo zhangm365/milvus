@@ -80,7 +80,7 @@ func (info *nodeItemInfo) String() string {
 	return fmt.Sprintf("NodeItemInfo %s, memory factor %f, delegator score: %f", info.nodeItem, info.memoryFactor, info.delegatorScore)
 }
 
-// strRecord implment fmt.Stringer with simple string.
+// strRecord implement fmt.Stringer with simple string.
 type strRecord string
 
 func (str strRecord) String() string {

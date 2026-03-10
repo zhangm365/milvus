@@ -596,7 +596,7 @@ func TestDocInDocOutInsertInvalid(t *testing.T) {
 		ShardsNum:      ShardNumDefault,
 		Status:         &StatusSuccess,
 	}, nil).Once()
-	// invlaid insert request, will not be sent to proxy
+	// invalid insert request, will not be sent to proxy
 
 	testcase := requestBodyTestCase{
 		path:        versionalV2(EntityCategory, InsertAction),

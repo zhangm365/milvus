@@ -634,7 +634,7 @@ class TestPartitionApiForbidden(TestcaseBase):
         # self.partition_wrap.upsert(data=data, check_task=CheckTasks.err_res,
         #                            check_items={"err_code": 2, "err_msg": err_msg})
         # self.collection_wrap.upsert(data=data, partition_name=partitions[0].name,
-        #                             chek_task=CheckTasks.err_res, check_items={"err_code": 2, "err_msg": err_msg})
+        #                             check_task=CheckTasks.err_res, check_items={"err_code": 2, "err_msg": err_msg})
         # partition release
         err_msg = "disable release partitions if partition key mode is used"
         partition_w.release(check_task=CheckTasks.err_res, check_items={"err_code": 2, "err_msg": err_msg})

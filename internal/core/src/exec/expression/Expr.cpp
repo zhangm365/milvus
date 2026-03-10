@@ -446,7 +446,7 @@ CompileExpression(const expr::TypedExprPtr& expr,
             context->get_active_count(),
             context->query_config()->get_expr_batch_size());
     } else {
-        ThrowInfo(ExprInvalid, "unsupport expr: ", expr->ToString());
+        ThrowInfo(ExprInvalid, "unsupported expr: ", expr->ToString());
     }
     return result;
 }
@@ -645,7 +645,7 @@ OptimizeCompiledExprs(ExecContext* context, const std::vector<ExprPtr>& exprs) {
         std::chrono::high_resolution_clock::now();
     for (const auto& expr : exprs) {
         if (expr->name() == "PhyConjunctFilterExpr") {
-            LOG_DEBUG("before reoder filter expression: {}", expr->ToString());
+            LOG_DEBUG("before reorder filter expression: {}", expr->ToString());
             auto conjunct_expr =
                 std::static_pointer_cast<PhyConjunctFilterExpr>(expr);
             bool has_heavy_operation = false;

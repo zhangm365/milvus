@@ -235,7 +235,7 @@ func (s *L0CompactionTaskSuite) generateTestL0Task(state datapb.CompactionTaskSt
 	}, s.mockAlloc, s.mockMeta)
 }
 
-func (s *L0CompactionTaskSuite) TestPorcessStateTrans() {
+func (s *L0CompactionTaskSuite) TestProcessStateTrans() {
 	s.Run("test pipelining Compaction failed", func() {
 		s.mockMeta.EXPECT().SaveCompactionTask(mock.Anything, mock.Anything).Return(nil)
 		s.mockAlloc.EXPECT().AllocN(mock.Anything).Return(100, 200, nil)

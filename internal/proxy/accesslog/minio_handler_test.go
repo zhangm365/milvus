@@ -147,7 +147,7 @@ func createAndUpdateFile(handler *minioHandler, t time.Time, rootPath, prefix, e
 	oldFileName := prefix + t.Format(timeNameFormat) + ext
 	oldFilePath := path.Join(rootPath, oldFileName)
 	oldFileMode := os.FileMode(0o644)
-	_, err := os.OpenFile(oldFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, oldFileMode)
+	_, err := os.OpenFile(oldFilePath, os.O_CREATE|os.O_WRONGLY|os.O_TRUNC, oldFileMode)
 	if err != nil {
 		return err
 	}

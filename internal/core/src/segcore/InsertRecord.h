@@ -745,10 +745,10 @@ class InsertRecordGrowing {
     }
 
     void
-    insert_pks(const std::vector<FieldDataPtr>& field_datas) {
+    insert_pks(const std::vector<FieldDataPtr>& field_data) {
         std::lock_guard lck(shared_mutex_);
         int64_t offset = 0;
-        for (auto& data : field_datas) {
+        for (auto& data : field_data) {
             int64_t row_count = data->get_num_rows();
             auto data_type = data->get_data_type();
             switch (data_type) {

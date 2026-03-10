@@ -152,7 +152,7 @@ func (m *mutablePChannel) TryAssignToServerID(accessMode types.AccessMode, strea
 		m.updateOrAppendAssignHistory()
 	}
 
-	// otherwise update the channel into assgining state.
+	// otherwise update the channel into assigning state.
 	m.inner.Channel.AccessMode = streamingpb.PChannelAccessMode(accessMode)
 	m.inner.Channel.Term++
 	m.inner.Node = types.NewProtoFromStreamingNodeInfo(streamingNode)

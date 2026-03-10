@@ -3338,7 +3338,7 @@ ChunkedSegmentSealedImpl::LoadColumnGroup(
 
         // if field has mmap setting, use it
         // - mmap setting at collection level, then all field are the same
-        // - mmap setting at field level, we define that as long as one field shall be mmap, then whole group shall be mmaped
+        // - mmap setting at field level, we define that as long as one field shall be mmap, then whole group shall be mapped
         auto [field_has_setting, field_mmap_enabled] =
             schema_->MmapEnabled(field_id);
         has_mmap_setting = has_mmap_setting || field_has_setting;
@@ -3567,7 +3567,7 @@ ChunkedSegmentSealedImpl::LoadBatchFieldData(
 
             // if field has mmap setting, use it
             // - mmap setting at collection level, then all field are the same
-            // - mmap setting at field level, we define that as long as one field shall be mmap, then whole group shall be mmaped
+            // - mmap setting at field level, we define that as long as one field shall be mmap, then whole group shall be mapped
             auto [field_has_setting, field_mmap_enabled] =
                 schema_->MmapEnabled(child_field_id);
             has_mmap_setting = has_mmap_setting || field_has_setting;

@@ -31,7 +31,7 @@ default_search_exp = "int64 >= 0"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 default_search_field = ct.default_float_vec_field_name
 default_search_params = ct.default_search_params
 default_int64_field_name = ct.default_int64_field_name
@@ -69,7 +69,7 @@ class TestMilvusClientSearchPagination(TestMilvusClientV2Base):
         self.binary_vector_dim = 256    
         self.primary_keys = []
         self.enable_dynamic_field = False
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -124,7 +124,7 @@ class TestMilvusClientSearchPagination(TestMilvusClientV2Base):
                     default_string_field_name: str(pk),
                     default_int64_field_name: pk
                 }
-                self.datas.append(row)
+                self.data.append(row)
 
                 # Distribute to partitions based on pk mod 3
                 if pk % 3 == 0:
@@ -454,14 +454,14 @@ class TestMilvusClientSearchPagination(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # filter result with expression in collection
-        total_datas = self.datas
+        total_data = self.data
         for expressions in cf.gen_normal_expressions_and_templates():
             log.debug(f"search with expression: {expressions}")
             expr = expressions[0].replace("&&", "and").replace("||", "or")
             filter_ids = []
             for i, _id in enumerate(self.primary_keys):
-                int64 = total_datas[i][ct.default_int64_field_name]
-                float = total_datas[i][ct.default_float_field_name]
+                int64 = total_data[i][ct.default_int64_field_name]
+                float = total_data[i][ct.default_float_field_name]
                 if not expr or eval(expr):
                     filter_ids.append(_id)
             # 2. search

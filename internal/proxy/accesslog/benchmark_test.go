@@ -81,11 +81,11 @@ func BenchmarkAccesslog(b *testing.B) {
 	ctx := metadata.NewIncomingContext(context.TODO(), md)
 	connection.GetManager().Register(ctx, identifier, clientInfo)
 	rpcInfo := &grpc.UnaryServerInfo{Server: nil, FullMethod: "testMethod"}
-	datas := genTestData(clientInfo, identifier)
+	data := genTestData(clientInfo, identifier)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		data := datas[i%len(datas)]
+		data := data[i%len(data)]
 		accessInfo := info.NewGrpcAccessInfo(ctx, rpcInfo, data.req)
 		accessInfo.UpdateCtx(ctx)
 		accessInfo.SetResult(data.resp, data.err)

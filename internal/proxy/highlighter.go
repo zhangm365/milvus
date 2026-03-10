@@ -324,9 +324,9 @@ func newLexicalHighlightOperator(t *searchTask, tasks []*highlightTask) (operato
 
 func (op *lexicalHighlightOperator) run(ctx context.Context, span trace.Span, inputs ...any) ([]any, error) {
 	result := inputs[0].(*milvuspb.SearchResults)
-	datas := result.GetResults().GetFieldsData()
+	data := result.GetResults().GetFieldsData()
 	// skip highlight if result is empty
-	if len(datas) == 0 {
+	if len(data) == 0 {
 		return []any{result}, nil
 	}
 
@@ -336,11 +336,11 @@ func (op *lexicalHighlightOperator) run(ctx context.Context, span trace.Span, in
 	}
 
 	for _, task := range req.GetTasks() {
-		textFieldDatas, ok := lo.Find(datas, func(data *schemapb.FieldData) bool { return data.FieldId == task.GetFieldId() })
+		textFieldData, ok := lo.Find(data, func(data *schemapb.FieldData) bool { return data.FieldId == task.GetFieldId() })
 		if !ok {
 			return nil, errors.Errorf("get highlight failed, text field not in output field %s: %d", task.GetFieldName(), task.GetFieldId())
 		}
-		texts := textFieldDatas.GetScalars().GetStringData().GetData()
+		texts := textFieldData.GetScalars().GetStringData().GetData()
 		task.Texts = append(task.Texts, texts...)
 		task.CorpusTextNum = int64(len(texts))
 
@@ -357,11 +357,11 @@ func (op *lexicalHighlightOperator) run(ctx context.Context, span trace.Span, in
 		// if use multi analyzer
 		// get analyzer field data
 		if nameFieldID > 0 {
-			analyzerFieldDatas, ok := lo.Find(datas, func(data *schemapb.FieldData) bool { return data.FieldId == nameFieldID })
+			analyzerFieldData, ok := lo.Find(data, func(data *schemapb.FieldData) bool { return data.FieldId == nameFieldID })
 			if !ok {
 				return nil, errors.Errorf("get highlight failed, analyzer name field: %d for multi analyzer not in output field", nameFieldID)
 			}
-			task.AnalyzerNames = append(task.AnalyzerNames, analyzerFieldDatas.GetScalars().GetStringData().GetData()...)
+			task.AnalyzerNames = append(task.AnalyzerNames, analyzerFieldData.GetScalars().GetStringData().GetData()...)
 		}
 	}
 
@@ -385,14 +385,14 @@ func (op *lexicalHighlightOperator) run(ctx context.Context, span trace.Span, in
 	rowNum := len(result.Results.GetScores())
 	HighlightResults := []*commonpb.HighlightResult{}
 	if rowNum != 0 {
-		rowDatas := lo.Map(task.result.Results, func(result *querypb.HighlightResult, i int) *commonpb.HighlightData {
+		rowData := lo.Map(task.result.Results, func(result *querypb.HighlightResult, i int) *commonpb.HighlightData {
 			return buildStringFragments(op.tasks[i/rowNum], i%rowNum, result.GetFragments())
 		})
 
 		for i, task := range req.GetTasks() {
 			HighlightResults = append(HighlightResults, &commonpb.HighlightResult{
 				FieldName: task.GetFieldName(),
-				Datas:     rowDatas[i*rowNum : (i+1)*rowNum],
+				Data:     rowData[i*rowNum : (i+1)*rowNum],
 			})
 		}
 	}
@@ -464,8 +464,8 @@ type semanticHighlightOperator struct {
 
 func (op *semanticHighlightOperator) run(ctx context.Context, span trace.Span, inputs ...any) ([]any, error) {
 	result := inputs[0].(*milvuspb.SearchResults)
-	datas := result.Results.GetFieldsData()
-	if len(datas) == 0 {
+	data := result.Results.GetFieldsData()
+	if len(data) == 0 {
 		return []any{result}, nil
 	}
 	highlightResults := []*commonpb.HighlightResult{}
@@ -473,11 +473,11 @@ func (op *semanticHighlightOperator) run(ctx context.Context, span trace.Span, i
 
 	// Process schema fields
 	for _, fieldID := range op.highlight.FieldIDs() {
-		fieldDatas, ok := lo.Find(datas, func(data *schemapb.FieldData) bool { return data.FieldId == fieldID })
+		fieldData, ok := lo.Find(data, func(data *schemapb.FieldData) bool { return data.FieldId == fieldID })
 		if !ok {
 			return nil, errors.Errorf("get highlight failed, text field not in output field %d", fieldID)
 		}
-		texts := fieldDatas.GetScalars().GetStringData().GetData()
+		texts := fieldData.GetScalars().GetStringData().GetData()
 		fieldName := op.highlight.GetFieldName(fieldID)
 
 		highlightResult, err := op.processFieldHighlight(ctx, fieldName, texts, topks)
@@ -491,7 +491,7 @@ func (op *semanticHighlightOperator) run(ctx context.Context, span trace.Span, i
 	if op.highlight.HasDynamicFields() {
 		// Find $meta field data
 		dynamicFieldID := op.highlight.DynamicFieldID()
-		metaFieldData, ok := lo.Find(datas, func(data *schemapb.FieldData) bool {
+		metaFieldData, ok := lo.Find(data, func(data *schemapb.FieldData) bool {
 			return data.FieldId == dynamicFieldID || data.FieldName == common.MetaFieldName
 		})
 		if !ok {
@@ -544,10 +544,10 @@ func (op *semanticHighlightOperator) processFieldHighlight(ctx context.Context, 
 
 	result := &commonpb.HighlightResult{
 		FieldName: fieldName,
-		Datas:     make([]*commonpb.HighlightData, len(highlights)),
+		Data:     make([]*commonpb.HighlightData, len(highlights)),
 	}
 	for i := range highlights {
-		result.Datas[i] = &commonpb.HighlightData{Fragments: highlights[i], Scores: scores[i]}
+		result.Data[i] = &commonpb.HighlightData{Fragments: highlights[i], Scores: scores[i]}
 	}
 	return result, nil
 }

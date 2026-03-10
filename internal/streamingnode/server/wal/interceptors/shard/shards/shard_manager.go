@@ -168,8 +168,8 @@ func newCollectionInfos(recoverInfos *recovery.RecoverySnapshot) map[int64]*Coll
 }
 
 // shardManagerImpl manages the all shard info of collection on current pchannel.
-// It's a in-memory data structure, and will be recovered from recovery stroage of wal and wal itself.
-// !!! Don't add any block operation (such as rpc or meta opration) in this module.
+// It's a in-memory data structure, and will be recovered from recovery storage of wal and wal itself.
+// !!! Don't add any block operation (such as rpc or meta operation) in this module.
 type shardManagerImpl struct {
 	log.Binder
 

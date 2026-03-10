@@ -44,7 +44,7 @@ class TestMilvusClientThreeValuedLogic(TestMilvusClientV2Base):
         self.non_null_field = "non_null_int"
         self.dim = default_dim
         self.nb = 40
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -86,9 +86,9 @@ class TestMilvusClientThreeValuedLogic(TestMilvusClientV2Base):
                 # nullable_b: NULL for IDs 0-9 and 20-29, NOT NULL (id*100) for IDs 10-19 and 30-39
                 self.nullable_b_field: None if (i < 10 or 20 <= i < 30) else i * 100,
             }
-            self.datas.append(row)
+            self.data.append(row)
 
-        self.insert(client, self.collection_name, self.datas)
+        self.insert(client, self.collection_name, self.data)
         self.flush(client, self.collection_name)
         self.load_collection(client, self.collection_name)
         log.info(f"Inserted {self.nb} rows into shared collection")
@@ -105,7 +105,7 @@ class TestMilvusClientThreeValuedLogic(TestMilvusClientV2Base):
 
     def get_ids_where(self, predicate):
         """Get sorted list of IDs where predicate(row) is True."""
-        return sorted([row[self.pk_field] for row in self.datas if predicate(row)])
+        return sorted([row[self.pk_field] for row in self.data if predicate(row)])
 
     def ids_a_is_null(self):
         """IDs where nullable_a IS NULL."""
@@ -167,7 +167,7 @@ class TestMilvusClientThreeValuedLogic(TestMilvusClientV2Base):
                       and r[self.nullable_b_field] is not None
         )
         # NOT of inner = all IDs except inner
-        all_ids = set(row[self.pk_field] for row in self.datas)
+        all_ids = set(row[self.pk_field] for row in self.data)
         return sorted(all_ids - set(inner))
 
     def ids_pk_lt_and_a_null(self, pk_limit):
@@ -526,7 +526,7 @@ class TestMilvusClientThreeValuedLogicIssue46972(TestMilvusClientV2Base):
         self.pk_field = "id"
         self.vector_field = "vector"
         self.dim = 128
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -571,7 +571,7 @@ class TestMilvusClientThreeValuedLogicIssue46972(TestMilvusClientV2Base):
         self.create_index(client, self.collection_name, index_params=index_params)
 
         # Insert the exact test data from the issue
-        self.datas = [{
+        self.data = [{
             'id': 1051,
             'vector': [0.1] * self.dim,
             'c0': None, 'c1': True, 'c2': 55943, 'c3': 2379.7519128726576, 'c4': None, 'c5': True,
@@ -585,10 +585,10 @@ class TestMilvusClientThreeValuedLogicIssue46972(TestMilvusClientV2Base):
             'tags_array': [73]
         }]
 
-        self.insert(client, self.collection_name, self.datas)
+        self.insert(client, self.collection_name, self.data)
         self.flush(client, self.collection_name)
         self.load_collection(client, self.collection_name)
-        log.info(f"Inserted {len(self.datas)} rows for issue #46972 test")
+        log.info(f"Inserted {len(self.data)} rows for issue #46972 test")
 
         def teardown():
             self.drop_collection(self._client(), self.collection_name)

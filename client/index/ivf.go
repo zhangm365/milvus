@@ -117,7 +117,7 @@ func NewIvfSQ8Index(metricType MetricType, nlist int) Index {
 	}
 }
 
-type ivfRabitQIndex struct {
+type ivfRabbitQIndex struct {
 	baseIndex
 
 	nlist      int
@@ -125,10 +125,10 @@ type ivfRabitQIndex struct {
 	refineType string
 }
 
-func (idx *ivfRabitQIndex) Params() map[string]string {
+func (idx *ivfRabbitQIndex) Params() map[string]string {
 	result := map[string]string{
 		MetricTypeKey: string(idx.metricType),
-		IndexTypeKey:  string(IvfRabitQ),
+		IndexTypeKey:  string(IvfRabbitQ),
 		ivfNlistKey:   strconv.Itoa(idx.nlist),
 	}
 
@@ -139,14 +139,14 @@ func (idx *ivfRabitQIndex) Params() map[string]string {
 	return result
 }
 
-func (idx *ivfRabitQIndex) WithRefineType(refineType string) *ivfRabitQIndex {
+func (idx *ivfRabbitQIndex) WithRefineType(refineType string) *ivfRabbitQIndex {
 	idx.refine = true
 	idx.refineType = refineType
 	return idx
 }
 
-func NewIvfRabitQIndex(metricType MetricType, nlist int) *ivfRabitQIndex {
-	return &ivfRabitQIndex{
+func NewIvfRabbitQIndex(metricType MetricType, nlist int) *ivfRabbitQIndex {
+	return &ivfRabbitQIndex{
 		baseIndex: baseIndex{
 			metricType: metricType,
 			indexType:  BinIvfFlat,
@@ -203,26 +203,26 @@ func NewIvfAnnParam(nprobe int) ivfAnnParam {
 	}
 }
 
-type ivfRabitQAnnParam struct {
+type ivfRabbitQAnnParam struct {
 	ivfAnnParam
 }
 
-func (ap *ivfRabitQAnnParam) Params() map[string]any {
+func (ap *ivfRabbitQAnnParam) Params() map[string]any {
 	return ap.ivfAnnParam.Params()
 }
 
-func (ap *ivfRabitQAnnParam) WithRabitQueryBits(rbqQueryBits int) *ivfRabitQAnnParam {
+func (ap *ivfRabbitQAnnParam) WithRabbitQueryBits(rbqQueryBits int) *ivfRabbitQAnnParam {
 	ap.params[ivfRbqQueryBitsKey] = rbqQueryBits
 	return ap
 }
 
-func (ap *ivfRabitQAnnParam) WithRefineK(refineK int) *ivfRabitQAnnParam {
+func (ap *ivfRabbitQAnnParam) WithRefineK(refineK int) *ivfRabbitQAnnParam {
 	ap.params[ivfRbqRefineKKey] = refineK
 	return ap
 }
 
-func NewIvfRabitQAnnParam(nprobe int) *ivfRabitQAnnParam {
-	return &ivfRabitQAnnParam{
+func NewIvfRabbitQAnnParam(nprobe int) *ivfRabbitQAnnParam {
+	return &ivfRabbitQAnnParam{
 		ivfAnnParam: NewIvfAnnParam(nprobe),
 	}
 }

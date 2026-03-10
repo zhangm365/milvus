@@ -27,7 +27,7 @@ class DISKANN:
         # search_cache_budget_gb_ratio
         # Type: Float Range: [0.0, 0.3)
         # Default value: 0.10
-        # TODO: runt he minium bourndary test after issue #43176 fixed
+        # TODO: runt he minimum bourndary test after issue #43176 fixed
         # {"description": "Minimum Boundary Test", "params": {"search_cache_budget_gb_ratio": 0.0}, "expected": success},
         {"description": "Maximum Boundary Test", "params": {"search_cache_budget_gb_ratio": 0.3}, "expected": success},
         {"description": "Default value Test", "params": {"search_cache_budget_gb_ratio": 0.1}, "expected": success},

@@ -48,7 +48,7 @@ func reduceSearchResult(ctx context.Context, subSearchResultData []*schemapb.Sea
 		reduceInfo.GetOffset())
 }
 
-func checkResultDatas(ctx context.Context, subSearchResultData []*schemapb.SearchResultData,
+func checkResultData(ctx context.Context, subSearchResultData []*schemapb.SearchResultData,
 	nq int64, topK int64,
 ) (int64, int, error) {
 	var allSearchCount int64
@@ -95,7 +95,7 @@ func reduceAdvanceGroupBy(ctx context.Context, subSearchResultData []*schemapb.S
 	}
 
 	var limit int64
-	if allSearchCount, hitNum, err := checkResultDatas(ctx, subSearchResultData, nq, topK); err != nil {
+	if allSearchCount, hitNum, err := checkResultData(ctx, subSearchResultData, nq, topK); err != nil {
 		log.Ctx(ctx).Warn("invalid search results", zap.Error(err))
 		return ret, err
 	} else {
@@ -222,7 +222,7 @@ func reduceSearchResultDataWithGroupBy(ctx context.Context, subSearchResultData 
 		return ret, err
 	}
 
-	if allSearchCount, _, err := checkResultDatas(ctx, subSearchResultData, nq, topk); err != nil {
+	if allSearchCount, _, err := checkResultData(ctx, subSearchResultData, nq, topk); err != nil {
 		log.Ctx(ctx).Warn("invalid search results", zap.Error(err))
 		return ret, err
 	} else {
@@ -393,7 +393,7 @@ func reduceSearchResultDataNoGroupBy(ctx context.Context, subSearchResultData []
 		return ret, nil
 	}
 
-	if allSearchCount, _, err := checkResultDatas(ctx, subSearchResultData, nq, topk); err != nil {
+	if allSearchCount, _, err := checkResultData(ctx, subSearchResultData, nq, topk); err != nil {
 		log.Ctx(ctx).Warn("invalid search results", zap.Error(err))
 		return ret, err
 	} else {

@@ -360,7 +360,7 @@ func (r *rowParser) parseStructEntity(field *schemapb.FieldSchema, values []any)
 		return scalarFieldData, nil
 	default:
 		return nil, merr.WrapErrImportFailed(
-			fmt.Sprintf("parse csv failed, unsupport data type: %s for struct field: %s", dataType.String(), field.GetName()))
+			fmt.Sprintf("parse csv failed, unsupported data type: %s for struct field: %s", dataType.String(), field.GetName()))
 	}
 }
 
@@ -545,7 +545,7 @@ func (r *rowParser) parseEntity(field *schemapb.FieldSchema, obj string, useElem
 		return scalarFieldData, nil
 	default:
 		return nil, merr.WrapErrImportFailed(
-			fmt.Sprintf("parse csv failed, unsupport data type: %s", field.GetDataType().String()))
+			fmt.Sprintf("parse csv failed, unsupported data type: %s", field.GetDataType().String()))
 	}
 }
 

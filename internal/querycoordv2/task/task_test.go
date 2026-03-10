@@ -1244,20 +1244,20 @@ func (suite *TaskSuite) TestLeaderTaskSet() {
 }
 
 func (suite *TaskSuite) TestCreateTaskBehavior() {
-	chanelTask, err := NewChannelTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica)
+	channelTask, err := NewChannelTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica)
 	suite.ErrorIs(err, merr.ErrParameterInvalid)
-	suite.Nil(chanelTask)
+	suite.Nil(channelTask)
 
 	action := NewSegmentAction(0, 0, "", 0)
-	chanelTask, err = NewChannelTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica, action)
+	channelTask, err = NewChannelTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica, action)
 	suite.ErrorIs(err, merr.ErrParameterInvalid)
-	suite.Nil(chanelTask)
+	suite.Nil(channelTask)
 
 	action1 := NewChannelAction(0, 0, "fake-channel1")
 	action2 := NewChannelAction(0, 0, "fake-channel2")
-	chanelTask, err = NewChannelTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica, action1, action2)
+	channelTask, err = NewChannelTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica, action1, action2)
 	suite.ErrorIs(err, merr.ErrParameterInvalid)
-	suite.Nil(chanelTask)
+	suite.Nil(channelTask)
 
 	segmentTask, err := NewSegmentTask(context.TODO(), 5*time.Second, WrapIDSource(0), 0, meta.NilReplica, commonpb.LoadPriority_LOW)
 	suite.ErrorIs(err, merr.ErrParameterInvalid)

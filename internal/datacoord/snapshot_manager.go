@@ -889,15 +889,15 @@ func (sm *snapshotManager) buildPartitionMapping(
 	}
 
 	// Build partition name to ID mapping for target collection
-	currrentPartitionMap := make(map[string]int64)
+	currentPartitionMap := make(map[string]int64)
 	for i, name := range currentPartitions.GetPartitionNames() {
-		currrentPartitionMap[name] = currentPartitions.GetPartitionIDs()[i]
+		currentPartitionMap[name] = currentPartitions.GetPartitionIDs()[i]
 	}
 
 	// Build snapshot partition ID to target partition ID mapping with same name
 	partitionMapping := make(map[int64]int64)
 	for partitionName, partitionID := range snapshotData.Collection.GetPartitions() {
-		targetPartID, ok := currrentPartitionMap[partitionName]
+		targetPartID, ok := currentPartitionMap[partitionName]
 		if !ok {
 			return nil, merr.WrapErrServiceInternal(
 				fmt.Sprintf("partition %s from snapshot not found in target collection", partitionName))

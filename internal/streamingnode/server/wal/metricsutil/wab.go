@@ -23,7 +23,7 @@ func NewWriteAheadBufferMetrics(
 		constLabel:       constLabel,
 		total:            metrics.WALWriteAheadBufferEntryTotal.With(constLabel),
 		size:             metrics.WALWriteAheadBufferSizeBytes.With(constLabel),
-		earilestTimeTick: metrics.WALWriteAheadBufferEarliestTimeTick.With(constLabel),
+		earliestTimeTick: metrics.WALWriteAheadBufferEarliestTimeTick.With(constLabel),
 		latestTimeTick:   metrics.WALWriteAheadBufferLatestTimeTick.With(constLabel),
 	}
 }
@@ -32,19 +32,19 @@ type WriteAheadBufferMetrics struct {
 	constLabel       prometheus.Labels
 	total            prometheus.Gauge
 	size             prometheus.Gauge
-	earilestTimeTick prometheus.Gauge
+	earliestTimeTick prometheus.Gauge
 	latestTimeTick   prometheus.Gauge
 }
 
 func (m *WriteAheadBufferMetrics) Observe(
 	total int,
 	bytes int,
-	earilestTimeTick uint64,
+	earliestTimeTick uint64,
 	latestTimeTick uint64,
 ) {
 	m.total.Set(float64(total))
 	m.size.Set(float64(bytes))
-	m.earilestTimeTick.Set(tsoutil.PhysicalTimeSeconds(earilestTimeTick))
+	m.earliestTimeTick.Set(tsoutil.PhysicalTimeSeconds(earliestTimeTick))
 	m.latestTimeTick.Set(tsoutil.PhysicalTimeSeconds(latestTimeTick))
 }
 

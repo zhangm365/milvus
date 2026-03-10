@@ -96,7 +96,7 @@ func (s *DecayFunctionSuite) TestNewDecayErrors() {
 		functionSchema.Params[5] = &commonpb.KeyValuePair{Key: normsScorekey, Value: "true"}
 		functionSchema.Params[6] = &commonpb.KeyValuePair{Key: scoreMode, Value: "unknow"}
 		_, err = newDecayFunction(schema, functionSchema)
-		s.ErrorContains(err, "Unsupport score mode")
+		s.ErrorContains(err, "Unsupported score mode")
 	}
 
 	{
@@ -154,7 +154,7 @@ func (s *DecayFunctionSuite) TestNewDecayErrors() {
 		}
 		functionSchema.Params[4].Value = "NotExist"
 		_, err := newDecayFunction(schema, functionSchema)
-		s.ErrorContains(err, "Invaild decay function:")
+		s.ErrorContains(err, "Invalid decay function:")
 		functionSchema.Params[4].Value = "exp"
 	}
 

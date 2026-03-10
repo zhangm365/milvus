@@ -115,7 +115,7 @@ func (s *CompactionSuite) compactAndReboot(collection string) {
 	})
 	s.Require().NoError(err)
 	s.Require().True(merr.Ok(coll.GetStatus()))
-	// make sure compaction is triggerred successfully
+	// make sure compaction is triggered successfully
 	s.Require().NotEqualValues(-1, compactionResp.GetCompactionID())
 	s.Require().EqualValues(1, compactionResp.GetCompactionPlanCount())
 

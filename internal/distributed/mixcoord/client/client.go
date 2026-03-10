@@ -132,7 +132,7 @@ func (c *Client) getMixCoordAddr() (string, error) {
 	return ms.Address, nil
 }
 
-// compatible with standalone mode upgrade from 2.5, shoule be removed in 3.0
+// compatible with standalone mode upgrade from 2.5, should be removed in 3.0
 func (c *Client) getCompatibleMixCoordAddr() (string, error) {
 	log := log.Ctx(c.ctx)
 	msess, _, err := c.sess.GetSessions(c.ctx, typeutil.RootCoordRole)

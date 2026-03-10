@@ -157,7 +157,7 @@ impl IndexReaderWrapper {
         }
     }
 
-    // Generally, we should use [`crate::search`], except for some special senarios where the doc_id could beyound
+    // Generally, we should use [`crate::search`], except for some special scenarios where the doc_id could beyond
     // the scope of u32 such as json key stats offset.
     #[allow(dead_code)]
     pub(crate) fn search_i64(&self, q: &dyn Query) -> Result<Vec<i64>> {

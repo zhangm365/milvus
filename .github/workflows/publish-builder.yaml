@@ -55,7 +55,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Get version from system time after release step
-        id: extracter
+        id: extractor
         run: |
           echo "::set-output name=version::$(date +%Y%m%d)"
           echo "::set-output name=sha_short::$(git rev-parse --short=7 HEAD)"
@@ -94,6 +94,6 @@ jobs:
         uses: ./.github/actions/bump-builder-version
         if: success() && github.event_name == 'push' && github.repository == 'milvus-io/milvus' && matrix.os == 'ubuntu22.04'
         with:
-          tag: "${{ steps.extracter.outputs.version }}-${{ steps.extracter.outputs.sha_short }}"
+          tag: "${{ steps.extractor.outputs.version }}-${{ steps.extractor.outputs.sha_short }}"
           type: cpu
           token: ${{ secrets.ALL_CONTRIBUTORS_TOKEN }}

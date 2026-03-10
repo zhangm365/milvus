@@ -159,11 +159,11 @@ IndexFactory::VecIndexLoadResource(
                "index type is empty");
     std::string index_type = index_params.at("index_type");
 
-    bool mmaped = false;
+    bool mapped = false;
     if (mmap_enable &&
         knowhere::KnowhereCheck::SupportMmapIndexTypeCheck(index_type)) {
         config["enable_mmap"] = true;
-        mmaped = true;
+        mapped = true;
     }
 
     knowhere::expected<knowhere::Resource> resource;
@@ -315,7 +315,7 @@ IndexFactory::VecIndexLoadResource(
     request.has_raw_data = has_raw_data;
     request.final_disk_cost = resource.value().diskCost;
     request.final_memory_cost = resource.value().memoryCost;
-    if (knowhere::UseDiskLoad(index_type, index_version) || mmaped) {
+    if (knowhere::UseDiskLoad(index_type, index_version) || mapped) {
         request.max_disk_cost = resource.value().diskCost;
         request.max_memory_cost = std::max(resource.value().memoryCost,
                                            download_buffer_size_in_bytes);

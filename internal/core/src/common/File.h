@@ -121,7 +121,7 @@ class File {
             case O_RDONLY: {
                 return "rb";
             }
-            case O_WRONLY: {
+            case O_WRONGLY: {
                 return flags & O_APPEND ? "ab" : "wb";
             }
             case O_RDWR: {

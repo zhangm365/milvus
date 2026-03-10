@@ -3909,7 +3909,7 @@ class TestMilvusClientGeometryNegative(TestMilvusClientV2Base):
 
     @pytest.mark.tags(CaseLabel.L1)
     @pytest.mark.parametrize("with_geo_index", [True, False])
-    @pytest.mark.skip(reason="not implemented for verifcation")
+    @pytest.mark.skip(reason="not implemented for verification")
     def test_st_dwithin_invalid_query_coordinates(self, with_geo_index):
         """
         target: test ST_DWITHIN with invalid query latitude/longitude coordinates
@@ -3988,7 +3988,7 @@ class TestMilvusClientGeometryNegative(TestMilvusClientV2Base):
 
 
     @pytest.mark.tags(CaseLabel.L1)
-    @pytest.mark.skip(reason="not implemented for verifcation")
+    @pytest.mark.skip(reason="not implemented for verification")
     def test_st_dwithin_invalid_base_data_coordinates(self):
         """
         target: test ST_DWITHIN with invalid coordinates in base data

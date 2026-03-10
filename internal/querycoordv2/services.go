@@ -735,7 +735,7 @@ func (s *Server) ShowConfigurations(ctx context.Context, req *internalpb.ShowCon
 
 	return &internalpb.ShowConfigurationsResponse{
 		Status:        merr.Success(),
-		Configuations: configList,
+		Configurations: configList,
 	}, nil
 }
 

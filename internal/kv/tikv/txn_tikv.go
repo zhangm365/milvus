@@ -190,7 +190,7 @@ func (kv *txnTiKV) HasPrefix(ctx context.Context, prefix string) (bool, error) {
 	defer iter.Close()
 
 	r := false
-	// Iterater only needs to check the first key-value pair
+	// Iterator only needs to check the first key-value pair
 	if iter.Valid() {
 		r = true
 	}
@@ -287,7 +287,7 @@ func (kv *txnTiKV) LoadWithPrefix(ctx context.Context, prefix string) ([]string,
 	endKey := tikv.PrefixNextKey([]byte(prefix))
 	iter, err := ss.Iter(startKey, endKey)
 	if err != nil {
-		loggingErr = errors.Wrap(err, fmt.Sprintf("Failed to create iterater for LoadWithPrefix() for prefix: %s", prefix))
+		loggingErr = errors.Wrap(err, fmt.Sprintf("Failed to create iterator for LoadWithPrefix() for prefix: %s", prefix))
 		return nil, nil, loggingErr
 	}
 	defer iter.Close()
@@ -546,7 +546,7 @@ func (kv *txnTiKV) MultiSaveAndRemoveWithPrefix(ctx context.Context, saves map[s
 		// Use Scan to iterate over keys in the prefix range
 		iter, err := txn.Iter(startKey, endKey)
 		if err != nil {
-			loggingErr = errors.Wrap(err, fmt.Sprintf("Failed to create iterater for %s during MultiSaveAndRemoveWithPrefix()", prefix))
+			loggingErr = errors.Wrap(err, fmt.Sprintf("Failed to create iterator for %s during MultiSaveAndRemoveWithPrefix()", prefix))
 			return loggingErr
 		}
 
@@ -609,7 +609,7 @@ func (kv *txnTiKV) WalkWithPrefix(ctx context.Context, prefix string, pagination
 	endKey := tikv.PrefixNextKey([]byte(prefix))
 	iter, err := ss.Iter(startKey, endKey)
 	if err != nil {
-		loggingErr = errors.Wrap(err, fmt.Sprintf("Failed to create iterater for %s during WalkWithPrefix", prefix))
+		loggingErr = errors.Wrap(err, fmt.Sprintf("Failed to create iterator for %s during WalkWithPrefix", prefix))
 		return loggingErr
 	}
 	defer iter.Close()

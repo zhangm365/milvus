@@ -97,7 +97,7 @@ func TestBroadcaster(t *testing.T) {
 	resource.InitForTest(resource.OptStreamingCatalog(meta), resource.OptMixCoordClient(f))
 
 	fbc := syncutil.NewFuture[Broadcaster]()
-	appended := createOpeartor(t, fbc)
+	appended := createOperator(t, fbc)
 	bc, err := RecoverBroadcaster(context.Background())
 	fbc.Set(bc)
 	assert.NoError(t, err)
@@ -136,7 +136,7 @@ func TestBroadcaster(t *testing.T) {
 		return appended.Load() == 15 && len(done.Collect()) == 9
 	}, 30*time.Second, 10*time.Millisecond)
 
-	// Test close befor broadcast
+	// Test close before broadcast
 	broadcastAPI, err := bc.WithResourceKeys(context.Background(), message.NewExclusiveClusterResourceKey())
 	assert.NoError(t, err)
 	broadcastAPI.Close()
@@ -173,7 +173,7 @@ func ack(t *testing.T, broadcaster Broadcaster, broadcastID uint64, vchannel str
 	}
 }
 
-func createOpeartor(t *testing.T, broadcaster *syncutil.Future[Broadcaster]) *atomic.Int64 {
+func createOperator(t *testing.T, broadcaster *syncutil.Future[Broadcaster]) *atomic.Int64 {
 	id := atomic.NewInt64(1)
 	appended := atomic.NewInt64(0)
 	operator := mock_streaming.NewMockWALAccesser(t)

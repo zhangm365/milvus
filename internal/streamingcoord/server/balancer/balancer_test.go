@@ -194,7 +194,7 @@ func TestBalancer(t *testing.T) {
 	b.Trigger(ctx)
 	checkReady()
 
-	// create a inifite block watcher and can be interrupted by close of balancer.
+	// create a infinite block watcher and can be interrupted by close of balancer.
 	f := syncutil.NewFuture[error]()
 	go func() {
 		err := b.WatchChannelAssignments(context.Background(), func(param balancer.WatchChannelAssignmentsCallbackParam) error {

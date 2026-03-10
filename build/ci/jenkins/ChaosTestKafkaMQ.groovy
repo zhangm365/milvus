@@ -43,7 +43,7 @@ pipeline {
         )
         string(
             description: 'Wait Time after chaos test',
-            name: 'idel_time',
+            name: 'idle_time',
             defaultValue: '1'
         )
         string(
@@ -252,8 +252,8 @@ pipeline {
                 container('main') {
                     dir ('tests/python_client/chaos') {
                         script {
-                        echo "sleep ${params.idel_time}m"
-                        sh "sleep ${params.idel_time}m"
+                        echo "sleep ${params.idle_time}m"
+                        sh "sleep ${params.idle_time}m"
                         }
                     }
                 }
@@ -319,7 +319,7 @@ pipeline {
                     script {
                         echo "get pod status"
                         sh "kubectl get pods -o wide|grep ${env.RELEASE_NAME} || true"
-                        echo "collecte logs"
+                        echo "collective logs"
                         sh "bash ../../scripts/export_log_k8s.sh ${env.NAMESPACE} ${env.RELEASE_NAME} k8s_log/${env.RELEASE_NAME} || true"                        
                         sh "tar -zcvf artifacts-${env.RELEASE_NAME}-pytest-logs.tar.gz /tmp/ci_logs/ --remove-files || true"
                         sh "tar -zcvf artifacts-${env.RELEASE_NAME}-server-logs.tar.gz k8s_log/ --remove-files || true"
@@ -334,7 +334,7 @@ pipeline {
         
         }
         success {
-            echo 'I succeeeded!'
+            echo 'I succeeded!'
             container('main') {
                 dir ('tests/python_client/chaos/scripts') {
                     script {

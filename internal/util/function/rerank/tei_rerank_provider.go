@@ -56,10 +56,10 @@ func newTeiProvider(params []*commonpb.KeyValuePair, conf map[string]string, cre
 				return nil, err
 			}
 		case models.TruncateParamKey:
-			if teiTrun, err := strconv.ParseBool(param.Value); err != nil {
+			if teiTurn, err := strconv.ParseBool(param.Value); err != nil {
 				return nil, fmt.Errorf("Rerank params error, %s: %s is not bool type", models.TruncateParamKey, param.Value)
 			} else {
-				truncateParams[models.TruncateParamKey] = teiTrun
+				truncateParams[models.TruncateParamKey] = teiTurn
 			}
 		case models.TruncationDirectionParamKey:
 			if truncationDirection := param.Value; truncationDirection != "Left" && truncationDirection != "Right" {

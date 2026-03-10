@@ -35,7 +35,7 @@ func (s *BM25StatsSetSuite) SetupTest() {
 	s.bm25FieldIDs = []int64{101, 102}
 }
 
-func (suite *BM25StatsSetSuite) TestMergeAndSeralize() {
+func (suite *BM25StatsSetSuite) TestMergeAndSerialize() {
 	statsA := map[int64]*storage.BM25Stats{
 		101: {},
 	}

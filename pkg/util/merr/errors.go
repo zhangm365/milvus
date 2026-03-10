@@ -135,7 +135,7 @@ var (
 	// IO related
 	ErrIoKeyNotFound     = newMilvusError("key not found", 1000, false)
 	ErrIoFailed          = newMilvusError("IO failed", 1001, false)
-	ErrIoUnexpectEOF     = newMilvusError("unexpected EOF", 1002, true)
+	ErrIoUnexpectedEOF     = newMilvusError("unexpected EOF", 1002, true)
 	ErrIoTooManyRequests = newMilvusError("too many requests", 1003, true)
 
 	// Parameter related
@@ -162,7 +162,7 @@ var (
 
 	// Alias related
 	ErrAliasNotFound               = newMilvusError("alias not found", 1600, false)
-	ErrAliasCollectionNameConfilct = newMilvusError("alias and collection name conflict", 1601, false)
+	ErrAliasCollectionNameConflict = newMilvusError("alias and collection name conflict", 1601, false)
 	ErrAliasAlreadyExist           = newMilvusError("alias already exist", 1602, false)
 	ErrCollectionIDOfAliasNotFound = newMilvusError("collection id of alias not found", 1603, false)
 

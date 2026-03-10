@@ -49,7 +49,7 @@ func getVertexAIJsonKey() ([]byte, error) {
 
 	jsonKeyPath := os.Getenv(models.VertexServiceAccountJSONEnv)
 	if jsonKeyPath == "" {
-		return nil, errors.New("VetexAI credentials file path is empty")
+		return nil, errors.New("VertexAI credentials file path is empty")
 	}
 	if vtxKey.filePath == jsonKeyPath {
 		return vtxKey.jsonKey, nil
