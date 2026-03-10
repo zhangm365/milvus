@@ -245,7 +245,7 @@ func (c *compactionInspector) schedule() []CompactionTask {
 
 	// The schedule loop will stop if either:
 	// 1. no more task to schedule (the task queue is empty)
-	// 2. no avaiable slots
+	// 2. no available slots
 	for {
 		t, err := c.queueTasks.Dequeue()
 		if err != nil {

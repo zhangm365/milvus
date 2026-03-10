@@ -98,7 +98,7 @@ func (s *ClusteringCompactionPolicySuite) TestEnable() {
 	s.True(s.clusteringCompactionPolicy.Enable())
 }
 
-func (s *ClusteringCompactionPolicySuite) TestTriggerWithNoCollecitons() {
+func (s *ClusteringCompactionPolicySuite) TestTriggerWithNoCollections() {
 	// trigger with no collections
 	events, err := s.clusteringCompactionPolicy.Trigger(context.Background())
 	s.NoError(err)

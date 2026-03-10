@@ -397,7 +397,7 @@ func (sd *shardDelegator) Search(ctx context.Context, req *querypb.SearchRequest
 		return nil, fmt.Errorf("dml channel not match, delegator channel %s, search channels %v", sd.vchannelName, req.GetDmlChannels())
 	}
 
-	req.Req.GuaranteeTimestamp = sd.speedupGuranteeTS(
+	req.Req.GuaranteeTimestamp = sd.speedupGuaranteeTS(
 		ctx,
 		req.Req.GetConsistencyLevel(),
 		req.Req.GetGuaranteeTimestamp(),
@@ -527,7 +527,7 @@ func (sd *shardDelegator) QueryStream(ctx context.Context, req *querypb.QueryReq
 		return fmt.Errorf("dml channel not match, delegator channel %s, search channels %v", sd.vchannelName, req.GetDmlChannels())
 	}
 
-	req.Req.GuaranteeTimestamp = sd.speedupGuranteeTS(
+	req.Req.GuaranteeTimestamp = sd.speedupGuaranteeTS(
 		ctx,
 		req.Req.GetConsistencyLevel(),
 		req.Req.GetGuaranteeTimestamp(),
@@ -603,7 +603,7 @@ func (sd *shardDelegator) Query(ctx context.Context, req *querypb.QueryRequest) 
 		return nil, fmt.Errorf("dml channel not match, delegator channel %s, search channels %v", sd.vchannelName, req.GetDmlChannels())
 	}
 
-	req.Req.GuaranteeTimestamp = sd.speedupGuranteeTS(
+	req.Req.GuaranteeTimestamp = sd.speedupGuaranteeTS(
 		ctx,
 		req.Req.GetConsistencyLevel(),
 		req.Req.GetGuaranteeTimestamp(),
@@ -929,9 +929,9 @@ func executeSubTasks[T any, R interface {
 	return nil, merr.Combine(errors...)
 }
 
-// speedupGuranteeTS returns the guarantee timestamp for strong consistency search.
+// speedupGuaranteeTS returns the guarantee timestamp for strong consistency search.
 // TODO: we just make a speedup right now, but in the future, we will make the mvcc and guarantee timestamp same.
-func (sd *shardDelegator) speedupGuranteeTS(
+func (sd *shardDelegator) speedupGuaranteeTS(
 	ctx context.Context,
 	cl commonpb.ConsistencyLevel,
 	guaranteeTS uint64,

@@ -68,7 +68,7 @@ func (w *segmentAllocWorker) do() {
 			return
 		}
 		if e := status.AsStreamingError(err); e.IsUnrecoverable() {
-			w.Logger().Warn("allocate new growing segement with unrecoverable error, stop retrying", zap.Error(err))
+			w.Logger().Warn("allocate new growing segment with unrecoverable error, stop retrying", zap.Error(err))
 			return
 		}
 		nextInterval := backoff.NextBackOff()

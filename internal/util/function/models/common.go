@@ -46,7 +46,7 @@ const (
 type EmbeddingType int
 
 const (
-	UnsupportEmbd EmbeddingType = iota
+	UnsupportedEmbd EmbeddingType = iota
 	Float32Embd
 	Int8Embd
 )
@@ -221,7 +221,7 @@ func GetEmbdType(dtype schemapb.DataType) EmbeddingType {
 	case schemapb.DataType_Int8Vector:
 		return Int8Embd
 	default:
-		return UnsupportEmbd
+		return UnsupportedEmbd
 	}
 }
 

@@ -152,7 +152,7 @@ func (f *testOneWALImplsFramework) Run() {
 
 // testTruncate tests the truncate function of walimpls.
 func (f *testOneWALImplsFramework) testTruncate(ctx context.Context, w WALImpls) {
-	msgID, err := w.Append(ctx, message.CreateTestEmptyInsertMesage(0, map[string]string{}))
+	msgID, err := w.Append(ctx, message.CreateTestEmptyInsertMessage(0, map[string]string{}))
 	assert.NoError(f.t, err)
 	assert.NotNil(f.t, msgID)
 	err = w.Truncate(ctx, msgID)
@@ -280,7 +280,7 @@ func (f *testOneWALImplsFramework) testAppend(ctx context.Context, w WALImpls) (
 				"id":    fmt.Sprintf("%d", i),
 				"const": "t",
 			}
-			msg := message.CreateTestEmptyInsertMesage(int64(i), properties)
+			msg := message.CreateTestEmptyInsertMessage(int64(i), properties)
 			id, err := w.Append(ctx, msg)
 			assert.NoError(f.t, err)
 			assert.NotNil(f.t, id)

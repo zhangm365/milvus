@@ -214,13 +214,13 @@ Test_Indexing_Without_Predicate() {
     std::vector<CPlaceholderGroup> placeholderGroups;
     placeholderGroups.push_back(placeholderGroup);
 
-    Timestamp timestmap = 10000000;
+    Timestamp timestamp = 10000000;
 
     CSearchResult c_search_result_on_smallIndex;
     auto res_before_load_index = CSearch(segment,
                                          plan,
                                          placeholderGroup,
-                                         timestmap,
+                                         timestamp,
                                          &c_search_result_on_smallIndex);
     ASSERT_EQ(res_before_load_index.error_code, Success);
 
@@ -264,7 +264,7 @@ Test_Indexing_Without_Predicate() {
     auto res_after_load_index = CSearch(sealed_segment.get(),
                                         plan,
                                         placeholderGroup,
-                                        timestmap,
+                                        timestamp,
                                         &c_search_result_on_bigIndex);
     ASSERT_EQ(res_after_load_index.error_code, Success);
 

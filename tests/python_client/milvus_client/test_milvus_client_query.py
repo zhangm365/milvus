@@ -25,7 +25,7 @@ default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
 default_invalid_string_exp = "varchar >= 0"
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 suffix_expr = 'varchar like "%0"'
 inner_match_expr = 'varchar like "%0%"'
 default_search_field = ct.default_float_vec_field_name
@@ -473,7 +473,7 @@ class TestMilvusClientQueryInvalid(TestMilvusClientV2Base):
         self.drop_collection(client, collection_name)
 
     @pytest.mark.tags(CaseLabel.L2)
-    def test_milvus_client_query_partition_without_loading_partiton(self):
+    def test_milvus_client_query_partition_without_loading_partition(self):
         """
         target: Verify that querying an unloaded partition raises an exception.
         method: 1. Create a collection and two partitions.
@@ -3534,7 +3534,7 @@ class TestMilvusClientQueryValid(TestMilvusClientV2Base):
         self.drop_collection(client, collection_name)
 
     @pytest.mark.tags(CaseLabel.L1)
-    @pytest.mark.parametrize("vachar_expression", [perfix_expr, suffix_expr, inner_match_expr])
+    @pytest.mark.parametrize("vachar_expression", [prefix_expr, suffix_expr, inner_match_expr])
     def test_milvus_client_mmap_query_string_expr_with_prefixes_and_suffix(self, vachar_expression):
         """
         target: test query with prefix string expression when mmap enabled
@@ -3560,7 +3560,7 @@ class TestMilvusClientQueryValid(TestMilvusClientV2Base):
         # 4. query before enabling mmap
         # Prepare expected results based on the specific expression
         exp_res = []
-        if vachar_expression == perfix_expr:  # varchar like "0%"
+        if vachar_expression == prefix_expr:  # varchar like "0%"
             for row in rows:
                 varchar_value = row[ct.default_string_field_name]
                 if varchar_value.startswith("0"):
@@ -4463,7 +4463,7 @@ class TestQueryString(TestMilvusClientV2Base):
         self.drop_collection(client, collection_name)
 
     @pytest.mark.tags(CaseLabel.L1)
-    @pytest.mark.parametrize("expression", [perfix_expr, suffix_expr, inner_match_expr])
+    @pytest.mark.parametrize("expression", [prefix_expr, suffix_expr, inner_match_expr])
     def test_milvus_client_query_string_expr_with_like_auto_index(self, expression):
         """
         target: test query with like string expression and indexed with auto index
@@ -4656,7 +4656,7 @@ class TestQueryString(TestMilvusClientV2Base):
         self.drop_collection(client, collection_name)
 
     @pytest.mark.tags(CaseLabel.L1)
-    @pytest.mark.parametrize("expression", [perfix_expr, suffix_expr, inner_match_expr])
+    @pytest.mark.parametrize("expression", [prefix_expr, suffix_expr, inner_match_expr])
     def test_milvus_client_query_string_expr_with_prefixes_bitmap(self, expression):
         """
         target: test query with prefix string expression and indexed with bitmap

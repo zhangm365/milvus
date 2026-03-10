@@ -14,7 +14,7 @@ import (
 	"github.com/milvus-io/milvus/pkg/v2/util/paramtable"
 )
 
-func TestInsepctor(t *testing.T) {
+func TestInspector(t *testing.T) {
 	paramtable.Init()
 
 	i := inspector.NewTimeTickSyncInspector()

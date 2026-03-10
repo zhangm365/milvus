@@ -83,7 +83,7 @@ class BitmapIndex : public ScalarIndex<T> {
     Build(const Config& config = {}) override;
 
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas) override;
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data) override;
 
     const TargetBitmap
     In(size_t n, const T* values) override;
@@ -247,10 +247,10 @@ class BitmapIndex : public ScalarIndex<T> {
 
  private:
     void
-    BuildPrimitiveField(const std::vector<FieldDataPtr>& datas);
+    BuildPrimitiveField(const std::vector<FieldDataPtr>& data);
 
     void
-    BuildArrayField(const std::vector<FieldDataPtr>& datas);
+    BuildArrayField(const std::vector<FieldDataPtr>& data);
 
     size_t
     GetIndexDataSize();

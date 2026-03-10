@@ -33,7 +33,7 @@ import (
 
 type InsertNodeSuite struct {
 	suite.Suite
-	// datas
+	// data
 	collectionName   string
 	collectionID     int64
 	partitionID      int64
@@ -86,7 +86,7 @@ func (suite *InsertNodeSuite) TestBasic() {
 		}
 	})
 
-	// TODO mock a delgator for test
+	// TODO mock a delegator for test
 	node := newInsertNode(suite.collectionID, suite.channel, suite.manager, suite.delegator, 8)
 	out := node.Operate(in)
 
@@ -124,7 +124,7 @@ func (suite *InsertNodeSuite) TestDataTypeNotSupported() {
 		}
 	}
 
-	// TODO mock a delgator for test
+	// TODO mock a delegator for test
 	node := newInsertNode(suite.collectionID, suite.channel, suite.manager, suite.delegator, 8)
 	suite.Panics(func() {
 		node.Operate(in)

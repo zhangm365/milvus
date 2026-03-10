@@ -193,20 +193,20 @@ struct IndexDataCodec {
 };
 
 std::map<std::string, IndexDataCodec>
-CompactIndexDatas(
-    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_datas);
+CompactIndexData(
+    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_data);
 
 void
-AssembleIndexDatas(
-    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_datas,
+AssembleIndexData(
+    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_data,
     BinarySet& index_binary_set);
 
 void
-AssembleIndexDatas(std::map<std::string, IndexDataCodec>& index_datas,
+AssembleIndexData(std::map<std::string, IndexDataCodec>& index_data,
                    BinarySet& index_binary_set);
 
 void
-AssembleIndexDatas(std::map<std::string, FieldDataChannelPtr>& index_datas,
+AssembleIndexData(std::map<std::string, FieldDataChannelPtr>& index_data,
                    std::unordered_map<std::string, FieldDataPtr>& result);
 
 // On Linux, read() (and similar system calls) will transfer at most 0x7ffff000 (2,147,479,552) bytes once

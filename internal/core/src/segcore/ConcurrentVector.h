@@ -46,17 +46,17 @@ class ThreadSafeValidData {
     }
 
     void
-    set_data_raw(const std::vector<FieldDataPtr>& datas) {
+    set_data_raw(const std::vector<FieldDataPtr>& data) {
         std::unique_lock<std::shared_mutex> lck(mutex_);
         auto total = 0;
-        for (auto& field_data : datas) {
+        for (auto& field_data : data) {
             total += field_data->get_num_rows();
         }
         if (length_ + total > data_.size()) {
             data_.resize(length_ + total);
         }
 
-        for (auto& field_data : datas) {
+        for (auto& field_data : data) {
             auto num_row = field_data->get_num_rows();
             for (size_t i = 0; i < num_row; i++) {
                 data_[length_ + i] = field_data->is_valid(i);
@@ -268,15 +268,15 @@ class ConcurrentVectorImpl : public VectorBase {
     }
 
     void
-    fill_chunk_data(const std::vector<FieldDataPtr>& datas) override {
+    fill_chunk_data(const std::vector<FieldDataPtr>& data) override {
         AssertInfo(chunks_ptr_->size() == 0, "non empty concurrent vector");
-        set_data_raw(0, datas);
+        set_data_raw(0, data);
     }
 
     void
     set_data_raw(ssize_t element_offset,
-                 const std::vector<FieldDataPtr>& datas) override {
-        for (auto& field_data : datas) {
+                 const std::vector<FieldDataPtr>& data) override {
+        for (auto& field_data : data) {
             auto num_rows = field_data->get_num_rows();
             set_data_raw(element_offset, field_data->Data(), num_rows);
             element_offset += num_rows;

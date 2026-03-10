@@ -30,7 +30,7 @@ namespace milvus::index {
 template <typename T>
 void
 ProcessJsonFieldData(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -47,7 +47,7 @@ ProcessJsonFieldData(
 
     bool is_array = cast_type.data_type() == JsonCastType::DataType::ARRAY;
 
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto n = data->get_num_rows();
         for (int64_t i = 0; i < n; i++) {
             auto json_column = static_cast<const Json*>(data->RawValue(i));
@@ -109,7 +109,7 @@ ProcessJsonFieldData(
 
 template void
 ProcessJsonFieldData<bool>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -121,7 +121,7 @@ ProcessJsonFieldData<bool>(
 
 template void
 ProcessJsonFieldData<int64_t>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -133,7 +133,7 @@ ProcessJsonFieldData<int64_t>(
 
 template void
 ProcessJsonFieldData<double>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -145,7 +145,7 @@ ProcessJsonFieldData<double>(
 
 template void
 ProcessJsonFieldData<std::string>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,

@@ -6,12 +6,12 @@
 int
 main(int argc, char* argv[]) {
     std::vector<std::string> data{"data1", "data2", "data3"};
-    std::vector<const char*> datas{};
+    std::vector<const char*> data{};
     for (auto& s : data) {
-        datas.push_back(s.c_str());
+        data.push_back(s.c_str());
     }
 
-    print_vector_of_strings(datas.data(), datas.size());
+    print_vector_of_strings(data.data(), data.size());
 
     return 0;
 }

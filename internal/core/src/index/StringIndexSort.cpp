@@ -170,14 +170,14 @@ StringIndexSort::Build(const Config& config) {
         return;
     }
     config_ = config;
-    auto field_datas =
+    auto field_data =
         storage::CacheRawDataAndFillMissing(file_manager_, config);
-    BuildWithFieldData(field_datas);
+    BuildWithFieldData(field_data);
 }
 
 void
 StringIndexSort::BuildWithFieldData(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     if (is_built_)
         return;
 
@@ -186,7 +186,7 @@ StringIndexSort::BuildWithFieldData(
     // Calculate total number of rows
     total_num_rows_ = 0;
     if (is_nested_index_) {
-        for (const auto& data : field_datas) {
+        for (const auto& data : field_data) {
             auto n = data->get_num_rows();
             auto array_column = static_cast<const Array*>(data->Data());
             for (int64_t i = 0; i < n; i++) {
@@ -196,7 +196,7 @@ StringIndexSort::BuildWithFieldData(
             }
         }
     } else {
-        for (const auto& data : field_datas) {
+        for (const auto& data : field_data) {
             total_num_rows_ += data->get_num_rows();
         }
     }
@@ -214,11 +214,11 @@ StringIndexSort::BuildWithFieldData(
     if (is_nested_index_) {
         static_cast<StringIndexSortMemoryImpl*>(impl_.get())
             ->BuildFromArrayDataNested(
-                field_datas, total_num_rows_, valid_bitset_, idx_to_offsets_);
+                field_data, total_num_rows_, valid_bitset_, idx_to_offsets_);
     } else {
         static_cast<StringIndexSortMemoryImpl*>(impl_.get())
             ->BuildFromFieldData(
-                field_datas, total_num_rows_, valid_bitset_, idx_to_offsets_);
+                field_data, total_num_rows_, valid_bitset_, idx_to_offsets_);
     }
 
     is_built_ = true;
@@ -312,13 +312,13 @@ StringIndexSort::Load(milvus::tracer::TraceContext ctx, const Config& config) {
             config, milvus::LOAD_PRIORITY)
             .value_or(milvus::proto::common::LoadPriority::HIGH);
 
-    auto index_datas =
+    auto index_data =
         file_manager_->LoadIndexToMemory(index_files.value(), load_priority);
 
     BinarySet binary_set;
-    AssembleIndexDatas(index_datas, binary_set);
+    AssembleIndexData(index_data, binary_set);
 
-    index_datas.clear();
+    index_data.clear();
 
     LoadWithoutAssemble(binary_set, config);
 }
@@ -559,7 +559,7 @@ StringIndexSortMemoryImpl::BuildFromRawData(
 
 void
 StringIndexSortMemoryImpl::BuildFromFieldData(
-    const std::vector<FieldDataPtr>& field_datas,
+    const std::vector<FieldDataPtr>& field_data,
     size_t total_num_rows,
     TargetBitmap& valid_bitset,
     std::vector<int32_t>& idx_to_offsets) {
@@ -568,7 +568,7 @@ StringIndexSortMemoryImpl::BuildFromFieldData(
     std::map<std::string, PostingList> map;
 
     size_t row_id = 0;
-    for (const auto& field_data : field_datas) {
+    for (const auto& field_data : field_data) {
         auto slice_num = field_data->get_num_rows();
         for (size_t i = 0; i < slice_num; ++i) {
             if (field_data->is_valid(i)) {
@@ -586,7 +586,7 @@ StringIndexSortMemoryImpl::BuildFromFieldData(
 
 void
 StringIndexSortMemoryImpl::BuildFromArrayDataNested(
-    const std::vector<FieldDataPtr>& field_datas,
+    const std::vector<FieldDataPtr>& field_data,
     size_t total_num_rows,
     TargetBitmap& valid_bitset,
     std::vector<int32_t>& idx_to_offsets) {
@@ -594,7 +594,7 @@ StringIndexSortMemoryImpl::BuildFromArrayDataNested(
     // std::map is sorted
     std::map<std::string, PostingList> map;
     size_t element_id = 0;
-    for (const auto& field_data : field_datas) {
+    for (const auto& field_data : field_data) {
         auto n = field_data->get_num_rows();
         auto array_column = static_cast<const Array*>(field_data->Data());
         for (int64_t i = 0; i < n; i++) {

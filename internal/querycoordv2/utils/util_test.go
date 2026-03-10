@@ -52,7 +52,7 @@ func (suite *UtilTestSuite) setNodeAvailable(nodes ...int64) {
 	}
 }
 
-func (suite *UtilTestSuite) TestCheckLeaderAvaliable() {
+func (suite *UtilTestSuite) TestCheckLeaderAvailable() {
 	leadview := &meta.LeaderView{
 		ID:            1,
 		Channel:       "test",
@@ -74,7 +74,7 @@ func (suite *UtilTestSuite) TestCheckLeaderAvaliable() {
 	suite.NoError(err)
 }
 
-func (suite *UtilTestSuite) TestCheckLeaderAvaliableFailed() {
+func (suite *UtilTestSuite) TestCheckLeaderAvailableFailed() {
 	suite.Run("leader not available", func() {
 		leadview := &meta.LeaderView{
 			ID:            1,

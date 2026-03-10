@@ -490,7 +490,7 @@ func checkObjectStorageError(fileName string, err error) error {
 		return merr.WrapErrIoTooManyRequests(fileName, err)
 	}
 	if err == io.ErrUnexpectedEOF {
-		return merr.WrapErrIoUnexpectEOF(fileName, err)
+		return merr.WrapErrIoUnexpectedEOF(fileName, err)
 	}
 	return merr.WrapErrIoFailed(fileName, err)
 }

@@ -90,10 +90,10 @@ ParsePksFromFieldData(std::vector<PkType>& pks, const DataArray& data) {
 void
 ParsePksFromFieldData(DataType data_type,
                       std::vector<PkType>& pks,
-                      const std::vector<FieldDataPtr>& datas) {
+                      const std::vector<FieldDataPtr>& data) {
     int64_t offset = 0;
 
-    for (auto& field_data : datas) {
+    for (auto& field_data : data) {
         AssertInfo(data_type == field_data->get_data_type(),
                    "inconsistent data type when parse pk from field data");
         int64_t row_count = field_data->get_num_rows();
@@ -1273,7 +1273,7 @@ LoadArrowReaderFromRemote(const std::vector<std::string>& remote_files,
 }
 
 void
-LoadFieldDatasFromRemote(const std::vector<std::string>& remote_files,
+LoadFieldDataFromRemote(const std::vector<std::string>& remote_files,
                          FieldDataChannelPtr channel,
                          milvus::proto::common::LoadPriority priority) {
     try {

@@ -380,24 +380,24 @@ func (t *mixCompactionTask) Compact() (*datapb.CompactionPlanResult, error) {
 		return nil, errors.New("illegal compaction plan")
 	}
 
-	sortMergeAppicable := t.compactionParams.UseMergeSort
-	if sortMergeAppicable {
+	sortMergeApplicable := t.compactionParams.UseMergeSort
+	if sortMergeApplicable {
 		for _, segment := range t.plan.GetSegmentBinlogs() {
 			if !segment.GetIsSorted() && !segment.GetIsSortedByNamespace() {
-				sortMergeAppicable = false
+				sortMergeApplicable = false
 				break
 			}
 		}
 
 		if len(t.plan.GetSegmentBinlogs()) > t.compactionParams.MaxSegmentMergeSort {
 			// sort merge is not applicable if there is only one segment or too many segments
-			sortMergeAppicable = false
+			sortMergeApplicable = false
 		}
 	}
 
 	var res []*datapb.CompactionSegment
 	var err error
-	if sortMergeAppicable {
+	if sortMergeApplicable {
 		log.Info("compact by merge sort")
 		res, err = mergeSortMultipleSegments(ctxTimeout, t.plan, t.collectionID, t.partitionID, t.maxRows, t.binlogIO,
 			t.plan.GetSegmentBinlogs(), t.tr, t.currentTime, t.plan.GetCollectionTtl(), t.compactionParams, t.sortByFieldIDs)

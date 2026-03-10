@@ -70,7 +70,7 @@ pipeline {
                 script {
                     emailext subject: '$DEFAULT_SUBJECT',
                     body: '$DEFAULT_CONTENT',
-//                     recipientProviders: [requestor()],
+//                     recipientProviders: [requester()],
 //                     replyTo: '$DEFAULT_REPLYTO',
                     to: 'qa@zilliz.com'
                 }

@@ -280,7 +280,7 @@ ProcessFuturesInOrder(std::vector<std::future<T>>& futures,
 }
 
 std::vector<FieldDataPtr>
-GetFieldDatasFromStorageV2(std::vector<std::vector<std::string>>& remote_files,
+GetFieldDataFromStorageV2(std::vector<std::vector<std::string>>& remote_files,
                            int64_t field_id,
                            DataType data_type,
                            DataType element_type,
@@ -288,7 +288,7 @@ GetFieldDatasFromStorageV2(std::vector<std::vector<std::string>>& remote_files,
                            milvus_storage::ArrowFileSystemPtr fs);
 
 std::vector<FieldDataPtr>
-GetFieldDatasFromManifest(
+GetFieldDataFromManifest(
     const std::string& manifest_path,
     const std::shared_ptr<milvus_storage::api::Properties>& loon_ffi_properties,
     const FieldDataMeta& field_meta,
@@ -306,7 +306,7 @@ PutIndexData(ChunkManager* remote_chunk_manager,
              std::shared_ptr<CPluginContext> plugin_context);
 
 int64_t
-GetTotalNumRowsForFieldDatas(const std::vector<FieldDataPtr>& field_datas);
+GetTotalNumRowsForFieldData(const std::vector<FieldDataPtr>& field_data);
 
 size_t
 GetNumRowsForLoadInfo(const LoadFieldDataInfo& load_info);
@@ -328,7 +328,7 @@ CreateFieldData(const DataType& type,
                 int64_t total_num_rows = 0);
 
 int64_t
-GetByteSizeOfFieldDatas(const std::vector<FieldDataPtr>& field_datas);
+GetByteSizeOfFieldData(const std::vector<FieldDataPtr>& field_data);
 
 std::vector<FieldDataPtr>
 CollectFieldDataChannel(FieldDataChannelPtr& channel);

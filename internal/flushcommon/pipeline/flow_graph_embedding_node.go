@@ -92,7 +92,7 @@ func (eNode *embeddingNode) bm25Embedding(runner function.FunctionRunner, data *
 		meta[outputFieldId] = storage.NewBM25Stats()
 	}
 
-	datas := []any{}
+	data := []any{}
 
 	for _, inputFieldId := range inputFieldIds {
 		data, ok := data.Data[inputFieldId]
@@ -100,10 +100,10 @@ func (eNode *embeddingNode) bm25Embedding(runner function.FunctionRunner, data *
 			return errors.New("BM25 embedding failed: input field data not varchar/text")
 		}
 
-		datas = append(datas, data.GetDataRows())
+		data = append(data, data.GetDataRows())
 	}
 
-	output, err := runner.BatchRun(datas...)
+	output, err := runner.BatchRun(data...)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (eNode *embeddingNode) minhashEmbedding(
 	data *storage.InsertData,
 ) error {
 	inputFields := runner.GetInputFields()
-	datas := []any{}
+	data := []any{}
 
 	for _, inputField := range inputFields {
 		fieldData, ok := data.Data[inputField.GetFieldID()]
@@ -131,10 +131,10 @@ func (eNode *embeddingNode) minhashEmbedding(
 			return errors.New("MinHash embedding failed: input field data not varchar/text")
 		}
 
-		datas = append(datas, fieldData.GetDataRows())
+		data = append(data, fieldData.GetDataRows())
 	}
 
-	output, err := runner.BatchRun(datas...)
+	output, err := runner.BatchRun(data...)
 	if err != nil {
 		return err
 	}
@@ -162,9 +162,9 @@ func (eNode *embeddingNode) minhashEmbedding(
 	return nil
 }
 
-func (eNode *embeddingNode) embedding(datas []*storage.InsertData) (map[int64]*storage.BM25Stats, error) {
+func (eNode *embeddingNode) embedding(data []*storage.InsertData) (map[int64]*storage.BM25Stats, error) {
 	meta := make(map[int64]*storage.BM25Stats)
-	for _, data := range datas {
+	for _, data := range data {
 		for _, functionRunner := range eNode.functionRunners {
 			functionSchema := functionRunner.GetSchema()
 			switch functionSchema.GetType() {
@@ -186,9 +186,9 @@ func (eNode *embeddingNode) embedding(datas []*storage.InsertData) (map[int64]*s
 	return meta, nil
 }
 
-func (eNode *embeddingNode) Embedding(datas []*writebuffer.InsertData) error {
-	for _, data := range datas {
-		stats, err := eNode.embedding(data.GetDatas())
+func (eNode *embeddingNode) Embedding(data []*writebuffer.InsertData) error {
+	for _, data := range data {
+		stats, err := eNode.embedding(data.GetData())
 		if err != nil {
 			return err
 		}

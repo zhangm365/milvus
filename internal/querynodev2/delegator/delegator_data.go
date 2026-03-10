@@ -235,13 +235,13 @@ type BatchApplyRet = struct {
 // Using pinned segments ensures consistency between BF check and delete application,
 // preventing race conditions where new segments could be added between PinOnlineSegments
 // and this call.
-func (sd *shardDelegator) applyBFInParallel(deleteDatas []*DeleteData, pool *conc.Pool[any], sealed []SnapshotItem, growing []SegmentEntry) *typeutil.ConcurrentMap[int, *BatchApplyRet] {
+func (sd *shardDelegator) applyBFInParallel(deleteData []*DeleteData, pool *conc.Pool[any], sealed []SnapshotItem, growing []SegmentEntry) *typeutil.ConcurrentMap[int, *BatchApplyRet] {
 	retIdx := 0
 	retMap := typeutil.NewConcurrentMap[int, *BatchApplyRet]()
 	batchSize := paramtable.Get().CommonCfg.BloomFilterApplyBatchSize.GetAsInt()
 
 	var futures []*conc.Future[any]
-	for didx, data := range deleteDatas {
+	for didx, data := range deleteData {
 		pks := data.PrimaryKeys
 		for idx := 0; idx < len(pks); idx += batchSize {
 			startIdx := idx
@@ -1067,7 +1067,7 @@ func (sd *shardDelegator) buildBM25IDF(req *internalpb.SearchRequest) (float64, 
 	}
 
 	texts := funcutil.GetVarCharFromPlaceholder(holder)
-	datas := []any{texts}
+	data := []any{texts}
 	functionRunner, ok := sd.functionRunners[req.GetFieldId()]
 	if !ok {
 		return 0, fmt.Errorf("functionRunner not found for field: %d", req.GetFieldId())
@@ -1084,11 +1084,11 @@ func (sd *shardDelegator) buildBM25IDF(req *internalpb.SearchRequest) (float64, 
 		for i := range texts {
 			analyzers[i] = analyzerName
 		}
-		datas = append(datas, analyzers)
+		data = append(data, analyzers)
 	}
 
 	// get search text term frequency
-	output, err := functionRunner.BatchRun(datas...)
+	output, err := functionRunner.BatchRun(data...)
 	if err != nil {
 		return 0, err
 	}
@@ -1134,13 +1134,13 @@ func (sd *shardDelegator) parseMinHash(req *internalpb.SearchRequest) error {
 	}
 
 	texts := funcutil.GetVarCharFromPlaceholder(holder)
-	datas := []any{texts}
+	data := []any{texts}
 	functionRunner, ok := sd.functionRunners[req.GetFieldId()]
 	if !ok {
 		return fmt.Errorf("functionRunner not found for field: %d", req.GetFieldId())
 	}
 
-	output, err := functionRunner.BatchRun(datas...)
+	output, err := functionRunner.BatchRun(data...)
 	if err != nil {
 		return err
 	}

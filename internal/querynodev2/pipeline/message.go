@@ -31,7 +31,7 @@ import (
 type insertNodeMsg struct {
 	insertMsgs    []*InsertMsg
 	deleteMsgs    []*DeleteMsg
-	insertDatas   map[int64]*delegator.InsertData
+	insertData   map[int64]*delegator.InsertData
 	timeRange     TimeRange
 	schema        *schemapb.CollectionSchema
 	schemaVersion uint64

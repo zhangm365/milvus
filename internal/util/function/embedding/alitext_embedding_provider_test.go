@@ -88,12 +88,12 @@ func (s *AliTextEmbeddingProviderSuite) TestEmbedding() {
 	ts := CreateAliEmbeddingServer()
 	defer ts.Close()
 
-	for _, provderName := range s.providers {
-		provder, err := createAliProvider(ts.URL, s.schema.Fields[2], provderName)
+	for _, providerName := range s.providers {
+		provider, err := createAliProvider(ts.URL, s.schema.Fields[2], providerName)
 		s.NoError(err)
 		{
 			data := []string{"sentence"}
-			r, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+			r, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 			ret := r.([][]float32)
 			s.NoError(err2)
 			s.Equal(1, len(ret))
@@ -102,7 +102,7 @@ func (s *AliTextEmbeddingProviderSuite) TestEmbedding() {
 		}
 		{
 			data := []string{"sentence 1", "sentence 2", "sentence 3"}
-			ret, _ := provder.CallEmbedding(context.Background(), data, models.SearchMode)
+			ret, _ := provider.CallEmbedding(context.Background(), data, models.SearchMode)
 			s.Equal([][]float32{{0.0, 1.0, 2.0, 3.0}, {1.0, 2.0, 3.0, 4.0}, {2.0, 3.0, 4.0, 5.0}}, ret)
 		}
 	}
@@ -130,12 +130,12 @@ func (s *AliTextEmbeddingProviderSuite) TestEmbeddingDimNotMatch() {
 
 	defer ts.Close()
 	for _, providerName := range s.providers {
-		provder, err := createAliProvider(ts.URL, s.schema.Fields[2], providerName)
+		provider, err := createAliProvider(ts.URL, s.schema.Fields[2], providerName)
 		s.NoError(err)
 
 		// embedding dim not match
 		data := []string{"sentence", "sentence"}
-		_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+		_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 		s.Error(err2)
 	}
 }
@@ -156,14 +156,14 @@ func (s *AliTextEmbeddingProviderSuite) TestEmbeddingNumberNotMatch() {
 	}))
 
 	defer ts.Close()
-	for _, provderName := range s.providers {
-		provder, err := createAliProvider(ts.URL, s.schema.Fields[2], provderName)
+	for _, providerName := range s.providers {
+		provider, err := createAliProvider(ts.URL, s.schema.Fields[2], providerName)
 
 		s.NoError(err)
 
 		// embedding dim not match
 		data := []string{"sentence", "sentence2"}
-		_, err2 := provder.CallEmbedding(context.Background(), data, models.InsertMode)
+		_, err2 := provider.CallEmbedding(context.Background(), data, models.InsertMode)
 		s.Error(err2)
 	}
 }

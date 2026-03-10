@@ -53,7 +53,7 @@ type GcOption struct {
 	checkInterval    time.Duration        // each interval
 	missingTolerance time.Duration        // key missing in meta tolerance time
 	dropTolerance    time.Duration        // dropped segment related key tolerance time
-	scanInterval     time.Duration        // interval for scan residue for interupted log wrttien
+	scanInterval     time.Duration        // interval for scan residue for interrupted log wrttien
 
 	broker           broker.Broker
 	removeObjectPool *conc.Pool[struct{}]

@@ -2774,7 +2774,7 @@ type ShowConfigurationsResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	Status        *commonpb.Status         `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	Configuations []*commonpb.KeyValuePair `protobuf:"bytes,2,rep,name=configuations,proto3" json:"configuations,omitempty"`
+	Configurations []*commonpb.KeyValuePair `protobuf:"bytes,2,rep,name=configurations,proto3" json:"configurations,omitempty"`
 }
 
 func (x *ShowConfigurationsResponse) Reset() {
@@ -2816,9 +2816,9 @@ func (x *ShowConfigurationsResponse) GetStatus() *commonpb.Status {
 	return nil
 }
 
-func (x *ShowConfigurationsResponse) GetConfiguations() []*commonpb.KeyValuePair {
+func (x *ShowConfigurationsResponse) GetConfigurations() []*commonpb.KeyValuePair {
 	if x != nil {
-		return x.Configuations
+		return x.Configurations
 	}
 	return nil
 }
@@ -5205,7 +5205,7 @@ var file_internal_proto_depIdxs = []int32{
 	63, // 37: milvus.proto.internal.ListPolicyResponse.privilege_groups:type_name -> milvus.proto.milvus.PrivilegeGroupInfo
 	57, // 38: milvus.proto.internal.ShowConfigurationsRequest.base:type_name -> milvus.proto.common.MsgBase
 	56, // 39: milvus.proto.internal.ShowConfigurationsResponse.status:type_name -> milvus.proto.common.Status
-	55, // 40: milvus.proto.internal.ShowConfigurationsResponse.configuations:type_name -> milvus.proto.common.KeyValuePair
+	55, // 40: milvus.proto.internal.ShowConfigurationsResponse.configurations:type_name -> milvus.proto.common.KeyValuePair
 	1,  // 41: milvus.proto.internal.Rate.rt:type_name -> milvus.proto.internal.RateType
 	64, // 42: milvus.proto.internal.ImportRequestInternal.schema:type_name -> milvus.proto.schema.CollectionSchema
 	33, // 43: milvus.proto.internal.ImportRequestInternal.files:type_name -> milvus.proto.internal.ImportFile

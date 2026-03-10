@@ -91,7 +91,7 @@ TEST_F(GcpNativeChunkManagerTest, BucketPositive) {
     EXPECT_EQ(chunk_manager_->BucketExists(test_bucket_name), false);
 }
 
-TEST_F(GcpNativeChunkManagerTest, BucketNegtive) {
+TEST_F(GcpNativeChunkManagerTest, BucketNegative) {
     string test_bucket_name = configs_.bucket_name;
     EXPECT_EQ(chunk_manager_->DeleteBucket(test_bucket_name), false);
     EXPECT_EQ(chunk_manager_->CreateBucket(test_bucket_name), true);

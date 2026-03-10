@@ -35,7 +35,7 @@ func (fv FloatVector) Dim() int {
 	return len(fv)
 }
 
-// entity.FieldType returns coresponding field type.
+// entity.FieldType returns corresponding field type.
 func (fv FloatVector) FieldType() FieldType {
 	return FieldTypeFloatVector
 }
@@ -64,7 +64,7 @@ func (fv Float16Vector) Dim() int {
 	return len(fv) / 2
 }
 
-// entity.FieldType returns coresponding field type.
+// entity.FieldType returns corresponding field type.
 func (fv Float16Vector) FieldType() FieldType {
 	return FieldTypeFloat16Vector
 }
@@ -85,7 +85,7 @@ func (fv BFloat16Vector) Dim() int {
 	return len(fv) / 2
 }
 
-// entity.FieldType returns coresponding field type.
+// entity.FieldType returns corresponding field type.
 func (fv BFloat16Vector) FieldType() FieldType {
 	return FieldTypeBFloat16Vector
 }
@@ -111,7 +111,7 @@ func (bv BinaryVector) Serialize() []byte {
 	return bv
 }
 
-// entity.FieldType returns coresponding field type.
+// entity.FieldType returns corresponding field type.
 func (bv BinaryVector) FieldType() FieldType {
 	return FieldTypeBinaryVector
 }
@@ -123,7 +123,7 @@ func (t Text) Dim() int {
 	return 0
 }
 
-// entity.FieldType returns coresponding field type.
+// entity.FieldType returns corresponding field type.
 func (t Text) FieldType() FieldType {
 	return FieldTypeVarChar
 }
@@ -145,7 +145,7 @@ func (iv Int8Vector) Serialize() []byte {
 	return typeutil.Int8ArrayToBytes(iv)
 }
 
-// entity.FieldType returns coresponding field type.
+// entity.FieldType returns corresponding field type.
 func (iv Int8Vector) FieldType() FieldType {
 	return FieldTypeInt8Vector
 }

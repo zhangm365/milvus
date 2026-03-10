@@ -48,7 +48,7 @@ func (it *insertTask) Execute(ctx context.Context) error {
 		zap.Int64("collectionID", collID),
 		zap.Strings("virtual_channels", channelNames),
 		zap.Int64("task_id", it.ID()),
-		zap.Bool("is_parition_key", it.partitionKeys != nil),
+		zap.Bool("is_partition_key", it.partitionKeys != nil),
 		zap.Duration("get cache duration", getCacheDur))
 
 	var ez *message.CipherConfig

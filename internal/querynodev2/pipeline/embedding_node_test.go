@@ -38,7 +38,7 @@ import (
 // test of embedding node
 type EmbeddingNodeSuite struct {
 	suite.Suite
-	// datas
+	// data
 	collectionID     int64
 	collectionSchema *schemapb.CollectionSchema
 	channel          string
@@ -217,9 +217,9 @@ func (suite *EmbeddingNodeSuite) TestOperator() {
 
 			msg, ok := output.(*insertNodeMsg)
 			suite.Require().True(ok)
-			suite.Require().NotNil(msg.insertDatas)
-			suite.Require().Equal(int64(3), msg.insertDatas[1].BM25Stats[102].NumRow())
-			suite.Require().Equal(int64(3), msg.insertDatas[1].InsertRecord.GetNumRows())
+			suite.Require().NotNil(msg.insertData)
+			suite.Require().Equal(int64(3), msg.insertData[1].BM25Stats[102].NumRow())
+			suite.Require().Equal(int64(3), msg.insertData[1].InsertRecord.GetNumRows())
 		})
 	})
 }
@@ -233,14 +233,14 @@ func (suite *EmbeddingNodeSuite) TestAddInsertData() {
 		defer node.Close()
 
 		// transfer insert msg failed because rowbase data not support sparse vector
-		insertDatas := make(map[int64]*delegator.InsertData)
+		insertData := make(map[int64]*delegator.InsertData)
 		rowBaseReq := proto.Clone(suite.msgs[0].InsertRequest).(*msgpb.InsertRequest)
 		rowBaseReq.Version = msgpb.InsertDataVersion_RowBased
 		rowBaseMsg := &msgstream.InsertMsg{
 			BaseMsg:       msgstream.BaseMsg{},
 			InsertRequest: rowBaseReq,
 		}
-		err = node.addInsertData(insertDatas, rowBaseMsg, collection)
+		err = node.addInsertData(insertData, rowBaseMsg, collection)
 		suite.Error(err)
 	})
 
@@ -257,8 +257,8 @@ func (suite *EmbeddingNodeSuite) TestAddInsertData() {
 		suite.NoError(err)
 		defer node.Close()
 
-		insertDatas := make(map[int64]*delegator.InsertData)
-		err = node.addInsertData(insertDatas, suite.msgs[0], collection)
+		insertData := make(map[int64]*delegator.InsertData)
+		err = node.addInsertData(insertData, suite.msgs[0], collection)
 		suite.Error(err)
 	})
 }

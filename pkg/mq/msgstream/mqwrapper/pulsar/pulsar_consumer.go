@@ -55,8 +55,8 @@ func (pc *Consumer) Chan() <-chan common.Message {
 	if pc.msgChannel == nil {
 		pc.once.Do(func() {
 			pc.msgChannel = make(chan common.Message, 256)
-			// this part handles msgstream expectation when the consumer is not seeked
-			// pulsar's default behavior is setting postition to the earliest pointer when client of the same subscription pointer is not acked
+			// this part handles msgstream expectation when the consumer is not sought
+			// pulsar's default behavior is setting position to the earliest pointer when client of the same subscription pointer is not acked
 			// yet, our message stream is to setting to the very start point of the topic
 			if !pc.hasSeek && !pc.AtLatest {
 				// the concrete value of the MessageID is pulsar.messageID{-1,-1,-1,-1}
@@ -189,7 +189,7 @@ func patchEarliestMessageID(mid *pulsar.MessageID) {
 
 	//ifData := v.InterfaceData() // unwrap interface
 	//ifData[1] is the pointer to the exact struct
-	// 20 is the offset of paritionIdx of messageID
+	// 20 is the offset of partitionIdx of messageID
 	//lint:ignore unsafeptr: possible misuse of unsafe.Pointer (govet), hardcoded offset
 	//*(*int32)(unsafe.Pointer(v.InterfaceData()[1] + 20)) = 0
 

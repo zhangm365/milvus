@@ -435,7 +435,7 @@ func (c *importChecker) checkIndexBuildingJob(job ImportJob) {
 	<-c.l0CompactionTrigger.GetPauseCompactionChan(job.GetJobID(), job.GetCollectionID())
 	log.Info("l0 segment compacting paused", zap.Int64("jobID", job.GetJobID()))
 
-	if c.waitL0ImortTaskDone(job) {
+	if c.waitL0ImportTaskDone(job) {
 		return
 	}
 	waitL0ImportDuration := job.GetTR().RecordSpan()
@@ -460,7 +460,7 @@ func (c *importChecker) checkIndexBuildingJob(job ImportJob) {
 	log.Info("import job all completed", zap.Duration("jobTimeCost/total", totalDuration))
 }
 
-func (c *importChecker) waitL0ImortTaskDone(job ImportJob) bool {
+func (c *importChecker) waitL0ImportTaskDone(job ImportJob) bool {
 	// wait all lo import tasks to be completed
 	l0ImportTasks := c.importMeta.GetTaskBy(c.ctx, WithType(ImportTaskType), WithJob(job.GetJobID()), WithL0CompactionSource())
 	for _, t := range l0ImportTasks {

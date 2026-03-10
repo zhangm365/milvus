@@ -186,7 +186,7 @@ func (s *ClusteringCompactionTaskSuite) TestCompactionInit() {
 	s.Equal(8, s.task.flushPool.Cap())
 }
 
-func (s *ClusteringCompactionTaskSuite) preparScalarCompactionNormalTask() {
+func (s *ClusteringCompactionTaskSuite) prepareScalarCompactionNormalTask() {
 	dblobs, err := getInt64DeltaBlobs(
 		1,
 		[]int64{100},
@@ -250,7 +250,7 @@ func (s *ClusteringCompactionTaskSuite) preparScalarCompactionNormalTask() {
 
 func (s *ClusteringCompactionTaskSuite) TestScalarCompactionNormal() {
 	s.T().Skip("no chunking for storage v2, skip legacy test")
-	s.preparScalarCompactionNormalTask()
+	s.prepareScalarCompactionNormalTask()
 	// 8+8+8+4+7+4*4=51
 	// 51*1024 = 52224
 	// writer will automatically flush after 1024 rows.

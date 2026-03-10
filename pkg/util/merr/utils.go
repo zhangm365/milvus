@@ -564,7 +564,7 @@ func WrapErrAliasNotFound(db any, alias any, msg ...string) error {
 }
 
 func WrapErrAliasCollectionNameConflict(db any, alias any, msg ...string) error {
-	err := wrapFields(ErrAliasCollectionNameConfilct,
+	err := wrapFields(ErrAliasCollectionNameConflict,
 		value("database", db),
 		value("alias", alias),
 	)
@@ -933,11 +933,11 @@ func WrapErrIoFailedReason(reason string, msg ...string) error {
 	return err
 }
 
-func WrapErrIoUnexpectEOF(key string, err error) error {
+func WrapErrIoUnexpectedEOF(key string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return wrapFieldsWithDesc(ErrIoUnexpectEOF, err.Error(), value("key", key))
+	return wrapFieldsWithDesc(ErrIoUnexpectedEOF, err.Error(), value("key", key))
 }
 
 func WrapErrIoTooManyRequests(key string, err error) error {

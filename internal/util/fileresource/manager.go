@@ -335,6 +335,6 @@ func NewManager(storage storage.ChunkManager, mode Mode) Manager {
 		manager.Start()
 		return manager
 	default:
-		panic(fmt.Sprintf("Unknown file resource mananger mod: %v", mode))
+		panic(fmt.Sprintf("Unknown file resource manager mod: %v", mode))
 	}
 }

@@ -200,7 +200,7 @@ class TestIvfRabitqSearchParams(TestMilvusClientV2Base):
         self.float_vector_dim = dim
         self.primary_keys = []
         self.enable_dynamic_field = False
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -233,7 +233,7 @@ class TestIvfRabitqSearchParams(TestMilvusClientV2Base):
                     pk_field_name: pk,
                     self.float_vector_field_name: list(float_vectors[pk])
                 }
-                self.datas.append(row)
+                self.data.append(row)
                 rows.append(row)
 
             # Insert into respective partitions

@@ -26,7 +26,7 @@ import (
 // milvus server label rules:
 // The server label of milvus will be injected into the session of milvus server,
 // which can be found at SessionRaw.ServerLabels.
-// The label is a envionment variable, the key must be prefixed with "MILVUS_SERVER_LABEL_".
+// The label is a environment variable, the key must be prefixed with "MILVUS_SERVER_LABEL_".
 // There are two types of labels:
 //
 // role-specific labels and non-role-specific labels.

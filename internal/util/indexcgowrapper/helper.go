@@ -24,12 +24,12 @@ func GetBinarySetKeys(cBinarySet C.CBinarySet) ([]string, error) {
 	if size == 0 {
 		return nil, errors.New("BinarySet size is zero")
 	}
-	datas := make([]unsafe.Pointer, size)
+	data := make([]unsafe.Pointer, size)
 
-	C.GetBinarySetKeys(cBinarySet, unsafe.Pointer(&datas[0]))
+	C.GetBinarySetKeys(cBinarySet, unsafe.Pointer(&data[0]))
 	ret := make([]string, size)
 	for i := 0; i < size; i++ {
-		ret[i] = C.GoString((*C.char)(datas[i]))
+		ret[i] = C.GoString((*C.char)(data[i]))
 	}
 
 	return ret, nil

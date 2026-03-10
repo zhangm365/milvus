@@ -4398,7 +4398,7 @@ func (node *Proxy) GetPersistentSegmentInfo(ctx context.Context, req *milvuspb.G
 
 	getSegmentsByStatesResponse, err := node.mixCoord.GetSegmentsByStates(ctx, &datapb.GetSegmentsByStatesRequest{
 		CollectionID: collectionID,
-		// -1 means list all partition segemnts
+		// -1 means list all partition segments
 		PartitionID: -1,
 		States:      []commonpb.SegmentState{commonpb.SegmentState_Flushing, commonpb.SegmentState_Flushed, commonpb.SegmentState_Sealed},
 	})
@@ -6927,7 +6927,7 @@ func (node *Proxy) RunAnalyzer(ctx context.Context, req *milvuspb.RunAnalyzerReq
 		})
 	}
 
-	// run builded analyzer by delegator
+	// run built analyzer by delegator
 	// collection must loaded
 	if err := validateRunAnalyzer(req); err != nil {
 		return &milvuspb.RunAnalyzerResponse{

@@ -57,7 +57,7 @@ func (d *channelAssignmentDiscoverer) parseState() VersionedState {
 		assignment := assignment
 		addrs = append(addrs, resolver.Address{
 			Addr: assignment.NodeInfo.Address,
-			// resolverAttributes is important to use when resolving, server id to make resolver.Address with same adresss different.
+			// resolverAttributes is important to use when resolving, server id to make resolver.Address with same address different.
 			Attributes: attributes.WithServerID(new(attributes.Attributes), assignment.NodeInfo.ServerID),
 			// balancerAttributes can be seen by picker of grpc balancer.
 			BalancerAttributes: attributes.WithChannelAssignmentInfo(new(attributes.Attributes), &assignment),

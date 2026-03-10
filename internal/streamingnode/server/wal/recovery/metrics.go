@@ -50,7 +50,7 @@ func (m *recoveryMetrics) ObServePersistedMetrics(tickTime uint64) {
 	m.persistedTimeTick.Set(tsoutil.PhysicalTimeSeconds(tickTime))
 }
 
-func (m *recoveryMetrics) ObserveInconsitentEvent() {
+func (m *recoveryMetrics) ObserveInconsistentEvent() {
 	m.inconsistentEventTotal.Inc()
 }
 

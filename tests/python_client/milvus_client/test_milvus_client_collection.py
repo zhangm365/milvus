@@ -21,9 +21,9 @@ default_search_exp = "id >= 0"
 exp_res = "exp_res"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
-default_invaild_string_exp = "varchar >= 0"
+default_invalid_string_exp = "varchar >= 0"
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 default_search_field = ct.default_float_vec_field_name
 default_search_params = ct.default_search_params
 default_primary_key_field_name = "id"
@@ -773,7 +773,7 @@ class TestMilvusClientCollectionValid(TestMilvusClientV2Base):
             self.add_collection_field(client, collection_name, field_name="field_new_int64", data_type=DataType.INT64,
                                       nullable=True, is_cluster_key=True)
             self.add_collection_field(client, collection_name, field_name="field_new_var", data_type=DataType.VARCHAR,
-                                      nullable=True, default_vaule="field_new_var", max_length=64)
+                                      nullable=True, default_value="field_new_var", max_length=64)
             check_items["add_fields"] = ["field_new_int64", "field_new_var"]
         self.describe_collection(client, collection_name,
                                  check_task=CheckTasks.check_describe_collection_property,

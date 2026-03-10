@@ -33,7 +33,7 @@ import (
 // test of filter node
 type FilterNodeSuite struct {
 	suite.Suite
-	// datas
+	// data
 	collectionID int64
 	partitionIDs []int64
 	channel      string

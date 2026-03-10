@@ -1111,7 +1111,7 @@ func (node *QueryNode) ShowConfigurations(ctx context.Context, req *internalpb.S
 
 		return &internalpb.ShowConfigurationsResponse{
 			Status:        merr.Status(err),
-			Configuations: nil,
+			Configurations: nil,
 		}, nil
 	}
 	defer node.lifetime.Done()
@@ -1127,7 +1127,7 @@ func (node *QueryNode) ShowConfigurations(ctx context.Context, req *internalpb.S
 
 	return &internalpb.ShowConfigurationsResponse{
 		Status:        merr.Success(),
-		Configuations: configList,
+		Configurations: configList,
 	}, nil
 }
 
@@ -1507,7 +1507,7 @@ func (node *QueryNode) DeleteBatch(ctx context.Context, req *querypb.DeleteBatch
 		segment := segment
 		futures = append(futures, pool.Submit(func() (struct{}, error) {
 			// TODO @silverxia, add interface to use same data struct for segment delete
-			// current implementation still copys pks into protobuf(or arrow) struct
+			// current implementation still copies pks into protobuf(or arrow) struct
 			err := segment.Delete(ctx, pks, req.GetTimestamps())
 			if err != nil {
 				errSet.Insert(segment.ID())
@@ -1764,18 +1764,18 @@ func (node *QueryNode) ComputePhraseMatchSlop(ctx context.Context, req *querypb.
 
 func (node *QueryNode) computePhraseMatchSlopByParams(req *querypb.ComputePhraseMatchSlopRequest) (*querypb.ComputePhraseMatchSlopResponse, error) {
 	query := req.GetQueryText()
-	datas := req.GetDataTexts()
+	data := req.GetDataTexts()
 
-	if query == "" || len(datas) == 0 {
+	if query == "" || len(data) == 0 {
 		return &querypb.ComputePhraseMatchSlopResponse{
 			Status: merr.Success(), // Empty result
 		}, nil
 	}
 
-	isMatches := make([]bool, len(datas))
-	slops := make([]int64, len(datas))
+	isMatches := make([]bool, len(data))
+	slops := make([]int64, len(data))
 
-	for i, data := range datas {
+	for i, data := range data {
 		slop, err := textmatch.ComputePhraseMatchSlop(req.GetAnalyzerParams(), query, data)
 		if err != nil {
 			isMatches[i] = false

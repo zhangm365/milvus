@@ -41,7 +41,7 @@ const char EDEK[] = "edek";
 const char EZID[] = "encryption_zone";
 
 const char INDEX_ROOT_PATH[] = "index_files";
-const char RAWDATA_ROOT_PATH[] = "raw_datas";
+const char RAWDATA_ROOT_PATH[] = "raw_data";
 const char ANALYZE_ROOT_PATH[] = "analyze_stats";
 const char CENTROIDS_NAME[] = "centroids";
 const char OFFSET_MAPPING_NAME[] = "offset_mapping";
@@ -72,7 +72,7 @@ const int64_t START_JSON_STATS_FIELD_ID = 2000;
 const int64_t END_JSON_STATS_FIELD_ID = 12000;
 
 const char DEFAULT_PLANNODE_ID[] = "0";
-const char DEAFULT_QUERY_ID[] = "0";
+const char DEFAULT_QUERY_ID[] = "0";
 const char DEFAULT_TASK_ID[] = "0";
 
 const int64_t DEFAULT_FIELD_MAX_MEMORY_LIMIT = 128 << 20;  // bytes

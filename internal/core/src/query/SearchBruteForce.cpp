@@ -166,7 +166,7 @@ BruteForceSearch(const dataset::SearchDataset& query_ds,
         PrepareBFDataSet(query_ds, raw_ds, data_type);
     auto search_cfg = PrepareBFSearchParams(search_info, index_info);
     // `range_search_k` is only used as one of the conditions for iterator early termination.
-    // not gurantee to return exactly `range_search_k` results, which may be more or less.
+    // not guarantee to return exactly `range_search_k` results, which may be more or less.
     // set it to -1 will return all results in the range.
     search_cfg[knowhere::meta::RANGE_SEARCH_K] = topk;
     sub_result.mutable_offsets().resize(nq * topk);

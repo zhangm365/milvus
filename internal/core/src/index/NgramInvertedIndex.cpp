@@ -103,7 +103,7 @@ NgramInvertedIndex::NgramInvertedIndex(const storage::FileManagerContext& ctx,
 }
 
 void
-NgramInvertedIndex::BuildWithFieldData(const std::vector<FieldDataPtr>& datas) {
+NgramInvertedIndex::BuildWithFieldData(const std::vector<FieldDataPtr>& data) {
     AssertInfo(schema_.data_type() == proto::schema::DataType::String ||
                    schema_.data_type() == proto::schema::DataType::VarChar ||
                    schema_.data_type() == proto::schema::DataType::JSON,
@@ -115,12 +115,12 @@ NgramInvertedIndex::BuildWithFieldData(const std::vector<FieldDataPtr>& datas) {
 
     index_build_begin_ = std::chrono::system_clock::now();
     if (schema_.data_type() == proto::schema::DataType::JSON) {
-        BuildWithJsonFieldData(datas);
+        BuildWithJsonFieldData(data);
     } else {
         // Calculate avg_row_size for String/VarChar types
         size_t total_bytes = 0;
         size_t total_rows = 0;
-        for (const auto& data : datas) {
+        for (const auto& data : data) {
             auto n = data->get_num_rows();
             for (size_t i = 0; i < n; i++) {
                 if (schema_.nullable() && !data->is_valid(i)) {
@@ -136,13 +136,13 @@ NgramInvertedIndex::BuildWithFieldData(const std::vector<FieldDataPtr>& datas) {
         avg_row_size_ = total_rows > 0 ? total_bytes / total_rows : 0;
         LOG_INFO("Ngram index avg_row_size: {} bytes", avg_row_size_);
 
-        InvertedIndexTantivy<std::string>::BuildWithFieldData(datas);
+        InvertedIndexTantivy<std::string>::BuildWithFieldData(data);
     }
 }
 
 void
 NgramInvertedIndex::BuildWithJsonFieldData(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     AssertInfo(schema_.data_type() == proto::schema::DataType::JSON,
                "schema data should be json, but is {}",
                schema_.data_type());
@@ -157,7 +157,7 @@ NgramInvertedIndex::BuildWithJsonFieldData(
     size_t total_rows = 0;
 
     ProcessJsonFieldData<std::string>(
-        field_datas,
+        field_data,
         this->schema_,
         nested_path_,
         JSON_CAST_TYPE,
@@ -239,10 +239,10 @@ NgramInvertedIndex::LoadIndexMetas(const std::vector<std::string>& index_files,
                 config, milvus::LOAD_PRIORITY)
                 .value_or(milvus::proto::common::LoadPriority::HIGH);
         // avg_row_size is only 8 bytes, never sliced
-        auto index_datas = mem_file_manager_->LoadIndexToMemory(
+        auto index_data = mem_file_manager_->LoadIndexToMemory(
             {*avg_row_size_it}, load_priority);
         auto avg_row_size_data =
-            std::move(index_datas.at(NGRAM_AVG_ROW_SIZE_FILE_NAME));
+            std::move(index_data.at(NGRAM_AVG_ROW_SIZE_FILE_NAME));
         memcpy(
             &avg_row_size_, avg_row_size_data->PayloadData(), sizeof(size_t));
         LOG_INFO("Loaded ngram index avg_row_size: {} bytes", avg_row_size_);

@@ -745,6 +745,6 @@ func (f *FunctionTaskSuite) TestDropCollectionFunctionTaskExecute() {
 		}
 
 		err := task.Execute(ctx)
-		f.ErrorContains(err, "Currently does not support droping BM25 function")
+		f.ErrorContains(err, "Currently does not support dropping BM25 function")
 	}
 }

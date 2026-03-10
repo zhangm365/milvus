@@ -289,7 +289,7 @@ func (m *mockMixCoord) GetComponentStates(ctx context.Context, req *milvuspb.Get
 	}, nil
 }
 
-func (h *mockMixCoord) SyncQcFileResource(ctx context.Context, resources []*internalpb.FileResourceInfo, verion uint64) error {
+func (h *mockMixCoord) SyncQcFileResource(ctx context.Context, resources []*internalpb.FileResourceInfo, version uint64) error {
 	return nil
 }
 
@@ -566,7 +566,7 @@ type mockCompactionTrigger struct {
 	methods map[string]interface{}
 }
 
-// triggerSingleCompaction trigerr a compaction bundled with collection-partiiton-channel-segment
+// triggerSingleCompaction trigerr a compaction bundled with collection-partition-channel-segment
 func (t *mockCompactionTrigger) triggerSingleCompaction(collectionID, partitionID, segmentID int64, channel string, blockToSendSignal bool) error {
 	if f, ok := t.methods["triggerSingleCompaction"]; ok {
 		if ff, ok := f.(func(collectionID int64, partitionID int64, segmentID int64, channel string) error); ok {

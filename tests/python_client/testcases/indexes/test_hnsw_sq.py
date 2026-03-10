@@ -193,7 +193,7 @@ class TestHnswSQSearchParams(TestMilvusClientV2Base):
         self.float_vector_dim = dim
         self.primary_keys = []
         self.enable_dynamic_field = False
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):

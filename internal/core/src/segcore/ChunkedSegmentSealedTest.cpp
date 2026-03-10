@@ -676,12 +676,12 @@ class TestChunkSegment : public testing::TestWithParam<bool> {
                 field_data_map[fid].push_back(field_data);
             }
         }
-        for (auto& [fid, field_datas] : field_data_map) {
+        for (auto& [fid, field_data] : field_data_map) {
             auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                             kPartitionID,
                                                             kSegmentID,
                                                             fid.get(),
-                                                            field_datas,
+                                                            field_data,
                                                             cm);
             segment->LoadFieldData(load_info);
         }
@@ -959,12 +959,12 @@ TEST(TestTTLFieldFilter, TestMaskWithTTLField) {
         auto field_data =
             std::make_shared<FieldData<int64_t>>(DataType::INT64, false);
         field_data->FillFieldData(pk_data.data(), test_data_count);
-        std::vector<FieldDataPtr> field_datas = {field_data};
+        std::vector<FieldDataPtr> field_data = {field_data};
         auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                         kPartitionID,
                                                         kSegmentID,
                                                         pk_fid.get(),
-                                                        field_datas,
+                                                        field_data,
                                                         cm);
         segment->LoadFieldData(load_info);
     }
@@ -973,12 +973,12 @@ TEST(TestTTLFieldFilter, TestMaskWithTTLField) {
         auto field_data =
             std::make_shared<FieldData<int64_t>>(DataType::INT64, false);
         field_data->FillFieldData(ts_data.data(), test_data_count);
-        std::vector<FieldDataPtr> field_datas = {field_data};
+        std::vector<FieldDataPtr> field_data = {field_data};
         auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                         kPartitionID,
                                                         kSegmentID,
                                                         TimestampFieldID.get(),
-                                                        field_datas,
+                                                        field_data,
                                                         cm);
         segment->LoadFieldData(load_info);
     }
@@ -987,12 +987,12 @@ TEST(TestTTLFieldFilter, TestMaskWithTTLField) {
         auto field_data =
             std::make_shared<FieldData<int64_t>>(DataType::TIMESTAMPTZ, false);
         field_data->FillFieldData(ttl_data.data(), test_data_count);
-        std::vector<FieldDataPtr> field_datas = {field_data};
+        std::vector<FieldDataPtr> field_data = {field_data};
         auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                         kPartitionID,
                                                         kSegmentID,
                                                         ttl_fid.get(),
-                                                        field_datas,
+                                                        field_data,
                                                         cm);
         segment->LoadFieldData(load_info);
     }
@@ -1091,12 +1091,12 @@ TEST(TestTTLFieldFilter, TestMaskWithNullableTTLField) {
         auto field_data =
             std::make_shared<FieldData<int64_t>>(DataType::INT64, false);
         field_data->FillFieldData(pk_data.data(), test_data_count);
-        std::vector<FieldDataPtr> field_datas = {field_data};
+        std::vector<FieldDataPtr> field_data = {field_data};
         auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                         kPartitionID,
                                                         kSegmentID,
                                                         pk_fid.get(),
-                                                        field_datas,
+                                                        field_data,
                                                         cm);
         segment->LoadFieldData(load_info);
     }
@@ -1105,12 +1105,12 @@ TEST(TestTTLFieldFilter, TestMaskWithNullableTTLField) {
         auto field_data =
             std::make_shared<FieldData<int64_t>>(DataType::INT64, false);
         field_data->FillFieldData(ts_data.data(), test_data_count);
-        std::vector<FieldDataPtr> field_datas = {field_data};
+        std::vector<FieldDataPtr> field_data = {field_data};
         auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                         kPartitionID,
                                                         kSegmentID,
                                                         TimestampFieldID.get(),
-                                                        field_datas,
+                                                        field_data,
                                                         cm);
         segment->LoadFieldData(load_info);
     }
@@ -1120,12 +1120,12 @@ TEST(TestTTLFieldFilter, TestMaskWithNullableTTLField) {
             std::make_shared<FieldData<int64_t>>(DataType::TIMESTAMPTZ, true);
         field_data->FillFieldData(
             ttl_data.data(), valid_data.data(), test_data_count, 0);
-        std::vector<FieldDataPtr> field_datas = {field_data};
+        std::vector<FieldDataPtr> field_data = {field_data};
         auto load_info = PrepareSingleFieldInsertBinlog(kCollectionID,
                                                         kPartitionID,
                                                         kSegmentID,
                                                         ttl_fid.get(),
-                                                        field_datas,
+                                                        field_data,
                                                         cm);
         segment->LoadFieldData(load_info);
     }

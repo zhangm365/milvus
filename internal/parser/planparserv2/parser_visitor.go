@@ -634,7 +634,7 @@ func (v *ParserVisitor) VisitPhraseMatch(ctx *parser.PhraseMatchContext) interfa
 		}
 		slop = slopValueExpr.GetValue().GetInt64Val()
 		if slop < 0 {
-			return merr.WrapErrParameterInvalidMsg("\"slop\" should not be a negative interger. \"slop\" passed: %s", ctx.Expr().GetText())
+			return merr.WrapErrParameterInvalidMsg("\"slop\" should not be a negative integer. \"slop\" passed: %s", ctx.Expr().GetText())
 		}
 
 		if slop > math.MaxUint32 {
@@ -1441,12 +1441,12 @@ func (v *ParserVisitor) VisitExists(ctx *parser.ExistsContext) interface{} {
 
 	if columnInfo.GetDataType() != schemapb.DataType_JSON {
 		return merr.WrapErrParameterInvalidMsg(
-			"exists operations are only supportted on json field, got:%s", columnInfo.GetDataType())
+			"exists operations are only supported on json field, got:%s", columnInfo.GetDataType())
 	}
 
 	if len(columnInfo.GetNestedPath()) == 0 {
 		return merr.WrapErrParameterInvalidMsg(
-			"exists operations are only supportted on json key")
+			"exists operations are only supported on json key")
 	}
 
 	return &ExprWithType{

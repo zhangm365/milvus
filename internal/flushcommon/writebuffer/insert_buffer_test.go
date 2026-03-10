@@ -218,7 +218,7 @@ func (s *InsertBufferConstructSuite) TestCreateFailure() {
 			},
 		},
 		{
-			tag: "mssing_maxlength",
+			tag: "missing_maxlength",
 			schema: &schemapb.CollectionSchema{
 				Fields: []*schemapb.FieldSchema{
 					{FieldID: 101, Name: "string", DataType: schemapb.DataType_VarChar},

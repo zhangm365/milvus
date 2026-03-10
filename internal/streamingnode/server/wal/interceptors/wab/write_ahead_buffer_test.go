@@ -79,7 +79,7 @@ func TestWriteAheadBufferWithOnlyTrivialTimeTick(t *testing.T) {
 }
 
 func TestWriteAheadBuffer(t *testing.T) {
-	// Concurrent add message into bufffer and make syncup.
+	// Concurrent add message into buffer and make syncup.
 	// The reader should never lost any message if no eviction happen.
 	wb := NewWriteAheadBuffer("pchannel", log.With(), 5*1024*1024, 30*time.Second, createTimeTickMessage(1, true))
 	expectedLastTimeTick := uint64(10000)

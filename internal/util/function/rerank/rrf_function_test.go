@@ -37,7 +37,7 @@ type RRFFunctionSuite struct {
 	suite.Suite
 }
 
-func (s *RRFFunctionSuite) TestNewRRFFuction() {
+func (s *RRFFunctionSuite) TestNewRRFFunction() {
 	schema := &schemapb.CollectionSchema{
 		Name: "test",
 		Fields: []*schemapb.FieldSchema{
@@ -86,7 +86,7 @@ func (s *RRFFunctionSuite) TestNewRRFFuction() {
 	}
 }
 
-func (s *RRFFunctionSuite) TestRRFFuctionProcess() {
+func (s *RRFFunctionSuite) TestRRFFunctionProcess() {
 	schema := &schemapb.CollectionSchema{
 		Name: "test",
 		Fields: []*schemapb.FieldSchema{

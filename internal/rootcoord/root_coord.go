@@ -1842,7 +1842,7 @@ func (c *Core) ShowConfigurations(ctx context.Context, req *internalpb.ShowConfi
 	if err := merr.CheckHealthy(c.GetStateCode()); err != nil {
 		return &internalpb.ShowConfigurationsResponse{
 			Status:        merr.Status(err),
-			Configuations: nil,
+			Configurations: nil,
 		}, nil
 	}
 
@@ -1857,7 +1857,7 @@ func (c *Core) ShowConfigurations(ctx context.Context, req *internalpb.ShowConfi
 
 	return &internalpb.ShowConfigurationsResponse{
 		Status:        merr.Success(),
-		Configuations: configList,
+		Configurations: configList,
 	}, nil
 }
 

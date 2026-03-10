@@ -196,7 +196,7 @@ class ScalarIndex : public IndexBase {
     }
 
     virtual void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& field_datas) {
+    BuildWithFieldData(const std::vector<FieldDataPtr>& field_data) {
         ThrowInfo(Unsupported, "BuildwithFieldData is not supported");
     }
 

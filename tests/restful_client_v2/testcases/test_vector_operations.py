@@ -5117,7 +5117,7 @@ class TestSearchByPKNegative(TestBase):
 
         assert rsp['code'] == 1100
 
-    def test_search_by_pk_with_unparseable_string_ids(self):
+    def test_search_by_pk_with_unparsable_string_ids(self):
         """
         Search with string ids that cannot be parsed to int64 should fail
         """

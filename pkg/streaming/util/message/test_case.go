@@ -205,8 +205,8 @@ func CreateTestTimeTickSyncMessage(t *testing.T, collectionID int64, timetick ui
 	return msg
 }
 
-// CreateTestEmptyInsertMesage creates an empty insert message for testing
-func CreateTestEmptyInsertMesage(msgID int64, extraProperties map[string]string) MutableMessage {
+// CreateTestEmptyInsertMessage creates an empty insert message for testing
+func CreateTestEmptyInsertMessage(msgID int64, extraProperties map[string]string) MutableMessage {
 	msg, err := NewInsertMessageBuilderV1().
 		WithHeader(&InsertMessageHeader{
 			CollectionId: 1,

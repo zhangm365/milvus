@@ -23,7 +23,7 @@ GetKnowhereMetrics() {
     auto str = knowhere::prometheusClient->GetMetrics();
     auto len = str.length();
     char* res = (char*)malloc(len + 1);
-    AssertInfo(res != nullptr, "memmory allocation for res failed!");
+    AssertInfo(res != nullptr, "memory allocation for res failed!");
     memcpy(res, str.data(), len);
     res[len] = '\0';
     return res;

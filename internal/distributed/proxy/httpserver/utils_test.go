@@ -1170,7 +1170,7 @@ func TestConvertQueries2Placeholder(t *testing.T) {
 		requestBody     string
 		dataType        schemapb.DataType
 		dim             int64
-		placehoderValue func() [][]byte
+		placeholderValue func() [][]byte
 	}
 	testCases := make([]testCase, 0)
 
@@ -1282,7 +1282,7 @@ func TestConvertQueries2Placeholder(t *testing.T) {
 	for _, testcase := range testCases {
 		phv, err := convertQueries2Placeholder(testcase.requestBody, testcase.dataType, testcase.dim)
 		assert.Nil(t, err)
-		assert.Equal(t, testcase.placehoderValue(), phv.GetValues(),
+		assert.Equal(t, testcase.placeholderValue(), phv.GetValues(),
 			fmt.Sprintf("check equal fail, data: %s, type: %s, dim: %d", testcase.requestBody, testcase.dataType, testcase.dim))
 	}
 
@@ -1310,7 +1310,7 @@ func TestConvertQueries2Placeholder(t *testing.T) {
 	} {
 		phv, err := convertQueries2Placeholder(testcase.requestBody, testcase.dataType, testcase.dim)
 		assert.Nil(t, err)
-		assert.NotEqual(t, testcase.placehoderValue(), phv.GetValues(),
+		assert.NotEqual(t, testcase.placeholderValue(), phv.GetValues(),
 			fmt.Sprintf("check not equal fail, data: %s, type: %s, dim: %d", testcase.requestBody, testcase.dataType, testcase.dim))
 	}
 
@@ -1583,7 +1583,7 @@ func withArrayField(coll *schemapb.CollectionSchema) *schemapb.CollectionSchema 
 	return coll
 }
 
-func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.DataType) []*schemapb.FieldData {
+func newFieldData(fieldData []*schemapb.FieldData, firstFieldType schemapb.DataType) []*schemapb.FieldData {
 	fieldData1 := schemapb.FieldData{
 		Type:      schemapb.DataType_Bool,
 		FieldName: "field-bool",
@@ -1598,7 +1598,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData1)
+	fieldData = append(fieldData, &fieldData1)
 
 	fieldData2 := schemapb.FieldData{
 		Type:      schemapb.DataType_Int8,
@@ -1614,7 +1614,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData2)
+	fieldData = append(fieldData, &fieldData2)
 
 	fieldData3 := schemapb.FieldData{
 		Type:      schemapb.DataType_Int16,
@@ -1630,7 +1630,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData3)
+	fieldData = append(fieldData, &fieldData3)
 
 	fieldData4 := schemapb.FieldData{
 		Type:      schemapb.DataType_Int32,
@@ -1646,7 +1646,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData4)
+	fieldData = append(fieldData, &fieldData4)
 
 	fieldData5 := schemapb.FieldData{
 		Type:      schemapb.DataType_Float,
@@ -1662,7 +1662,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData5)
+	fieldData = append(fieldData, &fieldData5)
 
 	fieldData6 := schemapb.FieldData{
 		Type:      schemapb.DataType_Double,
@@ -1678,7 +1678,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData6)
+	fieldData = append(fieldData, &fieldData6)
 
 	fieldData7 := schemapb.FieldData{
 		Type:      schemapb.DataType_String,
@@ -1694,7 +1694,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData7)
+	fieldData = append(fieldData, &fieldData7)
 
 	fieldData8 := schemapb.FieldData{
 		Type:      schemapb.DataType_VarChar,
@@ -1710,7 +1710,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData8)
+	fieldData = append(fieldData, &fieldData8)
 
 	fieldData9 := schemapb.FieldData{
 		Type:      schemapb.DataType_JSON,
@@ -1726,7 +1726,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData9)
+	fieldData = append(fieldData, &fieldData9)
 
 	fieldData10 := schemapb.FieldData{
 		Type:      schemapb.DataType_Array,
@@ -1761,7 +1761,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: true,
 	}
-	fieldDatas = append(fieldDatas, &fieldData11)
+	fieldData = append(fieldData, &fieldData11)
 
 	fieldData12 := schemapb.FieldData{
 		Type:      schemapb.DataType_Geometry,
@@ -1782,11 +1782,11 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 		},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData12)
+	fieldData = append(fieldData, &fieldData12)
 
 	switch firstFieldType {
 	case schemapb.DataType_None:
-		return fieldDatas
+		return fieldData
 	case schemapb.DataType_Bool:
 		return []*schemapb.FieldData{&fieldData1}
 	case schemapb.DataType_Int8:
@@ -1837,7 +1837,7 @@ func newFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.Data
 	}
 }
 
-func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schemapb.DataType) []*schemapb.FieldData {
+func newNullableFieldData(fieldData []*schemapb.FieldData, firstFieldType schemapb.DataType) []*schemapb.FieldData {
 	fieldData1 := schemapb.FieldData{
 		Type:      schemapb.DataType_Bool,
 		FieldName: "field-bool",
@@ -1853,7 +1853,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData1)
+	fieldData = append(fieldData, &fieldData1)
 
 	fieldData2 := schemapb.FieldData{
 		Type:      schemapb.DataType_Int8,
@@ -1870,7 +1870,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData2)
+	fieldData = append(fieldData, &fieldData2)
 
 	fieldData3 := schemapb.FieldData{
 		Type:      schemapb.DataType_Int16,
@@ -1887,7 +1887,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData3)
+	fieldData = append(fieldData, &fieldData3)
 
 	fieldData4 := schemapb.FieldData{
 		Type:      schemapb.DataType_Int32,
@@ -1904,7 +1904,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData4)
+	fieldData = append(fieldData, &fieldData4)
 
 	fieldData5 := schemapb.FieldData{
 		Type:      schemapb.DataType_Float,
@@ -1921,7 +1921,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData5)
+	fieldData = append(fieldData, &fieldData5)
 
 	fieldData6 := schemapb.FieldData{
 		Type:      schemapb.DataType_Double,
@@ -1938,7 +1938,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData6)
+	fieldData = append(fieldData, &fieldData6)
 
 	fieldData7 := schemapb.FieldData{
 		Type:      schemapb.DataType_String,
@@ -1955,7 +1955,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData7)
+	fieldData = append(fieldData, &fieldData7)
 
 	fieldData8 := schemapb.FieldData{
 		Type:      schemapb.DataType_VarChar,
@@ -1972,7 +1972,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData8)
+	fieldData = append(fieldData, &fieldData8)
 
 	fieldData9 := schemapb.FieldData{
 		Type:      schemapb.DataType_JSON,
@@ -1989,7 +1989,7 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData9)
+	fieldData = append(fieldData, &fieldData9)
 
 	fieldData10 := schemapb.FieldData{
 		Type:      schemapb.DataType_Array,
@@ -2026,11 +2026,11 @@ func newNullableFieldData(fieldDatas []*schemapb.FieldData, firstFieldType schem
 		ValidData: []bool{true, false, true},
 		IsDynamic: false,
 	}
-	fieldDatas = append(fieldDatas, &fieldData11)
+	fieldData = append(fieldData, &fieldData11)
 
 	switch firstFieldType {
 	case schemapb.DataType_None:
-		return fieldDatas
+		return fieldData
 	case schemapb.DataType_Bool:
 		return []*schemapb.FieldData{&fieldData1}
 	case schemapb.DataType_Int8:
@@ -2685,7 +2685,7 @@ func TestGenerateSearchParams(t *testing.T) {
 	})
 }
 
-func TestGenFunctionSchem(t *testing.T) {
+func TestGenFunctionScheme(t *testing.T) {
 	{
 		funcSchema := &FunctionSchema{
 			FunctionName:    "test",

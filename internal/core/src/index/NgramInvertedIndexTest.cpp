@@ -282,7 +282,7 @@ TEST(NgramIndex, TestNgramWikiEpisode) {
     data.push_back(
         "'Indira Davelba Murillo Alvarado (Tegucigalpa, "
         "the youngest of eight siblings. She attended primary school at the "
-        "Escuela 14 de Julio, and her secondary studies at the Instituto "
+        "Escuela 14 de Julio, and her secondary studies at the Institution "
         "school called \"Indi del Bosque\", where she taught the children of "
         "Honduran women'");
     data.push_back(

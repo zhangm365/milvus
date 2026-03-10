@@ -107,7 +107,7 @@ type sealedBm25Stats struct {
 	inmemory  bool
 	removed   bool
 	segmentID int64
-	ts        time.Time // Time of segemnt register, all segment resgister after target generate will don't remove
+	ts        time.Time // Time of segment register, all segment register after target generate will don't remove
 	localDir  string
 	fieldList []int64 // bm25 field list
 }
@@ -194,7 +194,7 @@ func (s *sealedBm25Stats) Remove() {
 }
 
 // Fetch sealed bm25 stats
-// load local file and return it when stats not in memeory
+// load local file and return it when stats not in memory
 func (s *sealedBm25Stats) FetchStats() (map[int64]*storage.BM25Stats, error) {
 	s.RLock()
 	defer s.RUnlock()
@@ -410,7 +410,7 @@ func (o *idfOracle) Close() {
 func (o *idfOracle) SetNext(snapshot *snapshot) {
 	o.next.SetSnapshot(snapshot)
 
-	// sync SyncDistibution when first load target
+	// sync SyncDistribution when first load target
 	if o.targetVersion.Load() == 0 {
 		o.SyncDistribution()
 	} else {

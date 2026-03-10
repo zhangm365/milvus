@@ -79,9 +79,9 @@ KmeansClustering::FetchDataFiles(uint8_t* buf,
                                              files.begin() + end);
         Config config;
         config[INSERT_FILES_KEY] = group_files;
-        auto field_datas = file_manager_->CacheRawDataToMemory(config);
+        auto field_data = file_manager_->CacheRawDataToMemory(config);
 
-        for (auto& data : field_datas) {
+        for (auto& data : field_data) {
             size_t size = std::min(expected_train_size - offset, data->Size());
             if (size <= 0) {
                 break;

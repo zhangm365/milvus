@@ -62,7 +62,7 @@ fn get_length_filter(params: &json::Map<String, json::Value>) -> Result<SystemFi
     let limit_str = params.get("max");
     if limit_str.is_none() || !limit_str.unwrap().is_u64() {
         return Err(TantivyBindingError::InternalError(
-            "lenth max param was none or not uint".to_string(),
+            "length max param was none or not uint".to_string(),
         ));
     }
     let limit = limit_str.unwrap().as_u64().unwrap() as usize;
@@ -136,7 +136,7 @@ pub fn create_filter(
                     SynonymFilter::from_json(params, helper).map(|f| SystemFilter::Synonym(f))
                 }
                 other => Err(TantivyBindingError::InternalError(format!(
-                    "unsupport filter type: {}",
+                    "unsupported filter type: {}",
                     other
                 ))),
             }

@@ -1381,7 +1381,7 @@ def gen_json_data_for_diff_json_types(nb=ct.default_nb, start=0, json_type="json
     Note: String values should be passed as json.dumps(str) to ensure they are treated as strings,
           not as serialized JSON results.
     """
-    if json_type == "json_embedded_object":                 # a json object with an embedd json object
+    if json_type == "json_embedded_object":                 # a json object with an embed json object
         return [{json_type: {"number": i, "level2": {"level2_number": i, "level2_float": i*1.0, "level2_str": str(i), "level2_array": [i for i in range(i, i + 10)]},
                              "float": i*1.0}, "str": str(i), "array": [i for i in range(i, i + 10)], "bool": bool(i)}
                 for i in range(start, start + nb)]
@@ -3122,7 +3122,7 @@ def gen_multiple_field_expressions(field_name_list=[], random_field_number=0, ex
     if random_field_number < 0:
         raise Exception(f"random_field_number should be greater than or equal with 0]")
     if not isinstance(expr_number, int):
-        raise Exception("parameter parameter should be an interger")
+        raise Exception("parameter parameter should be an integer")
     log.info(field_name_list)
     log.info(random_field_number)
     if len(field_name_list) != 0 and random_field_number != 0:

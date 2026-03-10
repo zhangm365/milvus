@@ -273,7 +273,7 @@ func (s *ReadSuite) TestHybridSearch() {
 			return rand.Float32()
 		}))).WithFilter("ID > 100"), NewAnnRequest("vector", 10, entity.FloatVector(lo.RepeatBy(128, func(_ int) float32 {
 			return rand.Float32()
-		})))).WithConsistencyLevel(entity.ClStrong).WithPartitons(partitionName).WithReranker(NewRRFReranker()).WithOutputFields("*"))
+		})))).WithConsistencyLevel(entity.ClStrong).WithPartitions(partitionName).WithReranker(NewRRFReranker()).WithOutputFields("*"))
 		s.NoError(err)
 	})
 

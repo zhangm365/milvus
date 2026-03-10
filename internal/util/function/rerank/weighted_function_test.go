@@ -37,7 +37,7 @@ type WeightedFunctionSuite struct {
 	suite.Suite
 }
 
-func (s *WeightedFunctionSuite) TestNewWeightedFuction() {
+func (s *WeightedFunctionSuite) TestNewWeightedFunction() {
 	schema := &schemapb.CollectionSchema{
 		Name: "test",
 		Fields: []*schemapb.FieldSchema{
@@ -93,7 +93,7 @@ func (s *WeightedFunctionSuite) TestNewWeightedFuction() {
 	}
 }
 
-func (s *WeightedFunctionSuite) TestWeightedFuctionProcess() {
+func (s *WeightedFunctionSuite) TestWeightedFunctionProcess() {
 	schema := &schemapb.CollectionSchema{
 		Name: "test",
 		Fields: []*schemapb.FieldSchema{

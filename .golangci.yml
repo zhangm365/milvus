@@ -11,7 +11,7 @@ linters:
     - govet
     - ineffassign
     - staticcheck
-    - decorder
+    - decoder
     - depguard
     - gofmt
     - goimports

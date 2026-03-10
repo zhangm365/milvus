@@ -347,8 +347,8 @@ func (s *DataNodeServicesSuite) TestShowConfigurations() {
 	resp, err = node.ShowConfigurations(s.ctx, req)
 	s.Assert().NoError(err)
 	s.Assert().True(merr.Ok(resp.GetStatus()))
-	s.Assert().Equal(1, len(resp.Configuations))
-	s.Assert().Equal("datanode.port", resp.Configuations[0].Key)
+	s.Assert().Equal(1, len(resp.Configurations))
+	s.Assert().Equal("datanode.port", resp.Configurations[0].Key)
 }
 
 func (s *DataNodeServicesSuite) TestGetMetrics() {

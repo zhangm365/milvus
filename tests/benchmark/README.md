@@ -73,7 +73,7 @@ insert_performance:
 ```
 - `insert_performance`
 
-   The top level is the runner type: the other test types including: `search_performance/build_performance/insert_performance/accuracy/locust_insert/...`, each test type corresponds to the different runner component defined in directory `runnners`
+   The top level is the runner type: the other test types including: `search_performance/build_performance/insert_performance/accuracy/locust_insert/...`, each test type corresponds to the different runner component defined in directory `runners`
 
 - other fields under runner type
 

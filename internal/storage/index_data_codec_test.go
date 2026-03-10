@@ -37,7 +37,7 @@ func TestIndexFileBinlogCodec(t *testing.T) {
 	indexID := UniqueID(uniquegenerator.GetUniqueIntGeneratorIns().GetInt())
 	indexParams := make(map[string]string)
 	indexParams[common.IndexTypeKey] = "IVF_FLAT"
-	datas := []*Blob{
+	data := []*Blob{
 		{
 			Key:   "ivf1",
 			Value: []byte{1, 2, 3},
@@ -54,7 +54,7 @@ func TestIndexFileBinlogCodec(t *testing.T) {
 
 	codec := NewIndexFileBinlogCodec()
 
-	serializedBlobs, err := codec.Serialize(indexBuildID, version, collectionID, partitionID, segmentID, fieldID, indexParams, indexName, indexID, datas)
+	serializedBlobs, err := codec.Serialize(indexBuildID, version, collectionID, partitionID, segmentID, fieldID, indexParams, indexName, indexID, data)
 	assert.NoError(t, err)
 
 	idxBuildID, v, collID, parID, segID, fID, params, idxName, idxID, blobs, err := codec.DeserializeImpl(serializedBlobs)
@@ -71,11 +71,11 @@ func TestIndexFileBinlogCodec(t *testing.T) {
 	}
 	assert.Equal(t, indexName, idxName)
 	assert.Equal(t, indexID, idxID)
-	assert.ElementsMatch(t, datas, blobs)
+	assert.ElementsMatch(t, data, blobs)
 
 	blobs, indexParams, indexName, indexID, err = codec.Deserialize(serializedBlobs)
 	assert.NoError(t, err)
-	assert.ElementsMatch(t, datas, blobs)
+	assert.ElementsMatch(t, data, blobs)
 	for key, value := range indexParams {
 		assert.Equal(t, value, params[key])
 	}
@@ -105,14 +105,14 @@ func TestIndexFileBinlogCodecError(t *testing.T) {
 	indexID := UniqueID(uniquegenerator.GetUniqueIntGeneratorIns().GetInt())
 	indexParams := make(map[string]string)
 	indexParams[common.IndexTypeKey] = "IVF_FLAT"
-	datas := []*Blob{
+	data := []*Blob{
 		{
 			Key:   "ivf1",
 			Value: []byte{1, 2, 3},
 		},
 	}
 
-	_, err = codec.Serialize(indexBuildID, version, collectionID, partitionID, segmentID, fieldID, indexParams, indexName, indexID, datas)
+	_, err = codec.Serialize(indexBuildID, version, collectionID, partitionID, segmentID, fieldID, indexParams, indexName, indexID, data)
 	assert.NoError(t, err)
 }
 

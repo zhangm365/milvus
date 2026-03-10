@@ -190,7 +190,7 @@ func (w *walAdaptorImpl) Append(ctx context.Context, msg message.MutableMessage)
 			// if the append operation of wal is fenced, we should report the error to the client.
 			if w.isFenced.CompareAndSwap(false, true) {
 				w.forceCancelAfterGracefulTimeout()
-				w.Logger().Warn("wal is fenced, mark as unavailable, all append opertions will be rejected", zap.Error(err))
+				w.Logger().Warn("wal is fenced, mark as unavailable, all append operations will be rejected", zap.Error(err))
 			}
 			return nil, status.NewChannelFenced(w.Channel().String())
 		}

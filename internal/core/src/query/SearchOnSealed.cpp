@@ -317,11 +317,11 @@ SearchOnSealedColumn(const Schema& schema,
                                             larger_is_closer);
     } else {
         if (search_info.array_offsets_ != nullptr) {
-            auto [seg_offsets, elem_indicies] =
+            auto [seg_offsets, elem_indices] =
                 final_qr.convert_to_element_offsets(
                     search_info.array_offsets_.get());
             result.seg_offsets_ = std::move(seg_offsets);
-            result.element_indices_ = std::move(elem_indicies);
+            result.element_indices_ = std::move(elem_indices);
             result.element_level_ = true;
         } else {
             result.seg_offsets_ = std::move(final_qr.mutable_offsets());

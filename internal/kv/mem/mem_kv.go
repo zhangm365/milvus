@@ -194,7 +194,7 @@ func (kv *MemoryKV) MultiLoadBytes(ctx context.Context, keys []string) ([][]byte
 	return result, nil
 }
 
-// MultiSave saves given key-value pairs in MemoryKV atomicly.
+// MultiSave saves given key-value pairs in MemoryKV atomically.
 func (kv *MemoryKV) MultiSave(ctx context.Context, kvs map[string]string) error {
 	kv.Lock()
 	defer kv.Unlock()
@@ -204,7 +204,7 @@ func (kv *MemoryKV) MultiSave(ctx context.Context, kvs map[string]string) error 
 	return nil
 }
 
-// MultiSaveBytes saves given key-value pairs in MemoryKV atomicly.
+// MultiSaveBytes saves given key-value pairs in MemoryKV atomically.
 func (kv *MemoryKV) MultiSaveBytes(ctx context.Context, kvs map[string][]byte) error {
 	kv.Lock()
 	defer kv.Unlock()
@@ -214,7 +214,7 @@ func (kv *MemoryKV) MultiSaveBytes(ctx context.Context, kvs map[string][]byte) e
 	return nil
 }
 
-// MultiRemove removes given @keys in MemoryKV atomicly.
+// MultiRemove removes given @keys in MemoryKV atomically.
 func (kv *MemoryKV) MultiRemove(ctx context.Context, keys []string) error {
 	kv.Lock()
 	defer kv.Unlock()
@@ -224,7 +224,7 @@ func (kv *MemoryKV) MultiRemove(ctx context.Context, keys []string) error {
 	return nil
 }
 
-// MultiSaveAndRemove saves and removes given key-value pairs in MemoryKV atomicly.
+// MultiSaveAndRemove saves and removes given key-value pairs in MemoryKV atomically.
 func (kv *MemoryKV) MultiSaveAndRemove(ctx context.Context, saves map[string]string, removals []string, preds ...predicates.Predicate) error {
 	if len(preds) > 0 {
 		return merr.WrapErrServiceUnavailable("predicates not supported")
@@ -246,7 +246,7 @@ func (kv *MemoryKV) MultiSaveAndRemove(ctx context.Context, saves map[string]str
 	return nil
 }
 
-// MultiSaveBytesAndRemove saves and removes given key-value pairs in MemoryKV atomicly.
+// MultiSaveBytesAndRemove saves and removes given key-value pairs in MemoryKV atomically.
 func (kv *MemoryKV) MultiSaveBytesAndRemove(ctx context.Context, saves map[string][]byte, removals []string) error {
 	kv.Lock()
 	defer kv.Unlock()
@@ -350,7 +350,7 @@ func (kv *MemoryKV) MultiSaveBytesAndRemoveWithPrefix(ctx context.Context, saves
 	return nil
 }
 
-// RemoveWithPrefix remove key of given prefix in MemoryKV atomicly.
+// RemoveWithPrefix remove key of given prefix in MemoryKV atomically.
 func (kv *MemoryKV) RemoveWithPrefix(ctx context.Context, key string) error {
 	kv.Lock()
 	defer kv.Unlock()

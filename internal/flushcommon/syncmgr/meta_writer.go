@@ -85,7 +85,7 @@ func (b *brokerMetaWriter) UpdateSync(ctx context.Context, pack *SyncTask) error
 	log.Info("SaveBinlogPath",
 		zap.Int64("SegmentID", pack.segmentID),
 		zap.Int64("CollectionID", pack.collectionID),
-		zap.Int64("ParitionID", pack.partitionID),
+		zap.Int64("PartitionID", pack.partitionID),
 		zap.Any("startPos", startPos),
 		zap.Any("checkPoints", checkPoints),
 		zap.Int("binlogNum", lo.SumBy(insertFieldBinlogs, getBinlogNum)),

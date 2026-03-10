@@ -36,7 +36,7 @@ namespace bitset {
 //   because they are not used directly and are wrapped
 //   in BitsetBase methods. So, a compiler may decide whether
 //   to really inline them, but it forces a compiler to
-//   generate specialized code for every hardward platform.
+//   generate specialized code for every hardware platform.
 // todo: MSVC has its own way to define `always inline`.
 #define BITSET_ALWAYS_INLINE __attribute__((always_inline))
 

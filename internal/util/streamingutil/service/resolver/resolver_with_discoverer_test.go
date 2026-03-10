@@ -83,7 +83,7 @@ func TestResolverWithDiscoverer(t *testing.T) {
 	}()
 
 	// should be block.
-	shouldbeBlock(t, outCh)
+	shouldBlock(t, outCh)
 
 	ch <- discoverer.VersionedState{
 		Version: typeutil.VersionInt64(1),
@@ -93,7 +93,7 @@ func TestResolverWithDiscoverer(t *testing.T) {
 	}
 
 	// version do not reach, should be block.
-	shouldbeBlock(t, outCh)
+	shouldBlock(t, outCh)
 
 	ch <- discoverer.VersionedState{
 		Version: typeutil.VersionInt64(3),
@@ -125,7 +125,7 @@ func TestResolverWithDiscoverer(t *testing.T) {
 			Attributes: attributes.New("1", "1"),
 		},
 	}
-	shouldbeBlock(t, outCh)
+	shouldBlock(t, outCh)
 	w.Close() // closed watcher should be removed in next update.
 
 	ch <- discoverer.VersionedState{
@@ -149,7 +149,7 @@ func TestResolverWithDiscoverer(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrInterrupted))
 }
 
-func shouldbeBlock(t *testing.T, ch <-chan VersionedState) {
+func shouldBlock(t *testing.T, ch <-chan VersionedState) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	select {

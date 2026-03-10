@@ -57,7 +57,7 @@ func (e *StreamingError) IsSkippedOperation() bool {
 func (e *StreamingError) IsUnrecoverable() bool {
 	return e.Code == streamingpb.StreamingCode_STREAMING_CODE_UNRECOVERABLE ||
 		e.IsReplicateViolation() ||
-		e.IsTxnUnavilable()
+		e.IsTxnUnavailable()
 }
 
 // IsReplicateViolation returns true if the error is caused by replicate violation.
@@ -70,8 +70,8 @@ func (e *StreamingError) IsWALNameMismatch() bool {
 	return e.Code == streamingpb.StreamingCode_STREAMING_CODE_WALNAME_MISMATCH
 }
 
-// IsTxnUnavilable returns true if the transaction is unavailable.
-func (e *StreamingError) IsTxnUnavilable() bool {
+// IsTxnUnavailable returns true if the transaction is unavailable.
+func (e *StreamingError) IsTxnUnavailable() bool {
 	return e.Code == streamingpb.StreamingCode_STREAMING_CODE_TRANSACTION_EXPIRED ||
 		e.Code == streamingpb.StreamingCode_STREAMING_CODE_INVALID_TRANSACTION_STATE
 }
@@ -131,9 +131,9 @@ func NewInner(format string, args ...interface{}) *StreamingError {
 	return New(streamingpb.StreamingCode_STREAMING_CODE_INNER, format, args...)
 }
 
-// NewInvaildArgument creates a new StreamingError with code STREAMING_CODE_INVAILD_ARGUMENT.
-func NewInvaildArgument(format string, args ...interface{}) *StreamingError {
-	return New(streamingpb.StreamingCode_STREAMING_CODE_INVAILD_ARGUMENT, format, args...)
+// NewInvalidArgument creates a new StreamingError with code STREAMING_CODE_INVALID_ARGUMENT.
+func NewInvalidArgument(format string, args ...interface{}) *StreamingError {
+	return New(streamingpb.StreamingCode_STREAMING_CODE_INVALID_ARGUMENT, format, args...)
 }
 
 // NewTransactionExpired creates a new StreamingError with code STREAMING_CODE_TRANSACTION_EXPIRED.

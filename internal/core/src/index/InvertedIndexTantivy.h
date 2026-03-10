@@ -283,7 +283,7 @@ class InvertedIndexTantivy : public ScalarIndex<T> {
     RegexQuery(const std::string& regex_pattern) override;
 
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas) override;
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data) override;
 
     void
     set_is_growing(bool is_growing) {
@@ -296,15 +296,15 @@ class InvertedIndexTantivy : public ScalarIndex<T> {
 
     void
     build_index_for_array(
-        const std::vector<std::shared_ptr<FieldDataBase>>& field_datas);
+        const std::vector<std::shared_ptr<FieldDataBase>>& field_data);
 
     void
     build_index_for_array_nested(
-        const std::vector<std::shared_ptr<FieldDataBase>>& field_datas);
+        const std::vector<std::shared_ptr<FieldDataBase>>& field_data);
 
     virtual void
     build_index_for_json(
-        const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+        const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
         ThrowInfo(ErrorCode::NotImplemented,
                   "build_index_for_json not implemented");
     }
@@ -346,7 +346,7 @@ class InvertedIndexTantivy : public ScalarIndex<T> {
     //
     // In the older version of milvus, the query node can only read tantivy index built whtin single segment
     // where the newer version builds and reads index of multi segments by default.
-    // However, the index may be built from a separate node from the query node where the index buliding node is a
+    // However, the index may be built from a separate node from the query node where the index building node is a
     // new version while the query node is a older version. So we have this `inverted_index_single_segment_` to control the index
     // building node to build specific type of tantivy index.
     bool inverted_index_single_segment_{false};

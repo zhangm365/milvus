@@ -45,9 +45,9 @@ type NullDataSuite struct {
 	vecType    schemapb.DataType
 }
 
-func getTargetFieldData(fieldName string, fieldDatas []*schemapb.FieldData) *schemapb.FieldData {
+func getTargetFieldData(fieldName string, fieldData []*schemapb.FieldData) *schemapb.FieldData {
 	var actual *schemapb.FieldData
-	for _, result := range fieldDatas {
+	for _, result := range fieldData {
 		if result.FieldName == fieldName {
 			actual = result
 			break
@@ -56,8 +56,8 @@ func getTargetFieldData(fieldName string, fieldDatas []*schemapb.FieldData) *sch
 	return actual
 }
 
-func (s *NullDataSuite) checkNullableFieldData(fieldName string, fieldDatas []*schemapb.FieldData, start int64) {
-	actual := getTargetFieldData(fieldName, fieldDatas)
+func (s *NullDataSuite) checkNullableFieldData(fieldName string, fieldData []*schemapb.FieldData, start int64) {
+	actual := getTargetFieldData(fieldName, fieldData)
 	fieldData := actual.GetScalars().GetLongData().Data
 	validData := actual.GetValidData()
 	s.Equal(len(validData), len(fieldData))

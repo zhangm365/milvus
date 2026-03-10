@@ -185,7 +185,7 @@ invalid_resource_names = [
     "12name",           # start with number
     "n12 ame",          # contain space
     "n-ame",            # contain hyphen
-    "nam(e)",           # contain special character
+    "name(e)",           # contain special character
     "name中文",          # contain Chinese character
     "name%$#",          # contain special character
     "".join("a" for i in range(max_name_length + 1))]           # exceed max length
@@ -195,7 +195,7 @@ valid_resource_names = [
     "_name",            # start with underline
     "_12name",          # start with underline and contains number
     "n12ame_",          # end with letter and contains number and underline
-    "nam_e",             # contains underline
+    "name_e",             # contains underline
     "".join("a" for i in range(max_name_length))]       # max length
 
 invalid_dims = [min_dim-1, 32.1, -32, "vii", "十六", max_dim+1]

@@ -145,7 +145,7 @@ func KafkaHealthCheck(clusterStatus *pcommon.MQClusterStatus) {
 	clusterStatus.Members = healthList
 }
 
-func GetPorperties(msg TsMsg) map[string]string {
+func GetProperties(msg TsMsg) map[string]string {
 	properties := map[string]string{}
 	properties[common.ChannelTypeKey] = msg.VChannel()
 	properties[common.MsgTypeKey] = msg.Type().String()

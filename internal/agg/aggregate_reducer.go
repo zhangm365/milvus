@@ -31,23 +31,23 @@ func NewGroupAggReducer(groupByFieldIds []int64, aggregates []*planpb.Aggregate,
 }
 
 type AggregationResult struct {
-	fieldDatas       []*schemapb.FieldData
+	fieldData       []*schemapb.FieldData
 	allRetrieveCount int64
 }
 
-func NewAggregationResult(fieldDatas []*schemapb.FieldData, allRetrieveCount int64) *AggregationResult {
-	if fieldDatas == nil {
-		fieldDatas = make([]*schemapb.FieldData, 0)
+func NewAggregationResult(fieldData []*schemapb.FieldData, allRetrieveCount int64) *AggregationResult {
+	if fieldData == nil {
+		fieldData = make([]*schemapb.FieldData, 0)
 	}
 	return &AggregationResult{
-		fieldDatas:       fieldDatas,
+		fieldData:       fieldData,
 		allRetrieveCount: allRetrieveCount,
 	}
 }
 
-// GetFieldDatas returns the fieldDatas slice
-func (ar *AggregationResult) GetFieldDatas() []*schemapb.FieldData {
-	return ar.fieldDatas
+// GetFieldData returns the fieldData slice
+func (ar *AggregationResult) GetFieldData() []*schemapb.FieldData {
+	return ar.fieldData
 }
 
 func (ar *AggregationResult) GetAllRetrieveCount() int64 {
@@ -69,7 +69,7 @@ func (reducer *GroupAggReducer) EmptyAggResult() (*AggregationResult, error) {
 		if err != nil {
 			return err
 		}
-		ret.fieldDatas = append(ret.fieldDatas, emptyFieldData)
+		ret.fieldData = append(ret.fieldData, emptyFieldData)
 		return nil
 	}
 
@@ -82,7 +82,7 @@ func (reducer *GroupAggReducer) EmptyAggResult() (*AggregationResult, error) {
 	for _, agg := range reducer.aggregates {
 		if agg.GetOp() == planpb.AggregateOp_count {
 			countField := genEmptyLongFieldData(schemapb.DataType_Int64, []int64{0})
-			ret.fieldDatas = append(ret.fieldDatas, countField)
+			ret.fieldData = append(ret.fieldData, countField)
 		} else {
 			field, err := helper.GetFieldFromID(agg.GetFieldId())
 			if err != nil {
@@ -96,7 +96,7 @@ func (reducer *GroupAggReducer) EmptyAggResult() (*AggregationResult, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate empty field data for result type %s: %w", resultType.String(), err)
 			}
-			ret.fieldDatas = append(ret.fieldDatas, emptyFieldData)
+			ret.fieldData = append(ret.fieldData, emptyFieldData)
 		}
 	}
 	return ret, nil
@@ -194,7 +194,7 @@ func getAggregateResultType(op planpb.AggregateOp, inputType schemapb.DataType) 
 
 // validateAggregationResults validates the input AggregationResult slice
 // It checks:
-// 1. Each result's fieldDatas length equals numGroupingKeys + numAggs
+// 1. Each result's fieldData length equals numGroupingKeys + numAggs
 // 2. No nil fieldData in any result
 // 3. Each fieldData's Type matches the expected type from schema
 func (reducer *GroupAggReducer) validateAggregationResults(results []*AggregationResult) error {
@@ -248,16 +248,16 @@ func (reducer *GroupAggReducer) validateAggregationResults(results []*Aggregatio
 			return fmt.Errorf("result at index %d is nil", resultIdx)
 		}
 
-		fieldDatas := result.GetFieldDatas()
+		fieldData := result.GetFieldData()
 
-		// Check 1: fieldDatas length
-		if len(fieldDatas) != expectedColumnCount {
-			return fmt.Errorf("result at index %d has fieldDatas length %d, expected %d (numGroupingKeys=%d, numAggs=%d)",
-				resultIdx, len(fieldDatas), expectedColumnCount, numGroupingKeys, numAggs)
+		// Check 1: fieldData length
+		if len(fieldData) != expectedColumnCount {
+			return fmt.Errorf("result at index %d has fieldData length %d, expected %d (numGroupingKeys=%d, numAggs=%d)",
+				resultIdx, len(fieldData), expectedColumnCount, numGroupingKeys, numAggs)
 		}
 
 		// Check 2: no nil fieldData and Check 3: type matching
-		for colIdx, fieldData := range fieldDatas {
+		for colIdx, fieldData := range fieldData {
 			if fieldData == nil {
 				return fmt.Errorf("result at index %d has nil fieldData at column %d", resultIdx, colIdx)
 			}
@@ -303,7 +303,7 @@ func (reducer *GroupAggReducer) Reduce(ctx context.Context, results []*Aggregati
 	numAggs := len(reducer.aggregates)
 	hashers := make([]FieldAccessor, numGroupingKeys)
 	accumulators := make([]FieldAccessor, numAggs)
-	firstFieldData := results[0].GetFieldDatas()
+	firstFieldData := results[0].GetFieldData()
 	outputColumnCount := len(firstFieldData)
 	for idx, fieldData := range firstFieldData {
 		accessor, err := NewFieldAccessor(fieldData.GetType())
@@ -319,13 +319,13 @@ func (reducer *GroupAggReducer) Reduce(ctx context.Context, results []*Aggregati
 	reducedResult := NewAggregationResult(nil, 0)
 	isGlobal := numGroupingKeys == 0
 	if isGlobal {
-		reducedResult.fieldDatas = typeutil.PrepareResultFieldData(firstFieldData, 1)
+		reducedResult.fieldData = typeutil.PrepareResultFieldData(firstFieldData, 1)
 		rows := make([]*Row, len(results))
 		for idx, result := range results {
 			reducedResult.allRetrieveCount += result.GetAllRetrieveCount()
 			fieldValues := make([]*FieldValue, outputColumnCount)
 			for col := 0; col < outputColumnCount; col++ {
-				fieldData := result.GetFieldDatas()[col]
+				fieldData := result.GetFieldData()[col]
 				accumulators[col].SetVals(fieldData)
 				if accumulators[col].IsNullAt(0) {
 					fieldValues[col] = NewNullFieldValue()
@@ -340,7 +340,7 @@ func (reducer *GroupAggReducer) Reduce(ctx context.Context, results []*Aggregati
 				rows[0].UpdateFieldValue(rows[r], c, aggs[c])
 			}
 		}
-		AssembleSingleRow(outputColumnCount, rows[0], reducedResult.fieldDatas)
+		AssembleSingleRow(outputColumnCount, rows[0], reducedResult.fieldData)
 		return reducedResult, nil
 	}
 
@@ -357,8 +357,8 @@ processResults:
 		if result == nil {
 			return nil, fmt.Errorf("input result from any sources cannot be nil")
 		}
-		fieldDatas := result.GetFieldDatas()
-		if outputColumnCount != len(fieldDatas) {
+		fieldData := result.GetFieldData()
+		if outputColumnCount != len(fieldData) {
 			return nil, fmt.Errorf("retrieved results from different segments have different size of columns")
 		}
 		if outputColumnCount == 0 {
@@ -366,7 +366,7 @@ processResults:
 		}
 		rowCount := -1
 		for i := 0; i < outputColumnCount; i++ {
-			fieldData := fieldDatas[i]
+			fieldData := fieldData[i]
 			if i < numGroupingKeys {
 				hashers[i].SetVals(fieldData)
 			} else {
@@ -431,9 +431,9 @@ processResults:
 	}
 
 	// 3. assemble reduced buckets into retrievedResult
-	reducedResult.fieldDatas = typeutil.PrepareResultFieldData(firstFieldData, totalRowCount)
+	reducedResult.fieldData = typeutil.PrepareResultFieldData(firstFieldData, totalRowCount)
 	for _, bucket := range reducer.hashValsMap {
-		err := AssembleBucket(bucket, reducedResult.GetFieldDatas())
+		err := AssembleBucket(bucket, reducedResult.GetFieldData())
 		if err != nil {
 			return nil, err
 		}
@@ -450,7 +450,7 @@ func InternalResult2AggResult(results []*internalpb.RetrieveResults) []*Aggregat
 }
 
 func AggResult2internalResult(aggRes *AggregationResult) *internalpb.RetrieveResults {
-	return &internalpb.RetrieveResults{FieldsData: aggRes.GetFieldDatas(), AllRetrieveCount: aggRes.GetAllRetrieveCount()}
+	return &internalpb.RetrieveResults{FieldsData: aggRes.GetFieldData(), AllRetrieveCount: aggRes.GetAllRetrieveCount()}
 }
 
 func SegcoreResults2AggResult(results []*segcorepb.RetrieveResults) ([]*AggregationResult, error) {
@@ -467,5 +467,5 @@ func SegcoreResults2AggResult(results []*segcorepb.RetrieveResults) ([]*Aggregat
 }
 
 func AggResult2segcoreResult(aggRes *AggregationResult) *segcorepb.RetrieveResults {
-	return &segcorepb.RetrieveResults{FieldsData: aggRes.GetFieldDatas(), AllRetrieveCount: aggRes.GetAllRetrieveCount()}
+	return &segcorepb.RetrieveResults{FieldsData: aggRes.GetFieldData(), AllRetrieveCount: aggRes.GetAllRetrieveCount()}
 }

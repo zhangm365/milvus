@@ -39,7 +39,7 @@ func (rs *recoveryStorageImpl) backgroundTask() {
 	defer func() {
 		ticker.Stop()
 		rs.Logger().Info("recovery storage background task, perform a graceful exit...")
-		if err := rs.persistDritySnapshotWhenClosing(); err != nil {
+		if err := rs.persistDirtySnapshotWhenClosing(); err != nil {
 			rs.Logger().Warn("failed to persist dirty snapshot when closing", zap.Error(err))
 		}
 		rs.backgroundTaskNotifier.Finish(struct{}{})
@@ -59,8 +59,8 @@ func (rs *recoveryStorageImpl) backgroundTask() {
 	}
 }
 
-// persistDritySnapshotWhenClosing persists the dirty snapshot when closing the recovery storage.
-func (rs *recoveryStorageImpl) persistDritySnapshotWhenClosing() error {
+// persistDirtySnapshotWhenClosing persists the dirty snapshot when closing the recovery storage.
+func (rs *recoveryStorageImpl) persistDirtySnapshotWhenClosing() error {
 	ctx, cancel := context.WithTimeout(context.Background(), rs.cfg.gracefulTimeout)
 	defer cancel()
 

@@ -232,7 +232,7 @@ func (c *Client) connectInternal(ctx context.Context) error {
 				c.config.addFlags(
 					disableDatabase |
 						disableJSON |
-						disableParitionKey |
+						disablePartitionKey |
 						disableDynamicSchema)
 				return nil
 			}

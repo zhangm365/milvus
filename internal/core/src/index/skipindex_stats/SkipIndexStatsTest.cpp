@@ -316,10 +316,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -358,10 +358,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -400,10 +400,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -443,10 +443,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -482,10 +482,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -520,10 +520,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -559,10 +559,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -598,10 +598,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -821,10 +821,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk_InQuery) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -865,10 +865,10 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromChunk_InQuery) {
         auto payload_reader =
             std::make_shared<milvus::storage::PayloadReader>(field_data);
         event_data.payload_reader = payload_reader;
-        auto ser_data = event_data.Serialize();
+        auto set_data = event_data.Serialize();
         auto buffer = std::make_shared<arrow::io::BufferReader>(
-            ser_data.data() + 2 * sizeof(milvus::Timestamp),
-            ser_data.size() - 2 * sizeof(milvus::Timestamp));
+            set_data.data() + 2 * sizeof(milvus::Timestamp),
+            set_data.size() - 2 * sizeof(milvus::Timestamp));
 
         parquet::arrow::FileReaderBuilder reader_builder;
         ASSERT_TRUE(reader_builder.Open(buffer).ok());
@@ -948,12 +948,12 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromArrowBatch_StringNgramMatch) {
         "員として働き、私たち全員に明るい未来が約束されていました。",
         "Zhang Hua a été admis à l'Université de Pékin ; Li Ping est entré "
         "dans une école secondaire technique ; j'ai travaillé comme vendeur "
-        "dans un grand magasin : nous avions tous un brillant avenir.",
+        "dans un grand magasin : nous avions tous un brilliant avenir.",
         "Zhang Hua was admitted to Peking University; Li Ping entered a "
         "secondary technical school; I worked as a salesperson in a department "
         "store: we all had bright futures.",
         "Zhang Hua wurde an der Peking-Universität aufgenommen, Li Ping "
-        "besuchte eine technische Sekundarschule, ich arbeitete als Verkäufer "
+        "besuchte eine technische Sekundarschule, ich arbeitete also Verkäufer "
         "in einem Kaufhaus: Wir alle hatten eine glänzende Zukunft.",
         "😀😁😂",                       // Emoji (4-byte UTF-8)
         "Ñoño",                      // Combining characters
@@ -1018,7 +1018,7 @@ TEST_F(SkipIndexStatsBuilderTest, BuildFromArrowBatch_StringNgramMatch) {
         std::string("Li Ping entered a secondary technical school;")));
     ASSERT_FALSE(metrics->CanSkipUnaryRange(
         OpType::PostfixMatch,
-        std::string("nous avions tous un brillant avenir.")));
+        std::string("nous avions tous un brilliant avenir.")));
     ASSERT_FALSE(
         metrics->CanSkipUnaryRange(OpType::PostfixMatch, std::string("j'ai ")));
     ASSERT_FALSE(metrics->CanSkipUnaryRange(OpType::PostfixMatch,

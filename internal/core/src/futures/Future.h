@@ -156,7 +156,7 @@ class IFuture {
     virtual std::pair<void*, CStatus>
     leakyGet() = 0;
 
-    /// @brief leaked future object created by method `Future<R>::createLeakedFuture` can be droped by these method.
+    /// @brief leaked future object created by method `Future<R>::createLeakedFuture` can be dropped by these method.
     static void
     releaseLeakedFuture(IFuture* future) {
         delete future;

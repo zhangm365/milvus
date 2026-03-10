@@ -363,7 +363,7 @@ func reflectValueCandi(v reflect.Value) (map[string]fieldCandi, error) {
 	case reflect.Struct:
 		return getStructReflectCandidates(v)
 	default:
-		return nil, fmt.Errorf("unsupport row type: %s", v.Kind().String())
+		return nil, fmt.Errorf("unsupported row type: %s", v.Kind().String())
 	}
 }
 

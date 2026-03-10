@@ -438,7 +438,7 @@ func TestPrintIndexFile(t *testing.T) {
 	indexID := UniqueID(uniquegenerator.GetUniqueIntGeneratorIns().GetInt())
 	indexParams := make(map[string]string)
 	indexParams[common.IndexTypeKey] = "IVF_FLAT"
-	datas := []*Blob{
+	data := []*Blob{
 		{
 			Key:   "ivf1",
 			Value: []byte{1, 2, 3},
@@ -455,7 +455,7 @@ func TestPrintIndexFile(t *testing.T) {
 
 	codec := NewIndexFileBinlogCodec()
 
-	serializedBlobs, err := codec.Serialize(indexBuildID, version, collectionID, partitionID, segmentID, fieldID, indexParams, indexName, indexID, datas)
+	serializedBlobs, err := codec.Serialize(indexBuildID, version, collectionID, partitionID, segmentID, fieldID, indexParams, indexName, indexID, data)
 	assert.NoError(t, err)
 
 	var binlogFiles []string

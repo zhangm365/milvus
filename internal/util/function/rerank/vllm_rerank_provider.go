@@ -51,10 +51,10 @@ func newVllmProvider(params []*commonpb.KeyValuePair, conf map[string]string, cr
 				return nil, err
 			}
 		case models.VllmTruncateParamName:
-			if vllmTrun, err := strconv.ParseInt(param.Value, 10, 64); err != nil {
+			if vllmTurn, err := strconv.ParseInt(param.Value, 10, 64); err != nil {
 				return nil, fmt.Errorf("Rerank params error, %s: %s is not a number", models.VllmTruncateParamName, param.Value)
 			} else {
-				truncateParams[models.VllmTruncateParamName] = vllmTrun
+				truncateParams[models.VllmTruncateParamName] = vllmTurn
 			}
 		default:
 		}

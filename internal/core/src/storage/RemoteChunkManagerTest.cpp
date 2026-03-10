@@ -109,7 +109,7 @@ TEST_F(RemoteChunkManagerTest, BucketPositive) {
     aws_chunk_manager_->DeleteBucket(testBucketName);
 }
 
-TEST_F(RemoteChunkManagerTest, BucketNegtive) {
+TEST_F(RemoteChunkManagerTest, BucketNegative) {
     string testBucketName = get_default_bucket_name();
     aws_chunk_manager_->SetBucketName(testBucketName);
     aws_chunk_manager_->DeleteBucket(testBucketName);

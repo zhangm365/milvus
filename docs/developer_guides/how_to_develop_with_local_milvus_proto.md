@@ -37,7 +37,7 @@ libprotoc 3.21.4
 ~/workspace/milvus-proto
 ```
 
-Back to milvus repo. Golang has provided a "convienient" way to use local repo instead of the remote one
+Back to milvus repo. Golang has provided a "convenient" way to use local repo instead of the remote one
 
 ```
 # go mod edit -replace github.com/milvus-io/milvus-proto/go-api/v2=/home/silverxia/workspace/milvus-proto/go-api 
@@ -53,7 +53,7 @@ Whoola, your IDE shall now recognize the new TestObject definition now
 
 ## Update Milvus API
 
-The tricky point is to update Milvus service API as well. If the modification is small and limited, the previous part is enough. The more common case is we need to use the new/updated message in an API(either exising or new).
+The tricky point is to update Milvus service API as well. If the modification is small and limited, the previous part is enough. The more common case is we need to use the new/updated message in an API(either existing or new).
 
 For example, the `TestObject` needs to appear in datanode `SyncSegments` API request struct. Golang module replacement does not fit since we need to generated a new service definition with the modified milvus-proto.
 
@@ -78,9 +78,9 @@ message SyncSegmentsRequest {
 }
 ```
 
-`make generated-proto` will fail since the current public online repo (actully the submodule here)does not contain the definition for TestObject.
+`make generated-proto` will fail since the current public online repo (actually the submodule here)does not contain the definition for TestObject.
 
-To work around that, we could modify the script slighly:
+To work around that, we could modify the script slightly:
 
 ```sh
 # scripts/generate_proto.sh

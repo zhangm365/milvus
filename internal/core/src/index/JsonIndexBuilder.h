@@ -40,7 +40,7 @@ using JsonNonExistAdder = std::function<void(int64_t offset)>;
 template <typename T>
 void
 ProcessJsonFieldData(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -52,7 +52,7 @@ ProcessJsonFieldData(
 
 extern template void
 ProcessJsonFieldData<bool>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -64,7 +64,7 @@ ProcessJsonFieldData<bool>(
 
 extern template void
 ProcessJsonFieldData<int64_t>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -76,7 +76,7 @@ ProcessJsonFieldData<int64_t>(
 
 extern template void
 ProcessJsonFieldData<double>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,
@@ -88,7 +88,7 @@ ProcessJsonFieldData<double>(
 
 extern template void
 ProcessJsonFieldData<std::string>(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas,
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data,
     const proto::schema::FieldSchema& schema,
     const std::string& nested_path,
     const JsonCastType& cast_type,

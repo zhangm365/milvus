@@ -35,7 +35,7 @@ func ExtractCtx(msg ConsumeMsg, properties map[string]string) (context.Context, 
 		return ctx, trace.SpanFromContext(ctx)
 	}
 	ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(properties))
-	name := "ReceieveMsg"
+	name := "ReceiveMsg"
 	return otel.Tracer(name).Start(ctx, name, trace.WithAttributes(
 		attribute.Int64("ID", msg.GetID()),
 		attribute.String("Type", msg.GetType().String()),

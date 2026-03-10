@@ -193,7 +193,7 @@ func (s *scannerAdaptorImpl) produceEventLoop(msgChan chan<- message.ImmutableMe
 		wb = resource.Resource().TimeTickInspector().MustGetOperator(s.Channel()).WriteAheadBuffer()
 	}
 
-	scanner := newSwithableScanner(s.Name(), s.logger, s.innerWAL, wb, s.readOption.DeliverPolicy, msgChan)
+	scanner := newSwitchableScanner(s.Name(), s.logger, s.innerWAL, wb, s.readOption.DeliverPolicy, msgChan)
 	s.logger.Info("start produce loop of scanner at model", zap.String("model", getScannerModel(scanner)))
 	for {
 		if scanner, err = scanner.Do(s.Context()); err != nil {
@@ -307,7 +307,7 @@ func (s *scannerAdaptorImpl) handleUpstream(msg message.ImmutableMessage) {
 			// Otherwise if there's no new message incoming and there's no pending message in the queue.
 			// Add current timetick message into pending queue to make timetick push forward.
 			// TODO: current milvus can only run on timetick pushing,
-			// after qview is applied, those trival time tick message can be erased.
+			// after qview is applied, those trivial time tick message can be erased.
 			s.pendingQueue.Add([]message.ImmutableMessage{msg})
 		}
 		s.metrics.UpdatePendingQueueSize(s.pendingQueue.Bytes())
@@ -322,7 +322,7 @@ func (s *scannerAdaptorImpl) handleUpstream(msg message.ImmutableMessage) {
 	}
 	// otherwise add message into reorder buffer directly.
 	if err := s.reorderBuffer.Push(msg); err != nil {
-		if errors.Is(err, utility.ErrTimeTickVoilation) {
+		if errors.Is(err, utility.ErrTimeTickViolation) {
 			s.metrics.ObserveTimeTickViolation(isTailing, msg.MessageType())
 		}
 		s.logger.Warn("failed to push message into reorder buffer",

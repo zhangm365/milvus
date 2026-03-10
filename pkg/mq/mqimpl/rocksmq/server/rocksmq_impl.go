@@ -443,7 +443,7 @@ func (rmq *rocksmq) Info() bool {
 		consumerList.Range(func(c *Consumer) bool {
 			consumerPosition, ok := rmq.getCurrentID(c.Topic, c.GroupName)
 			if !ok {
-				log.Error("some group not regist", zap.String("topic", c.Topic), zap.String("groupName", c.GroupName))
+				log.Error("some group not register", zap.String("topic", c.Topic), zap.String("groupName", c.GroupName))
 				return true
 			}
 			if minConsumerPosition == UniqueID(-1) || consumerPosition < minConsumerPosition {
@@ -837,7 +837,7 @@ func (rmq *rocksmq) getLastID(topicName string) (int64, bool) {
 // Consume steps:
 // 1. Consume n messages from rocksdb
 // 2. Update current_id to the last consumed message
-// 3. Update ack informations in rocksdb
+// 3. Update ack information in rocksdb
 func (rmq *rocksmq) Consume(topicName string, groupName string, n int) ([]ConsumerMessage, error) {
 	if rmq.isClosed() {
 		return nil, errors.New(RmqNotServingErrMsg)
@@ -1134,7 +1134,7 @@ func (rmq *rocksmq) Notify(topicName, groupName string) {
 	}
 }
 
-// updateAckedInfo update acked informations for retention after consume
+// updateAckedInfo update acked information for retention after consume
 func (rmq *rocksmq) updateAckedInfo(topicName, groupName string, firstID UniqueID, lastID UniqueID) error {
 	log := log.Ctx(rmq.ctx)
 	// 1. Try to get the page id between first ID and last ID of ids

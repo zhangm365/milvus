@@ -128,7 +128,7 @@ type ClientBase[T interface {
 	// resetInterval is the minimal duration to reset connection
 	minResetInterval time.Duration
 	lastReset        atomic.Time
-	// sessionCheckInterval is the minmal duration to check session, preventing too much etcd pulll
+	// sessionCheckInterval is the minimal duration to check session, preventing too much etcd pulll
 	minSessionCheckInterval time.Duration
 	lastSessionCheck        atomic.Time
 

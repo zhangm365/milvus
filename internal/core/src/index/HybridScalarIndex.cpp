@@ -108,9 +108,9 @@ HybridScalarIndex<T>::SelectIndexBuildType(size_t n, const T* values) {
 template <typename T>
 ScalarIndexType
 HybridScalarIndex<T>::SelectBuildTypeForPrimitiveType(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     std::set<T> distinct_vals;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto slice_row_num = data->get_num_rows();
         for (size_t i = 0; i < slice_row_num; ++i) {
             auto val = reinterpret_cast<const T*>(data->RawValue(i));
@@ -126,9 +126,9 @@ HybridScalarIndex<T>::SelectBuildTypeForPrimitiveType(
 template <typename T>
 ScalarIndexType
 HybridScalarIndex<T>::SelectBuildTypeForArrayType(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     std::set<T> distinct_vals;
-    for (const auto& data : field_datas) {
+    for (const auto& data : field_data) {
         auto slice_row_num = data->get_num_rows();
         for (size_t i = 0; i < slice_row_num; ++i) {
             auto array =
@@ -158,12 +158,12 @@ HybridScalarIndex<T>::SelectBuildTypeForArrayType(
 template <typename T>
 ScalarIndexType
 HybridScalarIndex<T>::SelectIndexBuildType(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     std::set<T> distinct_vals;
     if (IsPrimitiveType(field_type_)) {
-        return SelectBuildTypeForPrimitiveType(field_datas);
+        return SelectBuildTypeForPrimitiveType(field_data);
     } else if (IsArrayType(field_type_)) {
-        return SelectBuildTypeForArrayType(field_datas);
+        return SelectBuildTypeForArrayType(field_data);
     } else {
         ThrowInfo(Unsupported,
                   fmt::format("unsupported build index for type {}",
@@ -222,9 +222,9 @@ HybridScalarIndex<std::string>::GetInternalIndex() {
 template <typename T>
 void
 HybridScalarIndex<T>::BuildInternal(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     auto index = GetInternalIndex();
-    index->BuildWithFieldData(field_datas);
+    index->BuildWithFieldData(field_data);
 }
 
 template <typename T>
@@ -264,11 +264,11 @@ HybridScalarIndex<T>::Build(const Config& config) {
         ToString(low_cardinality_index_type_),
         ToString(high_cardinality_index_type_),
         scalar_index_version);
-    auto field_datas =
+    auto field_data =
         storage::CacheRawDataAndFillMissing(mem_file_manager_, config);
 
-    SelectIndexBuildType(field_datas);
-    BuildInternal(field_datas);
+    SelectIndexBuildType(field_data);
+    BuildInternal(field_data);
     auto index_meta = file_manager_context_.indexMeta;
     LOG_INFO(
         "build hybrid index with internal index:{}, for segment_id:{}, "
@@ -381,12 +381,12 @@ HybridScalarIndex<T>::Load(milvus::tracer::TraceContext ctx,
         GetValueFromConfig<milvus::proto::common::LoadPriority>(
             config, milvus::LOAD_PRIORITY)
             .value_or(milvus::proto::common::LoadPriority::HIGH);
-    auto index_datas = mem_file_manager_->LoadIndexToMemory(
+    auto index_data = mem_file_manager_->LoadIndexToMemory(
         std::vector<std::string>{index_type_file}, load_priority);
     BinarySet binary_set;
-    AssembleIndexDatas(index_datas, binary_set);
-    // clear index_datas to free memory early
-    index_datas.clear();
+    AssembleIndexData(index_data, binary_set);
+    // clear index_data to free memory early
+    index_data.clear();
     DeserializeIndexType(binary_set);
 
     auto index = GetInternalIndex();

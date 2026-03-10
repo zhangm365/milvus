@@ -50,10 +50,10 @@ class NgramInvertedIndex : public InvertedIndexTantivy<std::string> {
     RetainTantivyIndexFiles(std::vector<std::string>& index_files) override;
 
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas) override;
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data) override;
 
     void
-    BuildWithJsonFieldData(const std::vector<FieldDataPtr>& datas);
+    BuildWithJsonFieldData(const std::vector<FieldDataPtr>& data);
 
     // For unit tests only - combines Phase1 and Phase2 in one call
     std::optional<TargetBitmap>

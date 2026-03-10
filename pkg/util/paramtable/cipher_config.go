@@ -16,7 +16,7 @@ type cipherConfig struct {
 	KmsAwsExternalID       ParamItem `refreshable:"true"`
 	RotationPeriodInHours  ParamItem `refreshable:"true"`
 	UpdatePerieldInMinutes ParamItem `refreshable:"true"`
-	EnalbeDiskEncryption   ParamItem `refreshable:"false"`
+	EnableDiskEncryption   ParamItem `refreshable:"false"`
 }
 
 func (c *cipherConfig) init(base *BaseTable) {
@@ -68,12 +68,12 @@ func (c *cipherConfig) init(base *BaseTable) {
 	}
 	c.UpdatePerieldInMinutes.Init(base.mgr)
 
-	c.EnalbeDiskEncryption = ParamItem{
+	c.EnableDiskEncryption = ParamItem{
 		Key:          "cipherPlugin.enableDiskEncryption",
 		Version:      "2.6.1",
 		DefaultValue: "false",
 	}
-	c.EnalbeDiskEncryption.Init(base.mgr)
+	c.EnableDiskEncryption.Init(base.mgr)
 }
 
 func (c *cipherConfig) Save(key string, value string) error {

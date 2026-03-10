@@ -46,7 +46,7 @@ func NewMsgPackFromMessage(msgs ...message.ImmutableMessage) (*msgstream.MsgPack
 	}
 
 	// msgs is sorted by time tick.
-	// Postition use the last confirmed message id.
+	// Position use the last confirmed message id.
 	// 1. So use the first tsMsgs's Position can read all messages which timetick is greater or equal than the first tsMsgs's BeginTs.
 	//    In other words, from the StartPositions, you can read the full msgPack.
 	// 2. Use the last tsMsgs's Position as the EndPosition, you can read all messages following the msgPack.

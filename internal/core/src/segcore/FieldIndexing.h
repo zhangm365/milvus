@@ -310,7 +310,7 @@ class VectorFieldIndexing : public FieldIndexing {
 
     // for sparse float vector:
     //   * element_size is not used
-    //   * output_raw pooints at a milvus::schema::proto::SparseFloatArray.
+    //   * output_raw points at a milvus::schema::proto::SparseFloatArray.
     void
     GetDataFromIndex(const int64_t* seg_offsets,
                      int64_t count,
@@ -460,7 +460,7 @@ class IndexingRecord {
 
     // for sparse float vector:
     //   * element_size is not used
-    //   * output_raw pooints at a milvus::schema::proto::SparseFloatArray.
+    //   * output_raw points at a milvus::schema::proto::SparseFloatArray.
     void
     GetDataFromIndex(FieldId fieldId,
                      const int64_t* seg_offsets,

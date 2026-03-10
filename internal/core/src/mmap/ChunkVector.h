@@ -31,7 +31,7 @@ class ChunkVectorBase {
     emplace_to_at_least(int64_t chunk_num, int64_t chunk_size) = 0;
     virtual void
     copy_to_chunk(int64_t chunk_id,
-                  int64_t offest,
+                  int64_t offset,
                   const Type* data,
                   int64_t length,
                   const std::optional<CheckDataValid>& check_data_valid) = 0;

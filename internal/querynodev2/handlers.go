@@ -157,7 +157,7 @@ func (node *QueryNode) loadIndex(ctx context.Context, req *querypb.LoadSegmentsR
 		}
 		localSegment, ok := segment.(*segments.LocalSegment)
 		if !ok {
-			log.Warn("segment not local for load index opeartion")
+			log.Warn("segment not local for load index operation")
 			continue
 		}
 
@@ -190,7 +190,7 @@ func (node *QueryNode) loadStats(ctx context.Context, req *querypb.LoadSegmentsR
 		}
 		localSegment, ok := segment.(*segments.LocalSegment)
 		if !ok {
-			log.Warn("segment not local for load stats opeartion")
+			log.Warn("segment not local for load stats operation")
 			continue
 		}
 

@@ -65,8 +65,8 @@ func retry(attempts int, sleep time.Duration, fn func() error) error {
 	}
 }
 
-// NewEmbededEtcdKV creates a new etcd kv.
-func NewEmbededEtcdKV(cfg *embed.Config, rootPath string, options ...Option) (*EmbedEtcdKV, error) {
+// NewEmbeddedEtcdKV creates a new etcd kv.
+func NewEmbeddedEtcdKV(cfg *embed.Config, rootPath string, options ...Option) (*EmbedEtcdKV, error) {
 	var e *embed.Etcd
 	var err error
 

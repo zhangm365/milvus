@@ -507,7 +507,7 @@ func (opt *hybridSearchOption) WithConsistencyLevel(cl entity.ConsistencyLevel) 
 }
 
 // Deprecated: typo, use WithPartitions instead
-func (opt *hybridSearchOption) WithPartitons(partitions ...string) *hybridSearchOption {
+func (opt *hybridSearchOption) WithPartitions(partitions ...string) *hybridSearchOption {
 	return opt.WithPartitions(partitions...)
 }
 

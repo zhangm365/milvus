@@ -83,7 +83,7 @@ func (s *HelloMilvusSuite) createCollection(ctx context.Context, c *cluster.Mini
 	return collectionName
 }
 
-func (s *HelloMilvusSuite) TestSparse_should_not_speficy_dim() {
+func (s *HelloMilvusSuite) TestSparse_should_not_specify_dim() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	c := s.Cluster

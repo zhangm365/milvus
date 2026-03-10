@@ -115,7 +115,7 @@ impl IndexWriterWrapper {
         }
     }
 
-    pub fn add_array_json(&mut self, datas: &[*const c_char], offset: Option<i64>) -> Result<()> {
+    pub fn add_array_json(&mut self, data: &[*const c_char], offset: Option<i64>) -> Result<()> {
         match self {
             IndexWriterWrapper::V5(_) => {
                 return Err(TantivyBindingError::InternalError(
@@ -123,19 +123,19 @@ impl IndexWriterWrapper {
                         .into(),
                 ));
             }
-            IndexWriterWrapper::V7(writer) => writer.add_array_json(datas, offset.unwrap() as u32),
+            IndexWriterWrapper::V7(writer) => writer.add_array_json(data, offset.unwrap() as u32),
         }
     }
 
     pub fn add_array_keywords(
         &mut self,
-        datas: &[*const c_char],
+        data: &[*const c_char],
         offset: Option<i64>,
     ) -> Result<()> {
         match self {
-            IndexWriterWrapper::V5(writer) => writer.add_array_keywords(datas, offset),
+            IndexWriterWrapper::V5(writer) => writer.add_array_keywords(data, offset),
             IndexWriterWrapper::V7(writer) => {
-                writer.add_array_keywords(datas, offset.unwrap() as u32)
+                writer.add_array_keywords(data, offset.unwrap() as u32)
             }
         }
     }

@@ -46,10 +46,10 @@ create_chunk_int64(const FixedVector<int64_t>& data) {
     auto payload_reader =
         std::make_shared<milvus::storage::PayloadReader>(field_data);
     event_data.payload_reader = payload_reader;
-    auto ser_data = event_data.Serialize();
+    auto set_data = event_data.Serialize();
     auto buffer = std::make_shared<arrow::io::BufferReader>(
-        ser_data.data() + 2 * sizeof(milvus::Timestamp),
-        ser_data.size() - 2 * sizeof(milvus::Timestamp));
+        set_data.data() + 2 * sizeof(milvus::Timestamp),
+        set_data.size() - 2 * sizeof(milvus::Timestamp));
 
     parquet::arrow::FileReaderBuilder reader_builder;
     auto s = reader_builder.Open(buffer);
@@ -82,10 +82,10 @@ create_chunk_string(const FixedVector<std::string>& data) {
     auto payload_reader =
         std::make_shared<milvus::storage::PayloadReader>(field_data);
     event_data.payload_reader = payload_reader;
-    auto ser_data = event_data.Serialize();
+    auto set_data = event_data.Serialize();
     auto buffer = std::make_shared<arrow::io::BufferReader>(
-        ser_data.data() + 2 * sizeof(milvus::Timestamp),
-        ser_data.size() - 2 * sizeof(milvus::Timestamp));
+        set_data.data() + 2 * sizeof(milvus::Timestamp),
+        set_data.size() - 2 * sizeof(milvus::Timestamp));
 
     parquet::arrow::FileReaderBuilder reader_builder;
     auto s = reader_builder.Open(buffer);

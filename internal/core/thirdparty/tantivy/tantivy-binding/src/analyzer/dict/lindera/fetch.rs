@@ -179,7 +179,7 @@ pub fn build(
 ) -> Result<(), Box<dyn Error>> {
     let start = Instant::now();
     info!(
-        "start donwload and build lindera dictionary. name: {} to {:?}\n",
+        "start download and build lindera dictionary. name: {} to {:?}\n",
         params.file_name.as_str(),
         output_dir,
     );
@@ -282,7 +282,7 @@ pub fn build(
         fs::rename(tmp_path, &output_dir)?;
     }
     info!(
-        "finish donwload and build lindera dictionary. name: {} duration: {} ms\n",
+        "finish download and build lindera dictionary. name: {} duration: {} ms\n",
         params.file_name.as_str(),
         start.elapsed().as_millis()
     );

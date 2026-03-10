@@ -164,9 +164,9 @@ RTreeIndex<T>::Load(milvus::tracer::TraceContext ctx, const Config& config) {
                 }
             }
             if (!null_offset_files.empty()) {
-                auto index_datas = mem_file_manager_->LoadIndexToMemory(
+                auto index_data = mem_file_manager_->LoadIndexToMemory(
                     null_offset_files, load_priority);
-                auto compacted = CompactIndexDatas(index_datas);
+                auto compacted = CompactIndexData(index_data);
                 auto codecs = std::move(compacted.at("index_null_offset"));
                 for (auto&& codec : codecs.codecs_) {
                     fill_null_offsets(codec->PayloadData(),
@@ -177,9 +177,9 @@ RTreeIndex<T>::Load(milvus::tracer::TraceContext ctx, const Config& config) {
                    it != files.end()) {
             null_offset_files.push_back(*it);
             files.erase(it);
-            auto index_datas = mem_file_manager_->LoadIndexToMemory(
+            auto index_data = mem_file_manager_->LoadIndexToMemory(
                 {*null_offset_files.begin()}, load_priority);
-            auto null_data = std::move(index_datas.at("index_null_offset"));
+            auto null_data = std::move(index_data.at("index_null_offset"));
             fill_null_offsets(null_data->PayloadData(),
                               null_data->PayloadSize());
         }
@@ -263,8 +263,8 @@ RTreeIndex<T>::Build(const Config& config) {
     InitForBuildIndex(false);
 
     // load raw WKB data into memory
-    auto field_datas = mem_file_manager_->CacheRawDataToMemory(config);
-    BuildWithFieldData(field_datas);
+    auto field_data = mem_file_manager_->CacheRawDataToMemory(config);
+    BuildWithFieldData(field_data);
     // after build, mark built
     total_num_rows_ =
         wrapper_->count() + static_cast<int64_t>(null_offset_.size());
@@ -275,7 +275,7 @@ RTreeIndex<T>::Build(const Config& config) {
 template <typename T>
 void
 RTreeIndex<T>::BuildWithFieldData(
-    const std::vector<FieldDataPtr>& field_datas) {
+    const std::vector<FieldDataPtr>& field_data) {
     // Default to bulk load for build performance
     // If needed, we can wire a config switch later to disable it.
     bool use_bulk_load = true;
@@ -285,7 +285,7 @@ RTreeIndex<T>::BuildWithFieldData(
         if (schema_.nullable()) {
             std::vector<size_t> local_nulls;
             int64_t global_offset = 0;
-            for (const auto& fd : field_datas) {
+            for (const auto& fd : field_data) {
                 const auto n = fd->get_num_rows();
                 for (int64_t i = 0; i < n; ++i) {
                     if (!fd->is_valid(i)) {
@@ -303,12 +303,12 @@ RTreeIndex<T>::BuildWithFieldData(
                     null_offset_.end(), local_nulls.begin(), local_nulls.end());
             }
         } else {
-            for (const auto& fd : field_datas) {
+            for (const auto& fd : field_data) {
                 total_rows += fd->get_num_rows();
             }
         }
         // bulk load non-null geometries
-        wrapper_->bulk_load_from_field_data(field_datas, schema_.nullable());
+        wrapper_->bulk_load_from_field_data(field_data, schema_.nullable());
         total_num_rows_ = total_rows;
         is_built_ = true;
         ComputeByteSize();

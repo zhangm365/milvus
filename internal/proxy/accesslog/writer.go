@@ -273,7 +273,7 @@ func (l *RotateWriter) openFileExistingOrNew() error {
 		return fmt.Errorf("file to get log file info: %s", err)
 	}
 
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o644)
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONGLY, 0o644)
 	if err != nil {
 		return l.openNewFile()
 	}
@@ -309,7 +309,7 @@ func (l *RotateWriter) openNewFile() error {
 		}
 	}
 
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONGLY|os.O_TRUNC, mode)
 	if err != nil {
 		return fmt.Errorf("can't open new logfile: %s", err)
 	}

@@ -340,7 +340,7 @@ func (f *testOneWALFramework) testAppend(ctx context.Context, w wal.WAL) ([]mess
 				b := message.NewImmutableTxnMessageBuilder(begin)
 				txnCtx := appendResult.TxnCtx
 				for i := 0; i < int(rand.Int31n(5)); i++ {
-					msg = message.CreateTestEmptyInsertMesage(int64(i), map[string]string{})
+					msg = message.CreateTestEmptyInsertMessage(int64(i), map[string]string{})
 					msg.WithTxnContext(*txnCtx)
 					appendResult, err = w.Append(ctx, msg)
 					require.NoError(f.t, err)
@@ -354,7 +354,7 @@ func (f *testOneWALFramework) testAppend(ctx context.Context, w wal.WAL) ([]mess
 			if rand.Int31n(2) == 0 {
 				// ...rocksmq has a dirty implement of properties,
 				// without commonpb.MsgHeader, it can not work.
-				msg := message.CreateTestEmptyInsertMesage(int64(i), map[string]string{
+				msg := message.CreateTestEmptyInsertMessage(int64(i), map[string]string{
 					"id":    fmt.Sprintf("%d", i),
 					"const": "t",
 				})
@@ -408,7 +408,7 @@ func (f *testOneWALFramework) testAppend(ctx context.Context, w wal.WAL) ([]mess
 	}
 	wg.Wait()
 
-	msg := message.CreateTestEmptyInsertMesage(int64(f.messageCount-1), map[string]string{
+	msg := message.CreateTestEmptyInsertMessage(int64(f.messageCount-1), map[string]string{
 		"id":    fmt.Sprintf("%d", f.messageCount-1),
 		"const": "t",
 		"term":  strconv.FormatInt(int64(f.term), 10),

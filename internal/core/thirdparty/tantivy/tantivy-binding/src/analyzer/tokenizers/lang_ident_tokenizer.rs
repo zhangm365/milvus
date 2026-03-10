@@ -171,7 +171,7 @@ impl<'a> LangIdentTokenizer<'a> {
             helper: &mut FileResourcePathHelper,
         ) -> Result<TextAnalyzer>,
     ) -> Result<LangIdentTokenizer<'a>> {
-        // init identfier for tokenizer
+        // init identifier for tokenizer
         let identifier = params
             .get("identifier")
             .map_or(Ok(BoxIdentifier::default()), |v| {
@@ -211,7 +211,7 @@ impl<'a> LangIdentTokenizer<'a> {
             ));
         }
 
-        // set analyzer maping
+        // set analyzer mapping
         if let Some(map) = params.get("mapping") {
             map.as_object()
                 .ok_or(TantivyBindingError::InvalidArgument(

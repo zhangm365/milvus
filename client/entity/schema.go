@@ -43,7 +43,7 @@ const (
 	ClBounded ConsistencyLevel = ConsistencyLevel(commonpb.ConsistencyLevel_Bounded)
 	// ClSession session consistency level
 	ClSession ConsistencyLevel = ConsistencyLevel(commonpb.ConsistencyLevel_Session)
-	// ClEvenually eventually consistency level
+	// ClEventually eventually consistency level
 	ClEventually ConsistencyLevel = ConsistencyLevel(commonpb.ConsistencyLevel_Eventually)
 	// ClCustomized customized consistency level and users pass their own `guarantee_timestamp`.
 	ClCustomized ConsistencyLevel = ConsistencyLevel(commonpb.ConsistencyLevel_Customized)

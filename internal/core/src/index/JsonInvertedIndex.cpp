@@ -48,11 +48,11 @@ IsDataTypeSupported(JsonCastType cast_type, DataType data_type, bool is_array) {
 template <typename T>
 void
 JsonInvertedIndex<T>::build_index_for_json(
-    const std::vector<std::shared_ptr<FieldDataBase>>& field_datas) {
+    const std::vector<std::shared_ptr<FieldDataBase>>& field_data) {
     LOG_INFO("Start to build json inverted index for field: {}", nested_path_);
 
     ProcessJsonFieldData<T>(
-        field_datas,
+        field_data,
         this->schema_,
         nested_path_,
         cast_type_,
@@ -120,10 +120,10 @@ JsonInvertedIndex<T>::LoadIndexMetas(
 
     if (non_exist_offset_file_itr != index_files.end()) {
         // null offset file is not sliced
-        auto index_datas = this->mem_file_manager_->LoadIndexToMemory(
+        auto index_data = this->mem_file_manager_->LoadIndexToMemory(
             {*non_exist_offset_file_itr}, load_priority);
         auto non_exist_offset_data =
-            std::move(index_datas.at(INDEX_NON_EXIST_OFFSET_FILE_NAME));
+            std::move(index_data.at(INDEX_NON_EXIST_OFFSET_FILE_NAME));
         fill_non_exist_offset(non_exist_offset_data->PayloadData(),
                               non_exist_offset_data->PayloadSize());
         return;
@@ -142,10 +142,10 @@ JsonInvertedIndex<T>::LoadIndexMetas(
     }
     if (non_exist_offset_files.size() > 0) {
         // null offset file is sliced
-        auto index_datas = this->mem_file_manager_->LoadIndexToMemory(
+        auto index_data = this->mem_file_manager_->LoadIndexToMemory(
             non_exist_offset_files, load_priority);
 
-        auto non_exist_offset_data = CompactIndexDatas(index_datas);
+        auto non_exist_offset_data = CompactIndexData(index_data);
         auto non_exist_offset_data_codecs = std::move(
             non_exist_offset_data.at(INDEX_NON_EXIST_OFFSET_FILE_NAME));
         for (auto&& non_exist_offset_codec :

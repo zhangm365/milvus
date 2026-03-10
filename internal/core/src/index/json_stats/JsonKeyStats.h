@@ -86,7 +86,7 @@ class JsonKeyStats : public ScalarIndex<std::string> {
 
  public:
     void
-    BuildWithFieldData(const std::vector<FieldDataPtr>& datas, bool nullable);
+    BuildWithFieldData(const std::vector<FieldDataPtr>& data, bool nullable);
 
     void
     Load(milvus::tracer::TraceContext ctx, const Config& config = {}) override;
@@ -439,7 +439,7 @@ class JsonKeyStats : public ScalarIndex<std::string> {
     }
 
     std::map<JsonKey, KeyStatsInfo>
-    CollectKeyInfo(const std::vector<FieldDataPtr>& field_datas, bool nullable);
+    CollectKeyInfo(const std::vector<FieldDataPtr>& field_data, bool nullable);
 
     void
     TraverseJsonForStats(const char* json,
@@ -472,7 +472,7 @@ class JsonKeyStats : public ScalarIndex<std::string> {
     ClassifyJsonKeyLayoutType(const std::map<JsonKey, KeyStatsInfo>& infos);
 
     void
-    BuildKeyStats(const std::vector<FieldDataPtr>& field_datas, bool nullable);
+    BuildKeyStats(const std::vector<FieldDataPtr>& field_data, bool nullable);
 
     void
     BuildKeyStatsForRow(const char* json_str, uint32_t row_id);
@@ -695,7 +695,7 @@ class JsonKeyStats : public ScalarIndex<std::string> {
     std::unordered_map<std::string, int64_t> field_name_to_id_map_;
     // field_id -> field_name, such as 1001 -> json_path_int
     std::unordered_map<int64_t, std::string> field_id_to_name_map_;
-    // field_name vector, the sequece is the same as the order of files
+    // field_name vector, the sequence is the same as the order of files
     std::vector<std::string> field_names_;
     // field_name -> column
     mutable std::unordered_map<std::string,

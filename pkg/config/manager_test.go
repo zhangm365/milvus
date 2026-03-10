@@ -59,7 +59,7 @@ func TestConfigChangeEvent(t *testing.T) {
 	assert.Equal(t, res, "6")
 }
 
-func TestAllDupliateSource(t *testing.T) {
+func TestAllDuplicateSource(t *testing.T) {
 	mgr, _ := Init()
 	err := mgr.AddSource(NewEnvSource(formatKey))
 	assert.NoError(t, err)

@@ -42,7 +42,7 @@ type ackCallbackScheduler struct {
 	// the task which broadcastID is smaller happens before the task which broadcastID is larger.
 	// Meanwhile the timetick order of any vchannel of those two tasks are same with the order of broadcastID,
 	// so the smaller broadcastID task is always acked before the larger broadcastID task.
-	// so we can exeucte the tasks by the order of the broadcastID to promise the ack order is same with wal order.
+	// so we can execute the tasks by the order of the broadcastID to promise the ack order is same with wal order.
 	rkLockerMu sync.Mutex // because batch lock operation will be executed on rkLocker,
 	// so we may encounter following cases:
 	// 1. task A, B, C are competing with rkLocker, and we want the operation is executed in order of A -> B -> C.
@@ -92,7 +92,7 @@ func (s *ackCallbackScheduler) background() {
 	}()
 	s.Logger().Info("ack scheduler background start")
 
-	// it's weired to find that FastLock may be failure even if there's no resource-key locked,
+	// it's weird to find that FastLock may be failure even if there's no resource-key locked,
 	// also see: #45285
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()

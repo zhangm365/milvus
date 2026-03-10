@@ -382,7 +382,7 @@ func (b *broadcastTask) FastAck(ctx context.Context, broadcastResult map[string]
 	b.ObserveBroadcastDone()
 
 	if b.Header().AckSyncUp {
-		// Because the ack sync up is enabled, the ack operation want to be synced up at comsuming side of streaming node,
+		// Because the ack sync up is enabled, the ack operation want to be synced up at consuming side of streaming node,
 		// so we can not make a fast ack operation here to speed up the ack operation.
 		return nil
 	}

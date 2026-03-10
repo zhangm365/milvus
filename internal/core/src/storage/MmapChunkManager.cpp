@@ -335,7 +335,7 @@ MmapChunkManager::MmapChunkManager(std::string root_path,
     cm->CreateDir(root_path);
     this->descriptor_counter_.store(0);
     LOG_INFO(
-        "Init MappChunkManager with: Path {}, MaxDiskSize {} MB, "
+        "Init MapChunkManager with: Path {}, MaxDiskSize {} MB, "
         "FixedFileSize {} MB.",
         root_path,
         disk_limit / (1024 * 1024),

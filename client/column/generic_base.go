@@ -48,7 +48,7 @@ type genericColumnBase[T any] struct {
 	// while invalid one are filled with zero value.
 	// for Milvus 2.5.x and before, insert request shall be in compactMode while
 	// search & query results are formed in sparseMode
-	// this flag indicates which form current column are in and peform validation
+	// this flag indicates which form current column are in and perform validation
 	// or conversion logical based on it
 	sparseMode bool
 	// indexMapping stores the compact-sparse mapping
@@ -233,7 +233,7 @@ func (c *genericColumnBase[T]) SetNullable(nullable bool) {
 	c.nullable = nullable
 	// initialize validData only when
 	if c.nullable && c.validData == nil {
-		// set valid flag for all exisiting values
+		// set valid flag for all existing values
 		c.validData = lo.RepeatBy(len(c.values), func(_ int) bool { return true })
 	}
 

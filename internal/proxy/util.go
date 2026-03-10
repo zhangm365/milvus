@@ -572,11 +572,11 @@ func ValidateFieldAutoID(coll *schemapb.CollectionSchema) error {
 	for i, field := range coll.Fields {
 		if field.AutoID {
 			if idx != -1 {
-				return fmt.Errorf("only one field can speficy AutoID with true, field name = %s, %s", coll.Fields[idx].Name, field.Name)
+				return fmt.Errorf("only one field can specify AutoID with true, field name = %s, %s", coll.Fields[idx].Name, field.Name)
 			}
 			idx = i
 			if !field.IsPrimaryKey {
-				return fmt.Errorf("only primary field can speficy AutoID with true, field name = %s", field.Name)
+				return fmt.Errorf("only primary field can specify AutoID with true, field name = %s", field.Name)
 			}
 		}
 	}
@@ -819,7 +819,7 @@ func validateFunction(coll *schemapb.CollectionSchema, needValidateFunctionName 
 	usedOutputField := typeutil.NewSet[string]()
 	usedFunctionName := typeutil.NewSet[string]()
 
-	// reset `IsFunctionOuput` despite any user input, this shall be determined by function def only.
+	// reset `IsFunctionOutput` despite any user input, this shall be determined by function def only.
 	for _, field := range coll.Fields {
 		field.IsFunctionOutput = false
 	}
@@ -1020,7 +1020,7 @@ func validateLoadFieldsList(schema *schemapb.CollectionSchema) error {
 		if err != nil {
 			return err
 		}
-		// shoud load field, skip other check
+		// should load field, skip other check
 		if shouldLoad {
 			if typeutil.IsVectorType(field.GetDataType()) {
 				vectorCnt++
@@ -2102,10 +2102,10 @@ func LackOfFieldsDataBySchema(schema *schemapb.CollectionSchema, fieldsData []*s
 	return nil
 }
 
-// for some varchar with analzyer
+// for some varchar with analyzer
 // we need check char format before insert it to message queue
 // now only support utf-8
-func checkInputUtf8Compatiable(allFields []*schemapb.FieldSchema, insertMsg *msgstream.InsertMsg) error {
+func checkInputUtf8Compatible(allFields []*schemapb.FieldSchema, insertMsg *msgstream.InsertMsg) error {
 	checkeFields := lo.FilterMap(allFields, func(field *schemapb.FieldSchema, _ int) (int64, bool) {
 		if field.DataType == schemapb.DataType_VarChar {
 			return field.GetFieldID(), true
@@ -3006,7 +3006,7 @@ func extractFields(t time.Time, fieldList []string) ([]int64, error) {
 		case common.TszMicrosecond:
 			val = int64(t.Nanosecond() / 1000)
 		default:
-			return nil, merr.WrapErrParameterInvalidMsg("unsupported field for extraction: %s, fields should be seprated by ',' or ' '", field)
+			return nil, merr.WrapErrParameterInvalidMsg("unsupported field for extraction: %s, fields should be separated by ',' or ' '", field)
 		}
 		extractedValues = append(extractedValues, val)
 	}

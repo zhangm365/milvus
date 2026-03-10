@@ -447,7 +447,7 @@ func getMergeFunc[T PKType](name string) (scoreMergeFunc[T], error) {
 	case "sum":
 		return sumMerge[T], nil
 	default:
-		return nil, fmt.Errorf("Unsupport score mode: [%s], only supports: [max, avg, sum]", name)
+		return nil, fmt.Errorf("Unsupported score mode: [%s], only supports: [max, avg, sum]", name)
 	}
 }
 

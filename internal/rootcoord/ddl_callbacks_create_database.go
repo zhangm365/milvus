@@ -53,7 +53,7 @@ func (c *Core) broadcastCreateDatabase(ctx context.Context, req *milvuspb.Create
 		return errors.Wrap(err, "failed to allocate database id")
 	}
 
-	// Use dbID as ezID because the dbID is unqiue
+	// Use dbID as ezID because the dbID is unique
 	properties, err := hookutil.TidyDBCipherProperties(dbID, req.GetProperties())
 	if err != nil {
 		return errors.Wrap(err, "failed to tidy database cipher properties")

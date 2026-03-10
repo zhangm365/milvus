@@ -78,7 +78,7 @@ func WaitCollectionReleased(ctx context.Context, dist *meta.DistributionManager,
 				collection, currentChannelCount, currentSegmentCount)
 		}
 
-		log.Ctx(ctx).Info("waitting for release...",
+		log.Ctx(ctx).Info("waiting for release...",
 			zap.Int64("collection", collection),
 			zap.Int64s("partitions", partitions),
 			zap.Int("channel", currentChannelCount),

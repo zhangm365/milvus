@@ -238,7 +238,7 @@ VectorFieldIndexing::recreate_index(DataType data_type,
 
 // for sparse float vector:
 //   * element_size is not used
-//   * output_raw pooints at a milvus::schema::proto::SparseFloatArray.
+//   * output_raw points at a milvus::schema::proto::SparseFloatArray.
 void
 VectorFieldIndexing::GetDataFromIndex(const int64_t* seg_offsets,
                                       int64_t count,

@@ -20,7 +20,7 @@ type AssignSegmentRequest struct {
 }
 
 // AssignSegmentResult is a result of segment allocation.
-// The sum of Results.Row is equal to InserMetrics.NumRows.
+// The sum of Results.Row is equal to InsertMetrics.NumRows.
 type AssignSegmentResult struct {
 	SegmentID   int64
 	Acknowledge *atomic.Int32 // used to ack the segment assign result has been consumed

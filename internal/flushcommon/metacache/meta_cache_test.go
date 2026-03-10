@@ -37,7 +37,7 @@ type MetaCacheSuite struct {
 	collectionID    int64
 	collSchema      *schemapb.CollectionSchema
 	vchannel        string
-	invaliedSeg     int64
+	invalidSeg     int64
 	partitionIDs    []int64
 	flushedSegments []int64
 	growingSegments []int64
@@ -56,7 +56,7 @@ func (s *MetaCacheSuite) SetupSuite() {
 	s.flushedSegments = []int64{1, 2, 3, 4}
 	s.growingSegments = []int64{5, 6, 7, 8}
 	s.newSegments = []int64{9, 10, 11, 12}
-	s.invaliedSeg = 111
+	s.invalidSeg = 111
 	s.bfsFactory = func(*datapb.SegmentInfo) pkoracle.PkStat {
 		return pkoracle.NewBloomFilterSet()
 	}

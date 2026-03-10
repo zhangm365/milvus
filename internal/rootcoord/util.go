@@ -332,7 +332,7 @@ func CheckTimeTickLagExceeded(ctx context.Context, mixcoord types.MixCoord, maxD
 		errStr += fmt.Sprintf("data max timetick lag:%s on channel:%s", maxLag, maxLagChannel)
 	}
 	if errStr != "" {
-		return fmt.Errorf("max timetick lag execced threhold: %s", errStr)
+		return fmt.Errorf("max timetick lag execced threshold: %s", errStr)
 	}
 
 	return nil
@@ -441,7 +441,7 @@ func checkFieldSchema(fieldSchemas []*schemapb.FieldSchema) error {
 					return merr.WrapErrParameterInvalidMsg(err.Error())
 				}
 			default:
-				panic("default value unsupport data type")
+				panic("default value unsupported data type")
 			}
 		}
 		if err := checkDupKvPairs(fieldSchema.GetTypeParams(), "type"); err != nil {

@@ -68,7 +68,7 @@ func writeJSON(w http.ResponseWriter, r *http.Request, resp *eventLogResponse) {
 	w.Header().Set(ContentTypeHeader, ContentTypeJSON)
 	bs, err := json.Marshal(resp)
 	if err != nil {
-		log.Warn("faild to send response", zap.Error(err))
+		log.Warn("failed to send response", zap.Error(err))
 	}
 	w.Write(bs)
 }

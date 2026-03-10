@@ -167,7 +167,7 @@ class MmapBlocksHandler {
 /**
  * @brief MmapChunkManager
  * MmapChunkManager manages the memory-mapping space in mmap manager;
- * MmapChunkManager uses blocks_table_ to record the relationship of segments and the mapp space it uses.
+ * MmapChunkManager uses blocks_table_ to record the relationship of segments and the map space it uses.
  * The basic space unit of MmapChunkManager is MmapBlock, and is managed by MmapBlocksHandler.
  * todo(cqy): blocks_handler_ and blocks_table_ is not thread safe, we need use fine-grained locks for better performance.
  */

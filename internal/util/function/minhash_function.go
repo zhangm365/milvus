@@ -30,7 +30,7 @@ import (
 // Input: string (text)
 // Output: []byte (binary vector - MinHash signature vector)
 const (
-	// outter  parameters
+	// outer  parameters
 	NumHashesKey   = "num_hashes"
 	ShingleSizeKey = "shingle_size"
 	HashFuncKey    = "hash_function"

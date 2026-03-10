@@ -889,7 +889,7 @@ class PhyUnaryRangeFilterExpr : public SegmentExpr {
     VectorPtr
     ExecArrayEqualForIndex(EvalCtx& context, bool reverse);
 
-    // Check overflow and cache result for performace
+    // Check overflow and cache result for performance
     template <typename T>
     ColumnVectorPtr
     PreCheckOverflow(OffsetVector* input = nullptr);

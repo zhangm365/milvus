@@ -130,7 +130,7 @@ TEST_F(AzureChunkManagerTest, BucketPositive) {
     chunk_manager_->DeleteBucket(testBucketName);
 }
 
-TEST_F(AzureChunkManagerTest, BucketNegtive) {
+TEST_F(AzureChunkManagerTest, BucketNegative) {
     string testBucketName = "test-bucket-ng";
     try {
         chunk_manager_->DeleteBucket(testBucketName);

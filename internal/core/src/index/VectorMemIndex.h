@@ -41,8 +41,8 @@
 
 namespace milvus::index {
 // TODO : growing index should be isolated from VectorMemIndex
-// For general index, it should not suppport AddWithDataset etc.
-// For growing index, it should suppport AddWithDataset etc.
+// For general index, it should not support AddWithDataset etc.
+// For growing index, it should support AddWithDataset etc.
 template <typename T>
 class VectorMemIndex : public VectorIndex {
  public:
@@ -55,7 +55,7 @@ class VectorMemIndex : public VectorIndex {
         const storage::FileManagerContext& file_manager_context =
             storage::FileManagerContext());
 
-    // knowhere data view index special constucter for intermin index, no need to hold file_manager_ to upload or download files
+    // knowhere data view index special constructor for intermin index, no need to hold file_manager_ to upload or download files
     VectorMemIndex(DataType elem_type /* used for embedding list only */,
                    const IndexType& index_type,
                    const MetricType& metric_type,

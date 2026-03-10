@@ -30,7 +30,7 @@ func buildInterceptorParams(ctx context.Context, underlyingWALImpls walimpls.WAL
 		// But for the uncommitted message, its timetick is undetermined, and wal support to recover the uncommitted-txn.
 		// For protecting the `LastConfirmedMessageID` promise,
 		// we use the checkpoint (checkpoint is always see the committed message) to promise we can see the uncommitted message
-		// when using the FirstTimeTickMessage as the poisition to read.
+		// when using the FirstTimeTickMessage as the position to read.
 		lastConfirmedMessageID = cp.MessageID
 	}
 	msg, err := sendFirstTimeTick(ctx, underlyingWALImpls, lastConfirmedMessageID)

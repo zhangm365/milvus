@@ -292,10 +292,10 @@ struct Comparable : crtp<T, Comparable>
 };
 
 template< typename T >
-struct Dereferencable;
+struct Dereferenceable;
 
 template< typename T, typename Parameter, template< typename > class ... Skills >
-struct Dereferencable<NamedType<T, Parameter, Skills...>> : crtp<NamedType<T, Parameter, Skills...>, Dereferencable>
+struct Dereferenceable<NamedType<T, Parameter, Skills...>> : crtp<NamedType<T, Parameter, Skills...>, Dereferenceable>
 {
     FLUENT_NODISCARD constexpr T& operator*() &
     {
@@ -419,7 +419,7 @@ struct hash<fluent::NamedType<T, Parameter, Skills...>>
 
     size_t operator()(fluent::NamedType<T, Parameter, Skills...> const& x) const noexcept
     {
-        static_assert(noexcept(std::hash<T>()(x.get())), "hash fuction should not throw");
+        static_assert(noexcept(std::hash<T>()(x.get())), "hash function should not throw");
 
         return std::hash<T>()(x.get());
     }

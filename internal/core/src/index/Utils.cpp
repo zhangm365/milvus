@@ -294,12 +294,12 @@ ParseConfigFromIndexParams(
 }
 
 std::map<std::string, IndexDataCodec>
-CompactIndexDatas(
-    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_datas) {
+CompactIndexData(
+    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_data) {
     std::map<std::string, IndexDataCodec> index_file_slices;
     std::unordered_set<std::string> compacted_files;
-    if (index_datas.find(INDEX_FILE_SLICE_META) != index_datas.end()) {
-        auto slice_meta = std::move(index_datas.at(INDEX_FILE_SLICE_META));
+    if (index_data.find(INDEX_FILE_SLICE_META) != index_data.end()) {
+        auto slice_meta = std::move(index_data.at(INDEX_FILE_SLICE_META));
         Config meta_data = Config::parse(std::string(
             reinterpret_cast<const char*>(slice_meta->PayloadData()),
             slice_meta->PayloadSize()));
@@ -313,25 +313,25 @@ CompactIndexDatas(
             auto& index_data_codec = index_file_slices.at(prefix);
             for (auto i = 0; i < slice_num; ++i) {
                 std::string file_name = GenSlicedFileName(prefix, i);
-                AssertInfo(index_datas.find(file_name) != index_datas.end(),
+                AssertInfo(index_data.find(file_name) != index_data.end(),
                            "lost index slice data");
                 index_data_codec.codecs_.push_back(
-                    std::move(index_datas.at(file_name)));
+                    std::move(index_data.at(file_name)));
                 compacted_files.insert(file_name);
                 data_len += index_data_codec.codecs_.back()->PayloadSize();
             }
             AssertInfo(
                 total_len == data_len,
                 "index len is inconsistent after disassemble and assemble");
-            if (index_datas.count(prefix) > 0) {
+            if (index_data.count(prefix) > 0) {
                 index_data_codec.codecs_.push_back(
-                    std::move(index_datas[prefix]));
+                    std::move(index_data[prefix]));
                 compacted_files.insert(prefix);
             }
             index_data_codec.size_ = data_len;
         }
     }
-    for (auto& index_data : index_datas) {
+    for (auto& index_data : index_data) {
         if (compacted_files.find(index_data.first) == compacted_files.end()) {
             index_file_slices.insert({index_data.first, IndexDataCodec{}});
             auto& index_data_codec = index_file_slices.at(index_data.first);
@@ -343,15 +343,15 @@ CompactIndexDatas(
 }
 
 void
-AssembleIndexDatas(
-    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_datas,
+AssembleIndexData(
+    std::map<std::string, std::unique_ptr<storage::DataCodec>>& index_data,
     BinarySet& index_binary_set) {
-    auto index_file_slices = CompactIndexDatas(index_datas);
-    AssembleIndexDatas(index_file_slices, index_binary_set);
+    auto index_file_slices = CompactIndexData(index_data);
+    AssembleIndexData(index_file_slices, index_binary_set);
 }
 
 void
-AssembleIndexDatas(std::map<std::string, IndexDataCodec>& index_file_slices,
+AssembleIndexData(std::map<std::string, IndexDataCodec>& index_file_slices,
                    BinarySet& index_binary_set) {
     for (auto& [key, index_slices] : index_file_slices) {
         auto index_size = index_slices.size_;
@@ -368,15 +368,15 @@ AssembleIndexDatas(std::map<std::string, IndexDataCodec>& index_file_slices,
 }
 
 void
-AssembleIndexDatas(std::map<std::string, FieldDataChannelPtr>& index_datas,
+AssembleIndexData(std::map<std::string, FieldDataChannelPtr>& index_data,
                    std::unordered_map<std::string, FieldDataPtr>& result) {
-    if (auto meta_iter = index_datas.find(INDEX_FILE_SLICE_META);
-        meta_iter != index_datas.end()) {
+    if (auto meta_iter = index_data.find(INDEX_FILE_SLICE_META);
+        meta_iter != index_data.end()) {
         auto raw_metadata_array =
             storage::CollectFieldDataChannel(meta_iter->second);
         auto raw_metadata = storage::MergeFieldData(raw_metadata_array);
         result[INDEX_FILE_SLICE_META] = raw_metadata;
-        index_datas.erase(INDEX_FILE_SLICE_META);
+        index_data.erase(INDEX_FILE_SLICE_META);
         Config metadata = Config::parse(
             std::string(static_cast<const char*>(raw_metadata->Data()),
                         raw_metadata->DataSize()));
@@ -391,14 +391,14 @@ AssembleIndexDatas(std::map<std::string, FieldDataChannelPtr>& index_datas,
 
             for (auto i = 0; i < slice_num; ++i) {
                 std::string file_name = GenSlicedFileName(prefix, i);
-                auto it = index_datas.find(file_name);
-                AssertInfo(it != index_datas.end(), "lost index slice data");
+                auto it = index_data.find(file_name);
+                AssertInfo(it != index_data.end(), "lost index slice data");
                 auto& channel = it->second;
                 auto data_array = storage::CollectFieldDataChannel(channel);
                 auto data = storage::MergeFieldData(data_array);
                 auto len = data->DataSize();
                 new_field_data->FillFieldData(data->Data(), len);
-                index_datas.erase(file_name);
+                index_data.erase(file_name);
             }
             AssertInfo(
                 new_field_data->IsFull(),
@@ -406,7 +406,7 @@ AssembleIndexDatas(std::map<std::string, FieldDataChannelPtr>& index_datas,
             result[prefix] = new_field_data;
         }
     }
-    for (auto& [key, channel] : index_datas) {
+    for (auto& [key, channel] : index_data) {
         if (key == INDEX_FILE_SLICE_META) {
             continue;
         }
@@ -447,7 +447,7 @@ CheckAndUpdateKnowhereRangeSearchParam(const SearchInfo& search_info,
 
     search_config[RADIUS] = radius.value();
     // `range_search_k` is only used as one of the conditions for iterator early termination.
-    // not gurantee to return exactly `range_search_k` results, which may be more or less.
+    // not guarantee to return exactly `range_search_k` results, which may be more or less.
     // set it to -1 will return all results in the range.
     search_config[knowhere::meta::RANGE_SEARCH_K] = topk;
 

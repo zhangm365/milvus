@@ -63,7 +63,7 @@ func TestAccessLogger_InitFailed(t *testing.T) {
 	// init formatter failed
 	Params.Init(paramtable.NewBaseTable(paramtable.SkipRemote(true)))
 	Params.Save(Params.ProxyCfg.AccessLog.Enable.Key, "true")
-	Params.SaveGroup(map[string]string{Params.ProxyCfg.AccessLog.Formatter.KeyPrefix + "testf.invaild": "invalidConfig"})
+	Params.SaveGroup(map[string]string{Params.ProxyCfg.AccessLog.Formatter.KeyPrefix + "testf.invalid": "invalidConfig"})
 
 	InitAccessLogger(&Params)
 	rpcInfo := &grpc.UnaryServerInfo{Server: nil, FullMethod: "testMethod"}

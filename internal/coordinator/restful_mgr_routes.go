@@ -863,7 +863,7 @@ func (s *mixCoordImpl) handlePutStreamingNodeStatus(w http.ResponseWriter, req *
 		return
 	}
 	if err != nil {
-		logger.Info("handlePutStreamingNodeStatus QueryCoord ingore node")
+		logger.Info("handlePutStreamingNodeStatus QueryCoord ignore node")
 	}
 	logger.Info("handlePutStreamingNodeStatus success", zap.Any("status", requestBody.Status))
 	w.Header().Set("Content-Type", "application/json")

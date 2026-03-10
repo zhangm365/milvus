@@ -227,7 +227,7 @@ func (it *insertTask) PreExecute(ctx context.Context) error {
 	}
 
 	// check varchar/text with analyzer was utf-8 format
-	err = checkInputUtf8Compatiable(allFields, it.insertMsg)
+	err = checkInputUtf8Compatible(allFields, it.insertMsg)
 	if err != nil {
 		log.Warn("check varchar/text format failed", zap.Error(err))
 		return err

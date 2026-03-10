@@ -189,7 +189,7 @@ func initWriter(logCfg *paramtable.AccessLogConfig, minioCfg *paramtable.MinioCo
 		return lg, nil
 	}
 
-	// wirte to stdout when filename = ""
+	// write to stdout when filename = ""
 	stdout, _, err := zap.Open([]string{"stdout"}...)
 	if err != nil {
 		return nil, err

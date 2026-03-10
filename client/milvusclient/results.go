@@ -30,7 +30,7 @@ import (
 
 // ResultSet is struct for search result set.
 type ResultSet struct {
-	// internal schema for unmarshaling
+	// internal schema for unmarshalling
 	sch *entity.Schema
 
 	ResultCount  int // the returning entry count

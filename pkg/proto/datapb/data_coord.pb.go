@@ -133,7 +133,7 @@ func (SegmentLevel) EnumDescriptor() ([]byte, []int) {
 type ChannelWatchState int32
 
 const (
-	ChannelWatchState_Uncomplete     ChannelWatchState = 0 // deprecated, keep it for compatibility
+	ChannelWatchState_Incomplete     ChannelWatchState = 0 // deprecated, keep it for compatibility
 	ChannelWatchState_Complete       ChannelWatchState = 1 // deprecated, keep it for compatibility
 	ChannelWatchState_ToWatch        ChannelWatchState = 2
 	ChannelWatchState_WatchSuccess   ChannelWatchState = 3
@@ -146,7 +146,7 @@ const (
 // Enum value maps for ChannelWatchState.
 var (
 	ChannelWatchState_name = map[int32]string{
-		0: "Uncomplete",
+		0: "Incomplete",
 		1: "Complete",
 		2: "ToWatch",
 		3: "WatchSuccess",
@@ -156,7 +156,7 @@ var (
 		7: "ReleaseFailure",
 	}
 	ChannelWatchState_value = map[string]int32{
-		"Uncomplete":     0,
+		"Incomplete":     0,
 		"Complete":       1,
 		"ToWatch":        2,
 		"WatchSuccess":   3,
@@ -2905,9 +2905,9 @@ type SegmentInfo struct {
 	// After the growing segment is full managed by streamingnode, the true value can never be seen at coordinator.
 	IsCreatedByStreaming bool `protobuf:"varint,30,opt,name=is_created_by_streaming,json=isCreatedByStreaming,proto3" json:"is_created_by_streaming,omitempty"`
 	IsSortedByNamespace  bool `protobuf:"varint,31,opt,name=is_sorted_by_namespace,json=isSortedByNamespace,proto3" json:"is_sorted_by_namespace,omitempty"`
-	// manifest_path stores the fullpath of LOON manifest file of segemnt data files.
+	// manifest_path stores the fullpath of LOON manifest file of segment data files.
 	// we could keep the fullpath since one segment shall only have one active manifest
-	// and we could keep the possiblity that manifest stores out side of collection/partition/segment path
+	// and we could keep the possibility that manifest stores out side of collection/partition/segment path
 	ManifestPath string `protobuf:"bytes,32,opt,name=manifest_path,json=manifestPath,proto3" json:"manifest_path,omitempty"`
 	// expirQuantiles records the expiration timestamptz values of the segment
 	// at the 20%, 40%, 60%, 80%, and 100% data distribution levels
@@ -3619,7 +3619,7 @@ func (x *ChannelStatus) GetState() ChannelWatchState {
 	if x != nil {
 		return x.State
 	}
-	return ChannelWatchState_Uncomplete
+	return ChannelWatchState_Incomplete
 }
 
 func (x *ChannelStatus) GetCollectionID() int64 {
@@ -4967,7 +4967,7 @@ func (x *ChannelWatchInfo) GetState() ChannelWatchState {
 	if x != nil {
 		return x.State
 	}
-	return ChannelWatchState_Uncomplete
+	return ChannelWatchState_Incomplete
 }
 
 func (x *ChannelWatchInfo) GetTimeoutTs() int64 {
@@ -7353,7 +7353,7 @@ func (x *ChannelOperationProgressResponse) GetState() ChannelWatchState {
 	if x != nil {
 		return x.State
 	}
-	return ChannelWatchState_Uncomplete
+	return ChannelWatchState_Incomplete
 }
 
 func (x *ChannelOperationProgressResponse) GetProgress() int32 {

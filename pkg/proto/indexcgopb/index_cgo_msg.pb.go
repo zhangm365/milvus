@@ -271,7 +271,7 @@ type BinarySet struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Datas []*Binary `protobuf:"bytes,1,rep,name=datas,proto3" json:"datas,omitempty"`
+	Data []*Binary `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BinarySet) Reset() {
@@ -306,9 +306,9 @@ func (*BinarySet) Descriptor() ([]byte, []int) {
 	return file_index_cgo_msg_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *BinarySet) GetDatas() []*Binary {
+func (x *BinarySet) GetData() []*Binary {
 	if x != nil {
-		return x.Datas
+		return x.Data
 	}
 	return nil
 }
@@ -1596,7 +1596,7 @@ var file_index_cgo_msg_proto_depIdxs = []int32{
 	15, // 1: milvus.proto.indexcgo.IndexParams.params:type_name -> milvus.proto.common.KeyValuePair
 	15, // 2: milvus.proto.indexcgo.MapParams.params:type_name -> milvus.proto.common.KeyValuePair
 	14, // 3: milvus.proto.indexcgo.MapParamsV2.params:type_name -> milvus.proto.indexcgo.MapParamsV2.ParamsEntry
-	4,  // 4: milvus.proto.indexcgo.BinarySet.datas:type_name -> milvus.proto.indexcgo.Binary
+	4,  // 4: milvus.proto.indexcgo.BinarySet.data:type_name -> milvus.proto.indexcgo.Binary
 	6,  // 5: milvus.proto.indexcgo.SegmentInsertFiles.field_insert_files:type_name -> milvus.proto.indexcgo.FieldInsertFiles
 	16, // 6: milvus.proto.indexcgo.BuildIndexInfo.field_schema:type_name -> milvus.proto.schema.FieldSchema
 	8,  // 7: milvus.proto.indexcgo.BuildIndexInfo.storage_config:type_name -> milvus.proto.indexcgo.StorageConfig

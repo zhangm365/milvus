@@ -61,7 +61,7 @@ func (struts *SearchReduceUtilTestSuite) TestReduceSearchResult() {
 	}
 }
 
-func (struts *SearchReduceUtilTestSuite) TestReduceSearchResultWithEmtpyGroupData() {
+func (struts *SearchReduceUtilTestSuite) TestReduceSearchResultWithEmptyGroupData() {
 	nq := int64(1)
 	topk := int64(1)
 	emptyData := &schemapb.SearchResultData{

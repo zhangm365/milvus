@@ -91,16 +91,16 @@ func emptyInsertMsg(collectionID int64, partitionID int64, segmentID int64, chan
 
 // gen IDs with random pks for DeleteMsg
 func genDefaultDeletePK(rowSum int) *schemapb.IDs {
-	pkDatas := []int64{}
+	pkData := []int64{}
 
 	for i := 1; i <= rowSum; i++ {
-		pkDatas = append(pkDatas, int64(i))
+		pkData = append(pkData, int64(i))
 	}
 
 	return &schemapb.IDs{
 		IdField: &schemapb.IDs_IntId{
 			IntId: &schemapb.LongArray{
-				Data: pkDatas,
+				Data: pkData,
 			},
 		},
 	}
@@ -108,25 +108,25 @@ func genDefaultDeletePK(rowSum int) *schemapb.IDs {
 
 // gen IDs with specified pk
 func genDeletePK(pks ...int64) *schemapb.IDs {
-	pkDatas := make([]int64, 0, len(pks))
-	pkDatas = append(pkDatas, pks...)
+	pkData := make([]int64, 0, len(pks))
+	pkData = append(pkData, pks...)
 
 	return &schemapb.IDs{
 		IdField: &schemapb.IDs_IntId{
 			IntId: &schemapb.LongArray{
-				Data: pkDatas,
+				Data: pkData,
 			},
 		},
 	}
 }
 
 func genDefaultFiledData(numRows int) []*schemapb.FieldData {
-	pkDatas := []int64{}
-	vectorDatas := []byte{}
+	pkData := []int64{}
+	vectorData := []byte{}
 
 	for i := 1; i <= numRows; i++ {
-		pkDatas = append(pkDatas, int64(i))
-		vectorDatas = append(vectorDatas, uint8(i))
+		pkData = append(pkData, int64(i))
+		vectorData = append(vectorData, uint8(i))
 	}
 
 	return []*schemapb.FieldData{
@@ -138,7 +138,7 @@ func genDefaultFiledData(numRows int) []*schemapb.FieldData {
 				Scalars: &schemapb.ScalarField{
 					Data: &schemapb.ScalarField_LongData{
 						LongData: &schemapb.LongArray{
-							Data: pkDatas,
+							Data: pkData,
 						},
 					},
 				},
@@ -152,7 +152,7 @@ func genDefaultFiledData(numRows int) []*schemapb.FieldData {
 				Vectors: &schemapb.VectorField{
 					Dim: 8,
 					Data: &schemapb.VectorField_BinaryVector{
-						BinaryVector: vectorDatas,
+						BinaryVector: vectorData,
 					},
 				},
 			},

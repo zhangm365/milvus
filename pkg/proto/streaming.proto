@@ -46,9 +46,9 @@ message PChannelAssignmentLog {
 enum PChannelMetaState {
     PCHANNEL_META_STATE_UNKNOWN = 0;  // should never used.
     PCHANNEL_META_STATE_UNINITIALIZED =
-        1;  // channel is uninitialized, never assgined to any streaming node.
+        1;  // channel is uninitialized, never assigned to any streaming node.
     PCHANNEL_META_STATE_ASSIGNING =
-        2;  // new term is allocated, but not determined to be assgined.
+        2;  // new term is allocated, but not determined to be assigned.
     PCHANNEL_META_STATE_ASSIGNED =
         3;  // channel is assigned to a streaming node.
     PCHANNEL_META_STATE_UNAVAILABLE =
@@ -92,7 +92,7 @@ enum BroadcastTaskState {
     BROADCAST_TASK_STATE_DONE = 2;             // task has been broadcasted and acknowledged, the resource lock is released, and the persisted task can be cleared.
     BROADCAST_TASK_STATE_WAIT_ACK = 3 [deprecated = true];         // task has been broadcasted, waiting for ack, the resource lock is still acquired by some vchannels.
     BROADCAST_TASK_STATE_REPLICATED = 4;       // task is replicated from the source cluster, the resource lock isn't acquired, so the execution order should be protected by the order of broadcastID.
-    BROADCAST_TASK_STATE_TOMBSTONE = 5;        // task is tombstone, it's used to mark the task is already acked, but for idempotency and deduplication, it will be kept in recovery stroage for a while.
+    BROADCAST_TASK_STATE_TOMBSTONE = 5;        // task is tombstone, it's used to mark the task is already acked, but for idempotency and deduplication, it will be kept in recovery storage for a while.
 }
 
 // BroadcastTask is the task to broadcast the messake.
@@ -331,7 +331,7 @@ enum StreamingCode {
     STREAMING_CODE_UNMATCHED_CHANNEL_TERM = 5;  // unmatched channel term
     STREAMING_CODE_IGNORED_OPERATION      = 6;  // ignored operation
     STREAMING_CODE_INNER                  = 7;  // underlying service failure.
-    STREAMING_CODE_INVAILD_ARGUMENT       = 8;  // invalid argument
+    STREAMING_CODE_INVALID_ARGUMENT       = 8;  // invalid argument
     STREAMING_CODE_TRANSACTION_EXPIRED    = 9;  // transaction expired
     STREAMING_CODE_INVALID_TRANSACTION_STATE = 10;  // invalid transaction state
     STREAMING_CODE_UNRECOVERABLE          = 11; // unrecoverable error
@@ -365,7 +365,7 @@ service StreamingNodeHandlerService {
     // All messages sent to a channel will be assigned a unique messageID.
     // The messageID is used to identify the message in the channel.
     // The messageID isn't promised to be monotonous increasing with the
-    // sequence of responsing. Error: If channel isn't assign to this log node,
+    // sequence of responding. Error: If channel isn't assign to this log node,
     // the RPC will return error CHANNEL_NOT_EXIST. If channel is moving away to
     // other log node, the RPC will return error CHANNEL_FENCED.
     rpc Produce(stream ProduceRequest) returns (stream ProduceResponse) {};
@@ -515,11 +515,11 @@ message CloseVChannelConsumerResponse {
     int64 consumer_id = 1;
 }
 
-// ConsumeResponse is the reponse of the Consume RPC.
+// ConsumeResponse is the response of the Consume RPC.
 message ConsumeResponse {
     oneof response {
         CreateConsumerResponse create = 1;
-        ConsumeMessageReponse consume = 2;
+        ConsumeMessageResponse consume = 2;
         CreateVChannelConsumerResponse create_vchannel = 3;
         CreateVChannelConsumersResponse create_vchannels = 4;
         CloseVChannelConsumerResponse close_vchannel = 5;
@@ -534,7 +534,7 @@ message CreateConsumerResponse {
     int64 consumer_server_id = 2;
 }
 
-message ConsumeMessageReponse {
+message ConsumeMessageResponse {
     int64 consumer_id = 1;
     common.ImmutableMessage message = 2;
 }
@@ -567,7 +567,7 @@ service StreamingNodeManagerService {
         returns (StreamingNodeManagerRemoveResponse) {};
 
     // rpc CollectStatus() ...
-    // CollectStatus is unary RPC to collect all avaliable channel info and load
+    // CollectStatus is unary RPC to collect all available channel info and load
     // balance info on a log node. Used to recover channel info on log coord,
     // collect balance info and health check.
     rpc CollectStatus(StreamingNodeManagerCollectStatusRequest)
@@ -650,7 +650,7 @@ enum VChannelState {
     VCHANNEL_STATE_UNKNOWN = 0;  // should never used.
     VCHANNEL_STATE_NORMAL  = 1;  // vchannel is normal.
     VCHANNEL_STATE_DROPPED = 2;  // vchannel is dropped.
-    // VCHANNEL_STATE_SPLITTED = 3; // TODO: vchannel is splitted to other vchannels, used to support shard-splitting.
+    // VCHANNEL_STATE_SPLIT = 3; // TODO: vchannel is split to other vchannels, used to support shard-splitting.
 }
 
 // VChannelSchemaState is the state of vchannel schema.
@@ -700,7 +700,7 @@ message SegmentAssignmentStat {
 
 // The WALCheckpoint that is used to recovery the wal scanner.
 message WALCheckpoint {
-    common.MessageID message_id = 1; // From here to recover all uncommited info.
+    common.MessageID message_id = 1; // From here to recover all uncommitted info.
     // e.g., primary key index, segment assignment info, vchannel info...
     // because current data path flush is slow, and managed by the coordinator, current current is not apply to it.
     //

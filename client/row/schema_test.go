@@ -58,8 +58,8 @@ type SliceBadDimStruct2 struct {
 func TestParseSchema(t *testing.T) {
 	t.Run("invalid cases", func(t *testing.T) {
 		// anonymous struct with default collection name ("") will cause error
-		anonymusStruct := struct{}{}
-		sch, err := ParseSchema(anonymusStruct)
+		anonymousStruct := struct{}{}
+		sch, err := ParseSchema(anonymousStruct)
 		assert.Nil(t, sch)
 		assert.NotNil(t, err)
 

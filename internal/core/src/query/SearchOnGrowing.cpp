@@ -343,11 +343,11 @@ SearchOnGrowing(const segcore::SegmentGrowingImpl& segment,
                 larger_is_closer);
         } else {
             if (info.array_offsets_ != nullptr) {
-                auto [seg_offsets, elem_indicies] =
+                auto [seg_offsets, elem_indices] =
                     final_qr.convert_to_element_offsets(
                         info.array_offsets_.get());
                 search_result.seg_offsets_ = std::move(seg_offsets);
-                search_result.element_indices_ = std::move(elem_indicies);
+                search_result.element_indices_ = std::move(elem_indices);
                 search_result.element_level_ = true;
             } else {
                 search_result.seg_offsets_ =

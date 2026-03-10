@@ -581,9 +581,9 @@ func GetVectorElementType(data *schemapb.VectorField) schemapb.DataType {
 	case *schemapb.VectorField_SparseFloatVector:
 		return schemapb.DataType_SparseFloatVector
 	case *schemapb.VectorField_VectorArray:
-		panic("unexpect vector element type")
+		panic("unexpected vector element type")
 	default:
-		panic("unreacheable")
+		panic("unreachable")
 	}
 }
 

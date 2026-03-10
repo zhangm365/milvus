@@ -145,7 +145,7 @@ func (suite *IDFOracleSuite) TestSealed() {
 	suite.Equal(int64(len(sealedSegs)+len(invalidSealedSegs)), suite.idfOracle.current.NumRow())
 
 	// update and sync snapshot make all sealed in target activate
-	// and invalid sealed segemnt deactivate
+	// and invalid sealed segment deactivate
 	suite.updateSnapshot(sealedSegs, []int64{}, []int64{})
 	suite.idfOracle.SetNext(suite.snapshot)
 	suite.waitTargetVersion(suite.targetVersion)

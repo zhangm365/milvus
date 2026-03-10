@@ -211,7 +211,7 @@ func (s *FunctionExecutorSuite) TestErrorSchema() {
 	s.Error(err)
 }
 
-func (s *FunctionExecutorSuite) TestInternalPrcessSearch() {
+func (s *FunctionExecutorSuite) TestInternalProcessSearch() {
 	ts := CreateOpenAIEmbeddingServer()
 	defer ts.Close()
 	schema := s.creataSchema(ts.URL)
@@ -304,7 +304,7 @@ func (s *FunctionExecutorSuite) TestInternalPrcessSearch() {
 	}
 }
 
-func (s *FunctionExecutorSuite) TestInternalPrcessSearchFailed() {
+func (s *FunctionExecutorSuite) TestInternalProcessSearchFailed() {
 	ts := CreateErrorEmbeddingServer()
 	defer ts.Close()
 

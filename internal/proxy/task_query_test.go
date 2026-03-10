@@ -304,8 +304,8 @@ func TestQueryTask_all(t *testing.T) {
 			resultBuf:      &typeutil.ConcurrentSet[*internalpb.RetrieveResults]{},
 		}
 		// simulate scheduler enqueue task
-		enqueTs := uint64(10000)
-		qt.SetTs(enqueTs)
+		enqueueTs := uint64(10000)
+		qt.SetTs(enqueueTs)
 		qtErr := qt.PreExecute(context.TODO())
 		assert.Nil(t, qtErr)
 		assert.True(t, qt.queryParams.isIterator)
@@ -348,7 +348,7 @@ func TestQueryTask_all(t *testing.T) {
 						Value: "True",
 					},
 				},
-				GuaranteeTimestamp: enqueTs,
+				GuaranteeTimestamp: enqueueTs,
 			},
 			mixCoord:       qc,
 			lb:             lb,
@@ -359,7 +359,7 @@ func TestQueryTask_all(t *testing.T) {
 		assert.Nil(t, qtErr)
 		assert.True(t, qt.queryParams.isIterator)
 		// from the second page, the mvccTs is set to the sessionTs init in the first page
-		assert.Equal(t, enqueTs, qt.GetMvccTimestamp())
+		assert.Equal(t, enqueueTs, qt.GetMvccTimestamp())
 	})
 
 	t.Run("test count(*) with aggregation validation rules", func(t *testing.T) {

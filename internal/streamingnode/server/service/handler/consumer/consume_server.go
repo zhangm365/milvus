@@ -21,7 +21,7 @@ import (
 // Expected message sequence:
 // CreateConsumeServer:
 // <- CreateVChannelConsumer 1
-// -> CreateVChannelConsuemr 1
+// -> CreateVChannelConsumer 1
 // -> ConsumeMessage 1.1
 // <- CreateVChannelConsumer 2
 // -> ConsumeMessage 1.2
@@ -38,7 +38,7 @@ import (
 func CreateConsumeServer(walManager walmanager.Manager, streamServer streamingpb.StreamingNodeHandlerService_ConsumeServer) (*ConsumeServer, error) {
 	createReq, err := contextutil.GetCreateConsumer(streamServer.Context())
 	if err != nil {
-		return nil, status.NewInvaildArgument("create consumer request is required")
+		return nil, status.NewInvalidArgument("create consumer request is required")
 	}
 
 	l, err := walManager.GetAvailableWAL(types.NewPChannelInfoFromProto(createReq.GetPchannel()))
@@ -188,7 +188,7 @@ func (c *ConsumeServer) sendImmutableMessage(msg message.ImmutableMessage) (err 
 	}()
 
 	// Send Consumed message to client and do metrics.
-	if err := c.consumeServer.SendConsumeMessage(&streamingpb.ConsumeMessageReponse{
+	if err := c.consumeServer.SendConsumeMessage(&streamingpb.ConsumeMessageResponse{
 		ConsumerId: c.consumerID,
 		Message:    msg.IntoImmutableMessageProto(),
 	}); err != nil {

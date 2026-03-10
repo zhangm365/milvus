@@ -140,7 +140,7 @@ PhyRandomSampleNode::GetOutput() {
     if (!is_source_node_) {
         auto input_col = GetColumnVector(input_);
         TargetBitmapView input_data(input_col->GetRawData(), input_col->size());
-        // note: false means the elemnt is hit
+        // note: false means the element is hit
         size_t input_false_count = input_data.size() - input_data.count();
 
         if (input_false_count > 0) {

@@ -505,12 +505,12 @@ func RunBm25Function(task *ImportTask, data *storage.InsertData) error {
 		defer runner.Close()
 
 		inputFieldIDs := lo.Map(runner.GetInputFields(), func(field *schemapb.FieldSchema, _ int) int64 { return field.GetFieldID() })
-		inputDatas := make([]any, 0, len(inputFieldIDs))
+		inputData := make([]any, 0, len(inputFieldIDs))
 		for _, inputFieldID := range inputFieldIDs {
-			inputDatas = append(inputDatas, data.Data[inputFieldID].GetDataRows())
+			inputData = append(inputData, data.Data[inputFieldID].GetDataRows())
 		}
 
-		outputFieldData, err := runner.BatchRun(inputDatas...)
+		outputFieldData, err := runner.BatchRun(inputData...)
 		if err != nil {
 			return err
 		}
@@ -560,12 +560,12 @@ func RunMinHashFunction(task *ImportTask, data *storage.InsertData) error {
 		defer runner.Close()
 
 		inputFieldIDs := lo.Map(runner.GetInputFields(), func(field *schemapb.FieldSchema, _ int) int64 { return field.GetFieldID() })
-		inputDatas := make([]any, 0, len(inputFieldIDs))
+		inputData := make([]any, 0, len(inputFieldIDs))
 		for _, inputFieldID := range inputFieldIDs {
-			inputDatas = append(inputDatas, data.Data[inputFieldID].GetDataRows())
+			inputData = append(inputData, data.Data[inputFieldID].GetDataRows())
 		}
 
-		output, err := runner.BatchRun(inputDatas...)
+		output, err := runner.BatchRun(inputData...)
 		if err != nil {
 			return err
 		}
@@ -610,7 +610,7 @@ func CanBeZeroRowField(field *schemapb.FieldSchema) bool {
 		return true // auto-generated primary key, the row count must be 0
 	}
 	if field.GetIsDynamic() {
-		return true // dyanmic field, row count could be 0
+		return true // dynamic field, row count could be 0
 	}
 	if field.GetIsFunctionOutput() {
 		return true // function output field, row count could be 0
@@ -633,7 +633,7 @@ func GetInsertDataRowCount(data *storage.InsertData, schema *schemapb.Collection
 
 	for fieldID, fd := range data.Data {
 		if fd == nil {
-			// normaly is impossible, just to avoid potential crash here
+			// normally is impossible, just to avoid potential crash here
 			continue
 		}
 		if fd.RowNum() == 0 && CanBeZeroRowField(fields[fieldID]) {

@@ -519,14 +519,14 @@ func TestGetFlushableSegments(t *testing.T) {
 		assert.EqualValues(t, allocations[0].SegmentID, ids[0])
 
 		meta.SetRowCount(allocations[0].SegmentID, 0)
-		postions := make([]*msgpb.MsgPosition, 0)
+		positions := make([]*msgpb.MsgPosition, 0)
 		cpTs := allocations[0].ExpireTime + 1
-		postions = append(postions, &msgpb.MsgPosition{
+		positions = append(positions, &msgpb.MsgPosition{
 			ChannelName: "c1",
 			MsgID:       []byte{1, 2, 3},
 			Timestamp:   cpTs,
 		})
-		meta.UpdateChannelCheckpoints(context.TODO(), postions)
+		meta.UpdateChannelCheckpoints(context.TODO(), positions)
 		segmentManager.CleanZeroSealedSegmentsOfChannel(context.TODO(), "c1", cpTs)
 		ids, err = segmentManager.GetFlushableSegments(context.TODO(), "c1", allocations[0].ExpireTime)
 		assert.NoError(t, err)
@@ -776,26 +776,26 @@ func TestAllocationPool(t *testing.T) {
 			},
 		}
 
-		allo := getAllocation(100)
-		assert.EqualValues(t, 100, allo.NumOfRows)
-		assert.EqualValues(t, 0, allo.ExpireTime)
-		assert.EqualValues(t, 0, allo.SegmentID)
+		allow := getAllocation(100)
+		assert.EqualValues(t, 100, allow.NumOfRows)
+		assert.EqualValues(t, 0, allow.ExpireTime)
+		assert.EqualValues(t, 0, allow.SegmentID)
 
-		putAllocation(allo)
+		putAllocation(allow)
 	})
 
 	t.Run("put nil", func(t *testing.T) {
-		var allo *Allocation
+		var allow *Allocation
 		allocPool = sync.Pool{
 			New: func() interface{} {
 				return &Allocation{}
 			},
 		}
-		putAllocation(allo)
-		allo = getAllocation(100)
-		assert.EqualValues(t, 100, allo.NumOfRows)
-		assert.EqualValues(t, 0, allo.ExpireTime)
-		assert.EqualValues(t, 0, allo.SegmentID)
+		putAllocation(allow)
+		allow = getAllocation(100)
+		assert.EqualValues(t, 100, allow.NumOfRows)
+		assert.EqualValues(t, 0, allow.ExpireTime)
+		assert.EqualValues(t, 0, allow.SegmentID)
 	})
 
 	t.Run("put something else", func(t *testing.T) {
@@ -805,10 +805,10 @@ func TestAllocationPool(t *testing.T) {
 			},
 		}
 		allocPool.Put(&struct{}{})
-		allo := getAllocation(100)
-		assert.EqualValues(t, 100, allo.NumOfRows)
-		assert.EqualValues(t, 0, allo.ExpireTime)
-		assert.EqualValues(t, 0, allo.SegmentID)
+		allow := getAllocation(100)
+		assert.EqualValues(t, 100, allow.NumOfRows)
+		assert.EqualValues(t, 0, allow.ExpireTime)
+		assert.EqualValues(t, 0, allow.SegmentID)
 	})
 }
 

@@ -302,14 +302,14 @@ TEST(TextMatch, BuildIndexFromFieldDataMultiBatchNullable) {
     auto batch1 = make_batch({"", "foo", ""}, {false, true, false});
     auto batch2 = make_batch({"bar", ""}, {true, false});
 
-    std::vector<milvus::FieldDataPtr> field_datas = {batch0, batch1, batch2};
+    std::vector<milvus::FieldDataPtr> field_data = {batch0, batch1, batch2};
 
     auto index = std::make_unique<Index>(
         200, "test_multi_batch", "milvus_tokenizer", "{}");
     index->CreateReader(milvus::index::SetBitsetGrowing);
     index->RegisterAnalyzer("milvus_tokenizer", "{}");
 
-    index->BuildIndexFromFieldData(field_datas, true /* nullable */);
+    index->BuildIndexFromFieldData(field_data, true /* nullable */);
     index->Commit();
     index->Reload();
 
@@ -390,14 +390,14 @@ TEST(TextMatch, BuildIndexFromFieldDataSingleBatchNullable) {
     }
     fd->FillFieldData(texts.data(), valid_bytes.data(), texts.size(), 0);
 
-    std::vector<milvus::FieldDataPtr> field_datas = {fd};
+    std::vector<milvus::FieldDataPtr> field_data = {fd};
 
     auto index = std::make_unique<Index>(
         200, "test_single_batch", "milvus_tokenizer", "{}");
     index->CreateReader(milvus::index::SetBitsetGrowing);
     index->RegisterAnalyzer("milvus_tokenizer", "{}");
 
-    index->BuildIndexFromFieldData(field_datas, true);
+    index->BuildIndexFromFieldData(field_data, true);
     index->Commit();
     index->Reload();
 

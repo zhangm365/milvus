@@ -71,10 +71,10 @@ func TestCreateAlias_all(t *testing.T) {
 	assert.Equal(t, ts, task.BeginTs())
 	assert.Equal(t, ts, task.EndTs())
 
-	task.CreateAliasRequest.Alias = "illgal-alias:!"
+	task.CreateAliasRequest.Alias = "illegal-alias:!"
 	assert.Error(t, task.PreExecute(ctx))
 	task.CreateAliasRequest.Alias = "alias1"
-	task.CreateAliasRequest.CollectionName = "illgal-collection:!"
+	task.CreateAliasRequest.CollectionName = "illegal-collection:!"
 	assert.Error(t, task.PreExecute(ctx))
 	task.CreateAliasRequest.CollectionName = collectionName
 
@@ -158,10 +158,10 @@ func TestAlterAlias_all(t *testing.T) {
 	assert.Equal(t, ts, task.BeginTs())
 	assert.Equal(t, ts, task.EndTs())
 
-	task.AlterAliasRequest.Alias = "illgal-alias:!"
+	task.AlterAliasRequest.Alias = "illegal-alias:!"
 	assert.Error(t, task.PreExecute(ctx))
 	task.AlterAliasRequest.Alias = "alias1"
-	task.AlterAliasRequest.CollectionName = "illgal-collection:!"
+	task.AlterAliasRequest.CollectionName = "illegal-collection:!"
 	assert.Error(t, task.PreExecute(ctx))
 	task.AlterAliasRequest.CollectionName = collectionName
 

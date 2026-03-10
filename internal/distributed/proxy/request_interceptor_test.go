@@ -80,7 +80,7 @@ func (suite *StatsInterceptorSuite) TestUnaryRequestStatsInterceptor() {
 				FullMethod: milvuspb.MilvusService_CreateCollection_FullMethodName,
 			},
 			handler: func(ctx context.Context, req any) (interface{}, error) {
-				return merr.Status(merr.WrapErrServiceInternal("unexpcted")), nil
+				return merr.Status(merr.WrapErrServiceInternal("unexpected")), nil
 			},
 			expectLabels: [][]string{
 				{paramtable.GetStringNodeID(), "CreateCollection", metrics.TotalLabel, dbName, collection},

@@ -330,11 +330,11 @@ DiskFileManagerImpl::AddBatchIndexFiles(
     }
 
     // hold index data util upload index file done
-    std::vector<std::shared_ptr<uint8_t[]>> index_datas;
+    std::vector<std::shared_ptr<uint8_t[]>> index_data;
     std::vector<const uint8_t*> data_slices;
     for (auto& future : futures) {
         auto res = future.get();
-        index_datas.emplace_back(res);
+        index_data.emplace_back(res);
         data_slices.emplace_back(res.get());
     }
 
@@ -556,9 +556,9 @@ DiskFileManagerImpl::cache_raw_data_to_disk_internal(const Config& config) {
     int64_t write_offset = sizeof(num_rows) + sizeof(dim);
 
     auto FetchRawData = [&]() {
-        auto field_datas = GetObjectData(rcm_.get(), batch_files);
+        auto field_data = GetObjectData(rcm_.get(), batch_files);
         storage::ProcessFuturesInOrder(
-            field_datas, [&](std::unique_ptr<DataCodec> codec) {
+            field_data, [&](std::unique_ptr<DataCodec> codec) {
                 auto field_data = codec->GetFieldData();
                 num_rows += uint32_t(field_data->get_valid_rows());
 
@@ -811,7 +811,7 @@ DiskFileManagerImpl::cache_raw_data_to_disk_storage_v2(const Config& config) {
     uint32_t var_dim = 0;
     int64_t write_offset = sizeof(num_rows) + sizeof(var_dim);
 
-    std::vector<FieldDataPtr> field_datas;
+    std::vector<FieldDataPtr> field_data;
     auto manifest =
         index::GetValueFromConfig<std::string>(config, SEGMENT_MANIFEST_KEY);
     auto manifest_path_str = manifest.value_or("");
@@ -819,14 +819,14 @@ DiskFileManagerImpl::cache_raw_data_to_disk_storage_v2(const Config& config) {
         AssertInfo(
             loon_ffi_properties_ != nullptr,
             "loon ffi properties is null when build index with manifest");
-        field_datas = GetFieldDatasFromManifest(manifest_path_str,
+        field_data = GetFieldDataFromManifest(manifest_path_str,
                                                 loon_ffi_properties_,
                                                 field_meta_,
                                                 data_type,
                                                 dim,
                                                 element_type);
     } else {
-        field_datas = GetFieldDatasFromStorageV2(all_remote_files,
+        field_data = GetFieldDataFromStorageV2(all_remote_files,
                                                  GetFieldDataMeta().field_id,
                                                  data_type.value(),
                                                  element_type.value(),
@@ -837,7 +837,7 @@ DiskFileManagerImpl::cache_raw_data_to_disk_storage_v2(const Config& config) {
     bool nullable = false;
     uint64_t total_num_rows = 0;
     if (valid_data_path.has_value()) {
-        for (auto& field_data : field_datas) {
+        for (auto& field_data : field_data) {
             if (field_data->IsNullable()) {
                 nullable = true;
             }
@@ -851,7 +851,7 @@ DiskFileManagerImpl::cache_raw_data_to_disk_storage_v2(const Config& config) {
     }
 
     int64_t chunk_offset = 0;
-    for (auto& field_data : field_datas) {
+    for (auto& field_data : field_data) {
         num_rows += uint32_t(field_data->get_valid_rows());
         if (nullable) {
             auto rows = field_data->get_num_rows();
@@ -958,13 +958,13 @@ WriteOptFieldIvfDataImpl(
     const int64_t field_id,
     const std::shared_ptr<LocalChunkManager>& local_chunk_manager,
     const std::string& local_data_path,
-    const std::vector<FieldDataPtr>& field_datas,
+    const std::vector<FieldDataPtr>& field_data,
     uint64_t& write_offset) {
     using FieldDataT = DataTypeNativeOrVoid<T>;
     using OffsetT = uint32_t;
     std::unordered_map<FieldDataT, std::vector<OffsetT>> mp;
     OffsetT offset = 0;
-    for (const auto& field_data : field_datas) {
+    for (const auto& field_data : field_data) {
         for (int64_t i = 0; i < field_data->get_num_rows(); ++i) {
             auto val =
                 *reinterpret_cast<const FieldDataT*>(field_data->RawValue(i));
@@ -1011,7 +1011,7 @@ WriteOptFieldIvfDataImpl(
     WriteOptFieldIvfDataImpl<DT>(field_id,            \
                                  local_chunk_manager, \
                                  local_data_path,     \
-                                 field_datas,         \
+                                 field_data,         \
                                  write_offset)
 bool
 WriteOptFieldIvfData(
@@ -1019,7 +1019,7 @@ WriteOptFieldIvfData(
     const int64_t field_id,
     const std::shared_ptr<LocalChunkManager>& local_chunk_manager,
     const std::string& local_data_path,
-    const std::vector<FieldDataPtr>& field_datas,
+    const std::vector<FieldDataPtr>& field_data,
     uint64_t& write_offset) {
     switch (dt) {
         case DataType::BOOL:
@@ -1121,10 +1121,10 @@ DiskFileManagerImpl::CacheOptFieldToDisk(const Config& config) {
         const auto& field_type = std::get<1>(tup);
         const auto& element_type = std::get<2>(tup);
 
-        std::vector<FieldDataPtr> field_datas;
+        std::vector<FieldDataPtr> field_data;
         // fetch scalar data from storage v2
         if (storage_version == STORAGE_V2 || storage_version == STORAGE_V3) {
-            field_datas = GetFieldDatasFromStorageV2(remote_files_storage_v2,
+            field_data = GetFieldDataFromStorageV2(remote_files_storage_v2,
                                                      field_id,
                                                      field_type,
                                                      element_type,
@@ -1138,14 +1138,14 @@ DiskFileManagerImpl::CacheOptFieldToDisk(const Config& config) {
             }
 
             SortByPath(field_paths);
-            field_datas = FetchFieldData(rcm_.get(), field_paths);
+            field_data = FetchFieldData(rcm_.get(), field_paths);
         }
 
         if (WriteOptFieldIvfData(field_type,
                                  field_id,
                                  local_chunk_manager,
                                  local_data_path,
-                                 field_datas,
+                                 field_data,
                                  write_offset)) {
             actual_field_ids.insert(field_id);
         }

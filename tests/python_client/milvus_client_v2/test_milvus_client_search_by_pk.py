@@ -30,7 +30,7 @@ default_search_exp = "int64 >= 0"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 
 default_vector_field_name = "vector"
 
@@ -64,7 +64,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         self.enable_dynamic_field = True
         self.dyna_filed_name1 = "dyna_filed_name1"
         self.dyna_filed_name2 = "dyna_filed_name2"
-        self.datas = []
+        self.data = []
 
     @pytest.fixture(scope="class", autouse=True)
     def prepare_collection(self, request):
@@ -118,7 +118,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
                     self.dyna_filed_name1: f"dyna_value_{pk}",
                     self.dyna_filed_name2: pk * 1.0
                 }
-                self.datas.append(row)
+                self.data.append(row)
 
                 # Distribute to partitions based on pk mod 3
                 if pk % 3 == 0:
@@ -183,7 +183,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Search with inserted vectors
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {}
         search_res, _ = self.search(
             client,
@@ -217,7 +217,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Search with bfloat16 vectors
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.bf16_vector_metric, "params": {}}
 
         self.search(
@@ -249,8 +249,8 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Search with sparse vectors
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
-        vectors_to_search = [self.datas[i][self.sparse_vector_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
+        vectors_to_search = [self.data[i][self.sparse_vector_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.sparse_vector_metric, "params": {}}
 
         # search by ids one by one
@@ -412,7 +412,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Search with binary vectors
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.binary_vector_metric, "params": {"nprobe": 100}}
 
         self.search(
@@ -539,7 +539,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Generate vectors to search
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 128}}
 
         # search with limit
@@ -572,7 +572,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Generate vectors to search
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 100}}
 
         # search with output fields
@@ -591,7 +591,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
                          "limit": default_limit,
                          "metric": self.float_vector_metric,
                          "output_fields": [ct.default_string_field_name, self.dyna_filed_name1, self.dyna_filed_name2],
-                         "original_entities": self.datas,
+                         "original_entities": self.data,
                          "pk_name": self.pk_field_name
                          }
         )
@@ -611,7 +611,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         field_names = [field.get('name') for field in fields]
 
         # Generate vectors to search
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 100}}
 
         # search with output fields
@@ -629,7 +629,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
                          "limit": default_limit,
                          "metric": self.float_vector_metric,
                          "output_fields": field_names.extend([self.dyna_filed_name1, self.dyna_filed_name2]),
-                         "original_entities": self.datas,
+                         "original_entities": self.data,
                          "pk_name": self.pk_field_name
                          }
         )
@@ -685,7 +685,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_info = self.describe_collection(client, collection_name)[0]
 
         # Generate vectors to search
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {}
         invalid_output_fields = [["%"], [""], ["-"]]
         for field in invalid_output_fields:
@@ -724,7 +724,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         collection_name = self.collection_name
 
         # Generate vectors to search
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 100}}
 
         error = {"err_code": 999, "err_msg": f"topk [{ct.max_limit + 1}] is invalid, it should be in range " \
@@ -751,7 +751,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
             """
         client = self._client()
         collection_name = self.collection_name
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(ct.max_nq + 1)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(ct.max_nq + 1)]
         search_params = {"metric_type": self.sparse_vector_metric}
 
         error = {"err_code": 999,
@@ -779,7 +779,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         """
         client = self._client()
         collection_name = self.collection_name
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 100}}
 
         # search with concurrent threads using thread pool
@@ -821,7 +821,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         """
         client = self._client()
         collection_name = self.collection_name
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 100}}
 
         # close client
@@ -850,7 +850,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         """
         client = self._client()
         collection_name = self.collection_name
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.sparse_vector_metric, "params": {"nprobe": 100}}
 
         # search with dismatched metric type
@@ -878,7 +878,7 @@ class TestMilvusClientSearchByPk(TestMilvusClientV2Base):
         """
         client = self._client()
         collection_name = self.collection_name
-        ids_to_search = [self.datas[i][self.pk_field_name] for i in range(default_nq)]
+        ids_to_search = [self.data[i][self.pk_field_name] for i in range(default_nq)]
         search_params = {"metric_type": self.float_vector_metric, "params": {"nprobe": 100}}
 
         # search with invalid partition name

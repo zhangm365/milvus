@@ -624,7 +624,7 @@ Valid values: [default, pulsar, kafka, rocksmq, woodpecker]`,
 		Key:          "mq.dispatcher.targetBufSize",
 		Version:      "2.4.4",
 		DefaultValue: "16",
-		Doc:          `the lenth of channel buffer for targe`,
+		Doc:          `the length of channel buffer for targe`,
 		Export:       true,
 	}
 	p.TargetBufSize.Init(base.mgr)
@@ -1038,7 +1038,7 @@ Default value applies when Pulsar is running on the same network with Milvus.`,
 		Key:          "pulsar.webport",
 		Version:      "2.0.0",
 		DefaultValue: "80",
-		Doc:          "Web port of of Pulsar service. If you connect direcly without proxy, should use 8080.",
+		Doc:          "Web port of of Pulsar service. If you connect directly without proxy, should use 8080.",
 		Export:       true,
 	}
 	p.WebPort.Init(base.mgr)
@@ -1622,7 +1622,7 @@ Leave it empty if you want to use AWS default endpoint`,
 		Version:      "2.4.1",
 		DefaultValue: "0",
 		Doc: `The maximum number of objects requested per batch in minio ListObjects rpc, 
-0 means using oss client by default, decrease these configration if ListObjects timeout`,
+0 means using oss client by default, decrease these configuration if ListObjects timeout`,
 		Export: true,
 	}
 	p.ListObjectsMaxKeys.Init(base.mgr)

@@ -134,7 +134,7 @@ func (ss *SuffixSnapshot) hideRootPrefix(value string) string {
 }
 
 // composeSnapshotPrefix build a prefix for load snapshots
-// formated like [snapshotPrefix]/key[sep]
+// formatted like [snapshotPrefix]/key[sep]
 func (ss *SuffixSnapshot) composeSnapshotPrefix(key string) string {
 	return path.Join(ss.snapshotPrefix, key+ss.separator)
 }
@@ -633,7 +633,7 @@ func (ss *SuffixSnapshot) startBackgroundGC(ctx context.Context) {
 
 func (ss *SuffixSnapshot) getOriginalKey(snapshotKey string) (string, error) {
 	if !strings.HasPrefix(snapshotKey, ss.snapshotPrefix) {
-		return "", fmt.Errorf("get original key failed, invaild snapshot key:%s", snapshotKey)
+		return "", fmt.Errorf("get original key failed, invalid snapshot key:%s", snapshotKey)
 	}
 	// collect keys that parent node is snapshot node if the corresponding the latest ts is expired.
 	idx := strings.LastIndex(snapshotKey, ss.separator)

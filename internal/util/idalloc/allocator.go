@@ -93,7 +93,7 @@ func (ta *allocatorImpl) BarrierUntil(ctx context.Context, barrier uint64) error
 		return err
 	}
 
-	// Fall back to the slow path to avoid block other id allocation opeartions.
+	// Fall back to the slow path to avoid block other id allocation operations.
 	ta.cond.L.Lock()
 	for ta.lastAllocated < barrier {
 		if err := ta.cond.Wait(ctx); err != nil {

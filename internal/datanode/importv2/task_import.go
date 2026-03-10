@@ -278,9 +278,9 @@ func (t *ImportTask) sync(hashedData HashedData) ([]*conc.Future[struct{}], []sy
 	log.Ctx(context.TODO()).Info("start to sync import data", WrapLogFields(t)...)
 	futures := make([]*conc.Future[struct{}], 0)
 	syncTasks := make([]syncmgr.Task, 0)
-	for channelIdx, datas := range hashedData {
+	for channelIdx, data := range hashedData {
 		channel := t.GetVchannels()[channelIdx]
-		for partitionIdx, data := range datas {
+		for partitionIdx, data := range data {
 			if data.GetRowNum() == 0 {
 				continue
 			}

@@ -96,7 +96,7 @@ function(ExternalProject_Create_Cache project_name package_file install_path cac
     message(STATUS "Will create cached package file: ${package_file}")
 
     ExternalProject_Add_Step(${project_name} package
-        DEPENDEES install
+        DEPENDENCIES install
         BYPRODUCTS ${package_file}
         COMMAND ${CMAKE_COMMAND} -E echo "Updating cached package file: ${package_file}"
         COMMAND ${CMAKE_COMMAND} -E tar czvf ${package_file} ${install_path}

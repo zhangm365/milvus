@@ -80,8 +80,8 @@ type PChannelMetaState int32
 
 const (
 	PChannelMetaState_PCHANNEL_META_STATE_UNKNOWN       PChannelMetaState = 0 // should never used.
-	PChannelMetaState_PCHANNEL_META_STATE_UNINITIALIZED PChannelMetaState = 1 // channel is uninitialized, never assgined to any streaming node.
-	PChannelMetaState_PCHANNEL_META_STATE_ASSIGNING     PChannelMetaState = 2 // new term is allocated, but not determined to be assgined.
+	PChannelMetaState_PCHANNEL_META_STATE_UNINITIALIZED PChannelMetaState = 1 // channel is uninitialized, never assigned to any streaming node.
+	PChannelMetaState_PCHANNEL_META_STATE_ASSIGNING     PChannelMetaState = 2 // new term is allocated, but not determined to be assigned.
 	PChannelMetaState_PCHANNEL_META_STATE_ASSIGNED      PChannelMetaState = 3 // channel is assigned to a streaming node.
 	PChannelMetaState_PCHANNEL_META_STATE_UNAVAILABLE   PChannelMetaState = 4 // channel is unavailable at this term.
 )
@@ -141,7 +141,7 @@ const (
 	// Deprecated: Marked as deprecated in streaming.proto.
 	BroadcastTaskState_BROADCAST_TASK_STATE_WAIT_ACK   BroadcastTaskState = 3 // task has been broadcasted, waiting for ack, the resource lock is still acquired by some vchannels.
 	BroadcastTaskState_BROADCAST_TASK_STATE_REPLICATED BroadcastTaskState = 4 // task is replicated from the source cluster, the resource lock isn't acquired, so the execution order should be protected by the order of broadcastID.
-	BroadcastTaskState_BROADCAST_TASK_STATE_TOMBSTONE  BroadcastTaskState = 5 // task is tombstone, it's used to mark the task is already acked, but for idempotency and deduplication, it will be kept in recovery stroage for a while.
+	BroadcastTaskState_BROADCAST_TASK_STATE_TOMBSTONE  BroadcastTaskState = 5 // task is tombstone, it's used to mark the task is already acked, but for idempotency and deduplication, it will be kept in recovery storage for a while.
 )
 
 // Enum value maps for BroadcastTaskState.
@@ -203,7 +203,7 @@ const (
 	StreamingCode_STREAMING_CODE_UNMATCHED_CHANNEL_TERM    StreamingCode = 5   // unmatched channel term
 	StreamingCode_STREAMING_CODE_IGNORED_OPERATION         StreamingCode = 6   // ignored operation
 	StreamingCode_STREAMING_CODE_INNER                     StreamingCode = 7   // underlying service failure.
-	StreamingCode_STREAMING_CODE_INVAILD_ARGUMENT          StreamingCode = 8   // invalid argument
+	StreamingCode_STREAMING_CODE_INVALID_ARGUMENT          StreamingCode = 8   // invalid argument
 	StreamingCode_STREAMING_CODE_TRANSACTION_EXPIRED       StreamingCode = 9   // transaction expired
 	StreamingCode_STREAMING_CODE_INVALID_TRANSACTION_STATE StreamingCode = 10  // invalid transaction state
 	StreamingCode_STREAMING_CODE_UNRECOVERABLE             StreamingCode = 11  // unrecoverable error
@@ -225,7 +225,7 @@ var (
 		5:   "STREAMING_CODE_UNMATCHED_CHANNEL_TERM",
 		6:   "STREAMING_CODE_IGNORED_OPERATION",
 		7:   "STREAMING_CODE_INNER",
-		8:   "STREAMING_CODE_INVAILD_ARGUMENT",
+		8:   "STREAMING_CODE_INVALID_ARGUMENT",
 		9:   "STREAMING_CODE_TRANSACTION_EXPIRED",
 		10:  "STREAMING_CODE_INVALID_TRANSACTION_STATE",
 		11:  "STREAMING_CODE_UNRECOVERABLE",
@@ -244,7 +244,7 @@ var (
 		"STREAMING_CODE_UNMATCHED_CHANNEL_TERM":    5,
 		"STREAMING_CODE_IGNORED_OPERATION":         6,
 		"STREAMING_CODE_INNER":                     7,
-		"STREAMING_CODE_INVAILD_ARGUMENT":          8,
+		"STREAMING_CODE_INVALID_ARGUMENT":          8,
 		"STREAMING_CODE_TRANSACTION_EXPIRED":       9,
 		"STREAMING_CODE_INVALID_TRANSACTION_STATE": 10,
 		"STREAMING_CODE_UNRECOVERABLE":             11,
@@ -3753,7 +3753,7 @@ func (x *CloseVChannelConsumerResponse) GetConsumerId() int64 {
 	return 0
 }
 
-// ConsumeResponse is the reponse of the Consume RPC.
+// ConsumeResponse is the response of the Consume RPC.
 type ConsumeResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3816,7 +3816,7 @@ func (x *ConsumeResponse) GetCreate() *CreateConsumerResponse {
 	return nil
 }
 
-func (x *ConsumeResponse) GetConsume() *ConsumeMessageReponse {
+func (x *ConsumeResponse) GetConsume() *ConsumeMessageResponse {
 	if x, ok := x.GetResponse().(*ConsumeResponse_Consume); ok {
 		return x.Consume
 	}
@@ -3860,7 +3860,7 @@ type ConsumeResponse_Create struct {
 }
 
 type ConsumeResponse_Consume struct {
-	Consume *ConsumeMessageReponse `protobuf:"bytes,2,opt,name=consume,proto3,oneof"`
+	Consume *ConsumeMessageResponse `protobuf:"bytes,2,opt,name=consume,proto3,oneof"`
 }
 
 type ConsumeResponse_CreateVchannel struct {
@@ -3950,7 +3950,7 @@ func (x *CreateConsumerResponse) GetConsumerServerId() int64 {
 	return 0
 }
 
-type ConsumeMessageReponse struct {
+type ConsumeMessageResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -3959,8 +3959,8 @@ type ConsumeMessageReponse struct {
 	Message    *commonpb.ImmutableMessage `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
 
-func (x *ConsumeMessageReponse) Reset() {
-	*x = ConsumeMessageReponse{}
+func (x *ConsumeMessageResponse) Reset() {
+	*x = ConsumeMessageResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_streaming_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3968,13 +3968,13 @@ func (x *ConsumeMessageReponse) Reset() {
 	}
 }
 
-func (x *ConsumeMessageReponse) String() string {
+func (x *ConsumeMessageResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ConsumeMessageReponse) ProtoMessage() {}
+func (*ConsumeMessageResponse) ProtoMessage() {}
 
-func (x *ConsumeMessageReponse) ProtoReflect() protoreflect.Message {
+func (x *ConsumeMessageResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_streaming_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3986,19 +3986,19 @@ func (x *ConsumeMessageReponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ConsumeMessageReponse.ProtoReflect.Descriptor instead.
-func (*ConsumeMessageReponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConsumeMessageResponse.ProtoReflect.Descriptor instead.
+func (*ConsumeMessageResponse) Descriptor() ([]byte, []int) {
 	return file_streaming_proto_rawDescGZIP(), []int{56}
 }
 
-func (x *ConsumeMessageReponse) GetConsumerId() int64 {
+func (x *ConsumeMessageResponse) GetConsumerId() int64 {
 	if x != nil {
 		return x.ConsumerId
 	}
 	return 0
 }
 
-func (x *ConsumeMessageReponse) GetMessage() *commonpb.ImmutableMessage {
+func (x *ConsumeMessageResponse) GetMessage() *commonpb.ImmutableMessage {
 	if x != nil {
 		return x.Message
 	}
@@ -5010,7 +5010,7 @@ type WALCheckpoint struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MessageId *commonpb.MessageID `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"` // From here to recover all uncommited info.
+	MessageId *commonpb.MessageID `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"` // From here to recover all uncommitted info.
 	// e.g., primary key index, segment assignment info, vchannel info...
 	// because current data path flush is slow, and managed by the coordinator, current current is not apply to it.
 	//
@@ -6390,7 +6390,7 @@ var file_streaming_proto_goTypes = []interface{}{
 	(*CloseVChannelConsumerResponse)(nil),             // 61: milvus.proto.streaming.CloseVChannelConsumerResponse
 	(*ConsumeResponse)(nil),                           // 62: milvus.proto.streaming.ConsumeResponse
 	(*CreateConsumerResponse)(nil),                    // 63: milvus.proto.streaming.CreateConsumerResponse
-	(*ConsumeMessageReponse)(nil),                     // 64: milvus.proto.streaming.ConsumeMessageReponse
+	(*ConsumeMessageResponse)(nil),                     // 64: milvus.proto.streaming.ConsumeMessageResponse
 	(*CloseConsumerResponse)(nil),                     // 65: milvus.proto.streaming.CloseConsumerResponse
 	(*StreamingNodeManagerAssignRequest)(nil),         // 66: milvus.proto.streaming.StreamingNodeManagerAssignRequest
 	(*StreamingNodeManagerAssignResponse)(nil),        // 67: milvus.proto.streaming.StreamingNodeManagerAssignResponse
@@ -6503,12 +6503,12 @@ var file_streaming_proto_depIdxs = []int32{
 	59,  // 68: milvus.proto.streaming.CreateVChannelConsumersResponse.create_vchannels:type_name -> milvus.proto.streaming.CreateVChannelConsumerResponse
 	41,  // 69: milvus.proto.streaming.CreateVChannelConsumerResponse.error:type_name -> milvus.proto.streaming.StreamingError
 	63,  // 70: milvus.proto.streaming.ConsumeResponse.create:type_name -> milvus.proto.streaming.CreateConsumerResponse
-	64,  // 71: milvus.proto.streaming.ConsumeResponse.consume:type_name -> milvus.proto.streaming.ConsumeMessageReponse
+	64,  // 71: milvus.proto.streaming.ConsumeResponse.consume:type_name -> milvus.proto.streaming.ConsumeMessageResponse
 	59,  // 72: milvus.proto.streaming.ConsumeResponse.create_vchannel:type_name -> milvus.proto.streaming.CreateVChannelConsumerResponse
 	58,  // 73: milvus.proto.streaming.ConsumeResponse.create_vchannels:type_name -> milvus.proto.streaming.CreateVChannelConsumersResponse
 	61,  // 74: milvus.proto.streaming.ConsumeResponse.close_vchannel:type_name -> milvus.proto.streaming.CloseVChannelConsumerResponse
 	65,  // 75: milvus.proto.streaming.ConsumeResponse.close:type_name -> milvus.proto.streaming.CloseConsumerResponse
-	90,  // 76: milvus.proto.streaming.ConsumeMessageReponse.message:type_name -> milvus.proto.common.ImmutableMessage
+	90,  // 76: milvus.proto.streaming.ConsumeMessageResponse.message:type_name -> milvus.proto.common.ImmutableMessage
 	8,   // 77: milvus.proto.streaming.StreamingNodeManagerAssignRequest.pchannel:type_name -> milvus.proto.streaming.PChannelInfo
 	8,   // 78: milvus.proto.streaming.StreamingNodeManagerRemoveRequest.pchannel:type_name -> milvus.proto.streaming.PChannelInfo
 	72,  // 79: milvus.proto.streaming.StreamingNodeMetrics.wals:type_name -> milvus.proto.streaming.StreamingNodeWALMetrics
@@ -7247,7 +7247,7 @@ func file_streaming_proto_init() {
 			}
 		}
 		file_streaming_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ConsumeMessageReponse); i {
+			switch v := v.(*ConsumeMessageResponse); i {
 			case 0:
 				return &v.state
 			case 1:

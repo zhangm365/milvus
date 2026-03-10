@@ -148,14 +148,14 @@ CreatePlaceholderGroupForVectorType(DataType data_type,
                                     int64_t num_queries,
                                     int64_t dim,
                                     const void* data) {
-    namespace ser = milvus::proto::common;
-    ser::PlaceholderGroup raw_group;
+    namespace set = milvus::proto::common;
+    set::PlaceholderGroup raw_group;
     auto value = raw_group.add_placeholders();
     value->set_tag("$0");
 
     switch (data_type) {
         case DataType::VECTOR_FLOAT: {
-            value->set_type(ser::PlaceholderType::FloatVector);
+            value->set_type(set::PlaceholderType::FloatVector);
             auto ptr = static_cast<const float*>(data);
             for (int i = 0; i < num_queries; ++i) {
                 value->add_values(ptr + i * dim, dim * sizeof(float));
@@ -163,7 +163,7 @@ CreatePlaceholderGroupForVectorType(DataType data_type,
             break;
         }
         case DataType::VECTOR_FLOAT16: {
-            value->set_type(ser::PlaceholderType::Float16Vector);
+            value->set_type(set::PlaceholderType::Float16Vector);
             auto ptr = static_cast<const milvus::float16*>(data);
             for (int i = 0; i < num_queries; ++i) {
                 value->add_values(ptr + i * dim, dim * sizeof(milvus::float16));
@@ -171,7 +171,7 @@ CreatePlaceholderGroupForVectorType(DataType data_type,
             break;
         }
         case DataType::VECTOR_BFLOAT16: {
-            value->set_type(ser::PlaceholderType::BFloat16Vector);
+            value->set_type(set::PlaceholderType::BFloat16Vector);
             auto ptr = static_cast<const milvus::bfloat16*>(data);
             for (int i = 0; i < num_queries; ++i) {
                 value->add_values(ptr + i * dim,
@@ -180,7 +180,7 @@ CreatePlaceholderGroupForVectorType(DataType data_type,
             break;
         }
         case DataType::VECTOR_BINARY: {
-            value->set_type(ser::PlaceholderType::BinaryVector);
+            value->set_type(set::PlaceholderType::BinaryVector);
             auto byte_dim = dim / 8;
             auto ptr = static_cast<const uint8_t*>(data);
             for (int i = 0; i < num_queries; ++i) {
@@ -189,7 +189,7 @@ CreatePlaceholderGroupForVectorType(DataType data_type,
             break;
         }
         case DataType::VECTOR_INT8: {
-            value->set_type(ser::PlaceholderType::Int8Vector);
+            value->set_type(set::PlaceholderType::Int8Vector);
             auto ptr = static_cast<const int8_t*>(data);
             for (int i = 0; i < num_queries; ++i) {
                 value->add_values(ptr + i * dim, dim * sizeof(int8_t));
@@ -197,7 +197,7 @@ CreatePlaceholderGroupForVectorType(DataType data_type,
             break;
         }
         case DataType::VECTOR_SPARSE_U32_F32: {
-            value->set_type(ser::PlaceholderType::SparseFloatVector);
+            value->set_type(set::PlaceholderType::SparseFloatVector);
             auto ptr = static_cast<
                 const knowhere::sparse::SparseRow<milvus::SparseValueType>*>(
                 data);
@@ -869,13 +869,13 @@ TEST_P(BinlogIndexTest, AccuracyWithLoadFieldData) {
             EXPECT_EQ(ivf_sr->distances_.size(), num_queries * topk);
             EXPECT_EQ(ivf_sr->seg_offsets_.size(), num_queries * topk);
 
-            auto similary =
+            auto similarly =
                 GetKnnSearchRecall(num_queries,
                                    binlog_index_sr->seg_offsets_.data(),
                                    topk,
                                    ivf_sr->seg_offsets_.data(),
                                    topk);
-            ASSERT_GT(similary, 0.45);
+            ASSERT_GT(similarly, 0.45);
 
             VerifyQueryResults(ivf_sr->seg_offsets_);
 
@@ -1136,13 +1136,13 @@ TEST_P(BinlogIndexTest, AccuracyWithMapFieldData) {
             EXPECT_EQ(ivf_sr->distances_.size(), num_queries * topk);
             EXPECT_EQ(ivf_sr->seg_offsets_.size(), num_queries * topk);
 
-            auto similary =
+            auto similarly =
                 GetKnnSearchRecall(num_queries,
                                    binlog_index_sr->seg_offsets_.data(),
                                    topk,
                                    ivf_sr->seg_offsets_.data(),
                                    topk);
-            ASSERT_GT(similary, 0.45);
+            ASSERT_GT(similarly, 0.45);
 
             VerifyQueryResults(ivf_sr->seg_offsets_);
 
@@ -1314,7 +1314,7 @@ TEST_P(BinlogIndexTest, DisableInterimIndex) {
     }
 }
 
-TEST_P(BinlogIndexTest, LoadBingLogWihIDMAP) {
+TEST_P(BinlogIndexTest, LoadBingLogWithIDMAP) {
     IndexMetaPtr collection_index_meta =
         GetCollectionIndexMeta(knowhere::IndexEnum::INDEX_FAISS_IDMAP);
 

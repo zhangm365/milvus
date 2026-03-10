@@ -20,7 +20,7 @@ const (
 	disableDatabase uint64 = 1 << iota
 	disableJSON
 	disableDynamicSchema
-	disableParitionKey
+	disablePartitionKey
 )
 
 var regexValidScheme = regexp.MustCompile(`^https?:\/\/`)

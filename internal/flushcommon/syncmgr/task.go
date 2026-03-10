@@ -58,7 +58,7 @@ type SyncTask struct {
 	checkpoint    *msgpb.MsgPosition
 	dataSource    string
 	// batchRows is the row number of this sync task,
-	// not the total num of rows of segemnt
+	// not the total num of rows of segment
 	batchRows int64
 	level     datapb.SegmentLevel
 

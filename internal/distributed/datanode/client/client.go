@@ -160,9 +160,9 @@ func (c *Client) WatchDmChannels(ctx context.Context, req *datapb.WatchDmChannel
 // Return UnexpectedError code in status:
 //
 //	If DataNode isn't in HEALTHY: states not HEALTHY or dynamic checks not HEALTHY
-//	If DataNode doesn't find the correspounding segmentID in its memeory replica
+//	If DataNode doesn't find the correspounding segmentID in its memory replica
 //
-// Return Success code in status and trigers background flush:
+// Return Success code in status and triggers background flush:
 //
 //	Log an info log if a segment is under flushing
 func (c *Client) FlushSegments(ctx context.Context, req *datapb.FlushSegmentsRequest, opts ...grpc.CallOption) (*commonpb.Status, error) {

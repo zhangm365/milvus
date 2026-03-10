@@ -6,7 +6,7 @@ import (
 )
 
 func TestPolicyPartitionNotFound(t *testing.T) {
-	policy := PolicyParitionNotFound()
+	policy := PolicyPartitionNotFound()
 	if policy.Policy != PolicyNamePartitionNotFound {
 		t.Errorf("expected policy name %s, got %s", PolicyNamePartitionNotFound, policy.Policy)
 	}

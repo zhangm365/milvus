@@ -110,12 +110,12 @@ struct ArithOpElementFunc {
                                    !std::is_same_v<bool, T>,
                                int64_t,
                                T>
-        HighPrecisonType;
+        HighPrecisionType;
     void
     operator()(const T* src,
                size_t size,
-               HighPrecisonType val,
-               HighPrecisonType right_operand,
+               HighPrecisionType val,
+               HighPrecisionType right_operand,
                TargetBitmapView res,
                const int32_t* offsets = nullptr) {
         // Validate divisor for division/modulo operations
@@ -307,13 +307,13 @@ struct ArithOpIndexFunc {
                                    !std::is_same_v<bool, T>,
                                int64_t,
                                T>
-        HighPrecisonType;
+        HighPrecisionType;
     using Index = index::ScalarIndex<T>;
     TargetBitmap
     operator()(Index* index,
                size_t size,
-               HighPrecisonType val,
-               HighPrecisonType right_operand,
+               HighPrecisionType val,
+               HighPrecisionType right_operand,
                const int32_t* offsets = nullptr) {
         // Validate divisor for division/modulo operations
         if constexpr (arith_op == proto::plan::ArithOpType::Div ||

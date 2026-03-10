@@ -52,7 +52,7 @@ func (w *MockRecordWriter) GetWrittenUncompressed() uint64 {
 	return 0
 }
 
-func TestSerDe(t *testing.T) {
+func TestSetDe(t *testing.T) {
 	type args struct {
 		dt schemapb.DataType
 		v  any
@@ -128,7 +128,7 @@ func TestSerDe(t *testing.T) {
 	}
 }
 
-func TestSerDeCopy(t *testing.T) {
+func TestSetDeCopy(t *testing.T) {
 	tests := []struct {
 		name string
 		dt   schemapb.DataType

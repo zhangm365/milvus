@@ -41,8 +41,8 @@ func TestUpdatePartialFields(t *testing.T) {
 		return columns, nil
 	}
 
-	genPkWithSinglVectorField := func(option *hp.GenDataOption) ([]column.Column, []column.Column) {
-		log.Info("genPkWithSinglVectorField")
+	genPkWithSingleVectorField := func(option *hp.GenDataOption) ([]column.Column, []column.Column) {
+		log.Info("genPkWithSingleVectorField")
 		columns := make([]column.Column, 0, 2)
 		columns = append(columns, hp.GenColumnDataWithOption(entity.FieldTypeInt64, *option))
 		columns = append(columns, hp.GenColumnDataWithOption(entity.FieldTypeFloatVector, *option))
@@ -50,7 +50,7 @@ func TestUpdatePartialFields(t *testing.T) {
 	}
 
 	updateNb := 200
-	for _, genColumnsFunc := range []func(*hp.GenDataOption) ([]column.Column, []column.Column){genPkWithSingleScalarField, genPkWithSinglVectorField} {
+	for _, genColumnsFunc := range []func(*hp.GenDataOption) ([]column.Column, []column.Column){genPkWithSingleScalarField, genPkWithSingleVectorField} {
 		// perform partial update operation for existing entities [0, 200) -> query and verify
 		columns, dynamicColumns := genColumnsFunc(hp.TNewDataOption().TWithNb(updateNb).TWithStart(0))
 		updateRes, err := mc.Upsert(ctx, client.NewColumnBasedInsertOption(schema.CollectionName).WithColumns(columns...).WithColumns(dynamicColumns...).WithPartialUpdate(true))

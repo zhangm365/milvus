@@ -27,7 +27,7 @@ char*
 IndexBuilderSetSimdType(const char* value) {
     auto real_type = milvus::config::KnowhereSetSimdType(value);
     char* ret = reinterpret_cast<char*>(malloc(real_type.length() + 1));
-    AssertInfo(ret != nullptr, "memmory allocation for ret failed!");
+    AssertInfo(ret != nullptr, "memory allocation for ret failed!");
     memcpy(ret, real_type.c_str(), real_type.length());
     ret[real_type.length()] = 0;
     return ret;

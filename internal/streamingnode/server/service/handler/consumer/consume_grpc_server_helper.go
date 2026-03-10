@@ -8,7 +8,7 @@ type consumeGrpcServerHelper struct {
 }
 
 // SendConsumeMessage sends the consume result to client.
-func (p *consumeGrpcServerHelper) SendConsumeMessage(resp *streamingpb.ConsumeMessageReponse) error {
+func (p *consumeGrpcServerHelper) SendConsumeMessage(resp *streamingpb.ConsumeMessageResponse) error {
 	return p.Send(&streamingpb.ConsumeResponse{
 		Response: &streamingpb.ConsumeResponse_Consume{
 			Consume: resp,

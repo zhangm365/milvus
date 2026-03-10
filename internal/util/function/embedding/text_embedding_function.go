@@ -173,7 +173,7 @@ func (runner *TextEmbeddingFunction) Check(ctx context.Context) error {
 			return fmt.Errorf("Embedding model output and field type mismatch, model output is %s, field type is %s", schemapb.DataType_name[int32(schemapb.DataType_Int8Vector)], schemapb.DataType_name[int32(runner.GetOutputFields()[0].DataType)])
 		}
 	default:
-		return fmt.Errorf("Unsupport embedding type: %s", reflect.TypeOf(embds).String())
+		return fmt.Errorf("Unsupported embedding type: %s", reflect.TypeOf(embds).String())
 	}
 	if dim != int(runner.embProvider.FieldDim()) {
 		return fmt.Errorf("The dim set in the schema is inconsistent with the dim of the model, dim in schema is %d, dim of model is %d", runner.embProvider.FieldDim(), dim)

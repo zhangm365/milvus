@@ -816,7 +816,7 @@ func TestServer_AlterIndex(t *testing.T) {
 							MaxRowNum:      65536,
 							LastExpireTime: createTS,
 							StartPosition: &msgpb.MsgPosition{
-								// timesamp > index start time, will be filtered out
+								// timestamp > index start time, will be filtered out
 								Timestamp: createTS + 1,
 							},
 						},
@@ -881,7 +881,7 @@ func TestServer_AlterIndex(t *testing.T) {
 		indexParams[0].Value = "IVF_FLAT"
 	})
 
-	t.Run("param_value_invalied", func(t *testing.T) {
+	t.Run("param_value_invalid", func(t *testing.T) {
 		mockGetCollectionInfo()
 		req.Params[0].Value = "abc"
 		resp, err := s.AlterIndex(ctx, req)
@@ -1508,7 +1508,7 @@ func TestServer_DescribeIndex(t *testing.T) {
 				MaxRowNum:      65536,
 				LastExpireTime: createTS,
 				StartPosition: &msgpb.MsgPosition{
-					// timesamp > index start time, will be filtered out
+					// timestamp > index start time, will be filtered out
 					Timestamp: createTS + 1,
 				},
 			},
@@ -2068,7 +2068,7 @@ func TestServer_GetIndexStatistics(t *testing.T) {
 				MaxRowNum:      65536,
 				LastExpireTime: createTS,
 				StartPosition: &msgpb.MsgPosition{
-					// timesamp > index start time, will be filtered out
+					// timestamp > index start time, will be filtered out
 					Timestamp: createTS + 1,
 				},
 			},

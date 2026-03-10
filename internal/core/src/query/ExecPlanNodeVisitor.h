@@ -159,7 +159,7 @@ ExecuteQueryExpr(std::shared_ptr<milvus::plan::PlanNode> plannode,
     auto plan_fragment = plan::PlanFragment(plannode);
 
     auto query_context = std::make_shared<milvus::exec::QueryContext>(
-        DEAFULT_QUERY_ID, segment, active_count, timestamp);
+        DEFAULT_QUERY_ID, segment, active_count, timestamp);
     auto row = ExecPlanNodeVisitor::ExecuteTask(plan_fragment, query_context);
     AssertInfo(row != nullptr,
                "ExecuteTask returned null row vector for query expression");
@@ -184,7 +184,7 @@ ExecuteQueryExpr(std::shared_ptr<milvus::plan::PlanNode> plannode,
     auto plan_fragment = plan::PlanFragment(plannode);
 
     auto query_context = std::make_shared<milvus::exec::QueryContext>(
-        DEAFULT_QUERY_ID,
+        DEFAULT_QUERY_ID,
         segment,
         active_count,
         timestamp,

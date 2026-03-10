@@ -25,7 +25,7 @@ type StatsLogType int64
 const (
 	DefaultStatsType StatsLogType = iota + 0
 
-	// CompundStatsType log save multiple stats
+	// CompoundStatsType log save multiple stats
 	// and bloom filters to one file
 	CompoundStatsType
 )

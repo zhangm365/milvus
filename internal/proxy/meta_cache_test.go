@@ -1148,7 +1148,7 @@ func TestMetaCache_InitCache(t *testing.T) {
 		ctx := context.Background()
 		rootCoord := mocks.NewMockMixCoordClient(t)
 		rootCoord.EXPECT().ListPolicy(mock.Anything, mock.Anything, mock.Anything).Return(
-			nil, errors.New("mock list policy rpc errorr")).Once()
+			nil, errors.New("mock list policy rpc error")).Once()
 		err := InitMetaCache(ctx, rootCoord)
 		assert.Error(t, err)
 	})

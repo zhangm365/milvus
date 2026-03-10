@@ -50,7 +50,7 @@ class LoonFFIPropertiesSingleton {
         std::unique_lock lck(mutex_);
 
         if (properties_ == nullptr) {
-            properties_ = MakeInternalLocalProperies(root_path);
+            properties_ = MakeInternalLocalProperties(root_path);
         }
     }
 

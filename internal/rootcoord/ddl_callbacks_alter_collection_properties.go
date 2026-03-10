@@ -89,7 +89,7 @@ func (c *Core) broadcastAlterCollectionForAlterCollection(ctx context.Context, r
 		},
 		CacheExpirations: cacheExpirations,
 	}
-	udpates := &messagespb.AlterCollectionMessageUpdates{}
+	updates := &messagespb.AlterCollectionMessageUpdates{}
 
 	// Apply the properties to override the existing properties.
 	oldProperties := common.CloneKeyValuePairs(coll.Properties).ToMap()
@@ -98,12 +98,12 @@ func (c *Core) broadcastAlterCollectionForAlterCollection(ctx context.Context, r
 		switch prop.GetKey() {
 		case common.CollectionDescription:
 			if prop.GetValue() != coll.Description {
-				udpates.Description = prop.GetValue()
+				updates.Description = prop.GetValue()
 				header.UpdateMask.Paths = append(header.UpdateMask.Paths, message.FieldMaskCollectionDescription)
 			}
 		case common.ConsistencyLevel:
 			if lv, ok := unmarshalConsistencyLevel(prop.GetValue()); ok && lv != coll.ConsistencyLevel {
-				udpates.ConsistencyLevel = lv
+				updates.ConsistencyLevel = lv
 				header.UpdateMask.Paths = append(header.UpdateMask.Paths, message.FieldMaskCollectionConsistencyLevel)
 			}
 		default:
@@ -117,7 +117,7 @@ func (c *Core) broadcastAlterCollectionForAlterCollection(ctx context.Context, r
 	// Check if the properties are changed.
 	newPropsKeyValuePairs := common.NewKeyValuePairs(newProperties)
 	if !newPropsKeyValuePairs.Equal(coll.Properties) {
-		udpates.Properties = newPropsKeyValuePairs
+		updates.Properties = newPropsKeyValuePairs
 		header.UpdateMask.Paths = append(header.UpdateMask.Paths, message.FieldMaskCollectionProperties)
 	}
 
@@ -158,7 +158,7 @@ func (c *Core) broadcastAlterCollectionForAlterCollection(ctx context.Context, r
 			Properties:         newPropsKeyValuePairs,
 			Version:            coll.SchemaVersion,
 		}
-		udpates.Schema = schema
+		updates.Schema = schema
 	}
 
 	// if there's no change, return nil directly to promise idempotent.
@@ -167,7 +167,7 @@ func (c *Core) broadcastAlterCollectionForAlterCollection(ctx context.Context, r
 	}
 
 	// fill the put load config if rg or replica number is changed.
-	udpates.AlterLoadConfig = c.getAlterLoadConfigOfAlterCollection(coll.Properties, udpates.Properties)
+	updates.AlterLoadConfig = c.getAlterLoadConfigOfAlterCollection(coll.Properties, updates.Properties)
 
 	channels := make([]string, 0, len(coll.VirtualChannelNames)+1)
 	channels = append(channels, streaming.WAL().ControlChannel())
@@ -175,7 +175,7 @@ func (c *Core) broadcastAlterCollectionForAlterCollection(ctx context.Context, r
 	msg := message.NewAlterCollectionMessageBuilderV2().
 		WithHeader(header).
 		WithBody(&messagespb.AlterCollectionMessageBody{
-			Updates: udpates,
+			Updates: updates,
 		}).
 		WithBroadcast(channels).
 		MustBuildBroadcast()

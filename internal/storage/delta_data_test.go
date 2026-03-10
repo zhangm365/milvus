@@ -213,7 +213,7 @@ func (s *DeltaDataSuite) TestCreateWithPkType() {
 		s.EqualValues(10, cap(intPks.values))
 	})
 
-	s.Run("unsupport_pk_type", func() {
+	s.Run("unsupported_pk_type", func() {
 		_, err := NewDeltaDataWithPkType(10, schemapb.DataType_Bool)
 		s.Error(err)
 	})

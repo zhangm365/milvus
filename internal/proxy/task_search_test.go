@@ -1471,7 +1471,7 @@ func TestSearchTaskWithInvalidRoundDecimal(t *testing.T) {
 	//                 assert.True(t, ok)
 	//                 // TODO(dragondriver): construct result according to the request
 	//
-	//                 constructSearchResulstData := func() *schemapb.SearchResultData {
+	//                 constructSearchResultsData := func() *schemapb.SearchResultData {
 	//                     resultData := &schemapb.SearchResultData{
 	//                         NumQueries: int64(nq),
 	//                         TopK:       int64(topk),
@@ -1528,7 +1528,7 @@ func TestSearchTaskWithInvalidRoundDecimal(t *testing.T) {
 	//                     SlicedNumCount:           1,
 	//                     SlicedOffset:             0,
 	//                 }
-	//                 resultData := constructSearchResulstData()
+	//                 resultData := constructSearchResultsData()
 	//                 sliceBlob, err := proto.Marshal(resultData)
 	//                 assert.NoError(t, err)
 	//                 result1.SlicedBlob = sliceBlob
@@ -1713,7 +1713,7 @@ func TestSearchTaskV2_all(t *testing.T) {
 	//                 assert.True(t, ok)
 	//                 // TODO(dragondriver): construct result according to the request
 	//
-	//                 constructSearchResulstData := func() *schemapb.SearchResultData {
+	//                 constructSearchResultsData := func() *schemapb.SearchResultData {
 	//                     resultData := &schemapb.SearchResultData{
 	//                         NumQueries: int64(nq),
 	//                         TopK:       int64(topk),
@@ -1770,7 +1770,7 @@ func TestSearchTaskV2_all(t *testing.T) {
 	//                     SlicedNumCount:           1,
 	//                     SlicedOffset:             0,
 	//                 }
-	//                 resultData := constructSearchResulstData()
+	//                 resultData := constructSearchResultsData()
 	//                 sliceBlob, err := proto.Marshal(resultData)
 	//                 assert.NoError(t, err)
 	//                 result1.SlicedBlob = sliceBlob
@@ -1950,7 +1950,7 @@ func TestSearchTaskV2_7803_reduce(t *testing.T) {
 	//                 assert.True(t, ok)
 	//                 // TODO(dragondriver): construct result according to the request
 	//
-	//                 constructSearchResulstData := func(invalidNum int) *schemapb.SearchResultData {
+	//                 constructSearchResultsData := func(invalidNum int) *schemapb.SearchResultData {
 	//                     resultData := &schemapb.SearchResultData{
 	//                         NumQueries: int64(nq),
 	//                         TopK:       int64(topk),
@@ -2007,7 +2007,7 @@ func TestSearchTaskV2_7803_reduce(t *testing.T) {
 	//                     SlicedNumCount:           1,
 	//                     SlicedOffset:             0,
 	//                 }
-	//                 resultData := constructSearchResulstData(topk / 2)
+	//                 resultData := constructSearchResultsData(topk / 2)
 	//                 sliceBlob, err := proto.Marshal(resultData)
 	//                 assert.NoError(t, err)
 	//                 result1.SlicedBlob = sliceBlob
@@ -2034,7 +2034,7 @@ func TestSearchTaskV2_7803_reduce(t *testing.T) {
 	//                     SlicedNumCount:           1,
 	//                     SlicedOffset:             0,
 	//                 }
-	//                 resultData2 := constructSearchResulstData(topk - topk/2)
+	//                 resultData2 := constructSearchResultsData(topk - topk/2)
 	//                 sliceBlob2, err := proto.Marshal(resultData2)
 	//                 assert.NoError(t, err)
 	//                 result2.SlicedBlob = sliceBlob2

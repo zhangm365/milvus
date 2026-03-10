@@ -197,7 +197,7 @@ func (t *createCollectionTask) validateSchema(ctx context.Context, schema *schem
 		return err
 	}
 
-	// check analyzer was vaild
+	// check analyzer was valid
 	analyzerInfos := make([]*querypb.AnalyzerInfo, 0)
 	for _, field := range schema.GetFields() {
 		err := validateAnalyzer(schema, field, &analyzerInfos)

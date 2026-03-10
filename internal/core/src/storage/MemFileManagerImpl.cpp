@@ -147,11 +147,11 @@ MemFileManagerImpl::LoadIndexToMemory(
     std::vector<std::string> batch_files;
 
     auto LoadBatchIndexFiles = [&]() {
-        auto index_datas = GetObjectData(
+        auto index_data = GetObjectData(
             rcm_.get(), batch_files, milvus::PriorityForLoad(priority));
         size_t idx = 0;
         storage::ProcessFuturesInOrder(
-            index_datas, [&](std::unique_ptr<DataCodec> codec) {
+            index_data, [&](std::unique_ptr<DataCodec> codec) {
                 auto file_name = batch_files[idx].substr(
                     batch_files[idx].find_last_of('/') + 1);
                 file_to_index_data[file_name] = std::move(codec);
@@ -199,13 +199,13 @@ MemFileManagerImpl::cache_raw_data_to_memory_internal(const Config& config) {
     auto parallel_degree =
         uint64_t(DEFAULT_FIELD_MAX_MEMORY_LIMIT / FILE_SLICE_SIZE);
     std::vector<std::string> batch_files;
-    std::vector<FieldDataPtr> field_datas;
+    std::vector<FieldDataPtr> field_data;
 
     auto FetchRawData = [&]() {
-        auto raw_datas = GetObjectData(rcm_.get(), batch_files);
+        auto raw_data = GetObjectData(rcm_.get(), batch_files);
         storage::ProcessFuturesInOrder(
-            raw_datas, [&](std::unique_ptr<DataCodec> codec) {
-                field_datas.emplace_back(codec->GetFieldData());
+            raw_data, [&](std::unique_ptr<DataCodec> codec) {
+                field_data.emplace_back(codec->GetFieldData());
             });
     };
 
@@ -220,9 +220,9 @@ MemFileManagerImpl::cache_raw_data_to_memory_internal(const Config& config) {
         FetchRawData();
     }
 
-    AssertInfo(field_datas.size() == remote_files.size(),
+    AssertInfo(field_data.size() == remote_files.size(),
                "inconsistent file num and raw data num!");
-    return field_datas;
+    return field_data;
 }
 
 std::vector<FieldDataPtr>
@@ -249,7 +249,7 @@ MemFileManagerImpl::cache_raw_data_to_memory_storage_v2(const Config& config) {
         AssertInfo(loon_ffi_properties_ != nullptr,
                    "[StorageV2] loon ffi properties is null when build index "
                    "with manifest");
-        return GetFieldDatasFromManifest(manifest_path_str,
+        return GetFieldDataFromManifest(manifest_path_str,
                                          loon_ffi_properties_,
                                          field_meta_,
                                          data_type,
@@ -261,23 +261,23 @@ MemFileManagerImpl::cache_raw_data_to_memory_storage_v2(const Config& config) {
     for (auto& files : remote_files) {
         SortByPath(files);
     }
-    auto field_datas = GetFieldDatasFromStorageV2(remote_files,
+    auto field_data = GetFieldDataFromStorageV2(remote_files,
                                                   field_meta_.field_id,
                                                   data_type.value(),
                                                   element_type.value(),
                                                   dim,
                                                   fs_);
     // field data list could differ for storage v2 group list
-    return field_datas;
+    return field_data;
 }
 
 template <DataType T>
 std::vector<std::vector<uint32_t>>
-GetOptFieldIvfDataImpl(const std::vector<FieldDataPtr>& field_datas) {
+GetOptFieldIvfDataImpl(const std::vector<FieldDataPtr>& field_data) {
     using FieldDataT = DataTypeNativeOrVoid<T>;
     std::unordered_map<FieldDataT, std::vector<uint32_t>> mp;
     uint32_t offset = 0;
-    for (const auto& field_data : field_datas) {
+    for (const auto& field_data : field_data) {
         for (int64_t i = 0; i < field_data->get_num_rows(); ++i) {
             auto val =
                 *reinterpret_cast<const FieldDataT*>(field_data->RawValue(i));
@@ -300,28 +300,28 @@ GetOptFieldIvfDataImpl(const std::vector<FieldDataPtr>& field_datas) {
 
 std::vector<std::vector<uint32_t>>
 GetOptFieldIvfData(const DataType& dt,
-                   const std::vector<FieldDataPtr>& field_datas) {
+                   const std::vector<FieldDataPtr>& field_data) {
     switch (dt) {
         case DataType::BOOL:
-            return GetOptFieldIvfDataImpl<DataType::BOOL>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::BOOL>(field_data);
         case DataType::INT8:
-            return GetOptFieldIvfDataImpl<DataType::INT8>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::INT8>(field_data);
         case DataType::INT16:
-            return GetOptFieldIvfDataImpl<DataType::INT16>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::INT16>(field_data);
         case DataType::INT32:
-            return GetOptFieldIvfDataImpl<DataType::INT32>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::INT32>(field_data);
         case DataType::TIMESTAMPTZ:
-            return GetOptFieldIvfDataImpl<DataType::TIMESTAMPTZ>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::TIMESTAMPTZ>(field_data);
         case DataType::INT64:
-            return GetOptFieldIvfDataImpl<DataType::INT64>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::INT64>(field_data);
         case DataType::FLOAT:
-            return GetOptFieldIvfDataImpl<DataType::FLOAT>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::FLOAT>(field_data);
         case DataType::DOUBLE:
-            return GetOptFieldIvfDataImpl<DataType::DOUBLE>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::DOUBLE>(field_data);
         case DataType::STRING:
-            return GetOptFieldIvfDataImpl<DataType::STRING>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::STRING>(field_data);
         case DataType::VARCHAR:
-            return GetOptFieldIvfDataImpl<DataType::VARCHAR>(field_datas);
+            return GetOptFieldIvfDataImpl<DataType::VARCHAR>(field_data);
         default:
             LOG_WARN("Unsupported data type in optional scalar field: ", dt);
             return {};
@@ -367,9 +367,9 @@ MemFileManagerImpl::cache_opt_field_memory(const Config& config) {
         }
 
         SortByPath(field_paths);
-        std::vector<FieldDataPtr> field_datas =
+        std::vector<FieldDataPtr> field_data =
             FetchFieldData(rcm_.get(), field_paths);
-        res[field_id] = GetOptFieldIvfData(field_type, field_datas);
+        res[field_id] = GetOptFieldIvfData(field_type, field_data);
     }
     return res;
 }
@@ -413,14 +413,14 @@ MemFileManagerImpl::cache_opt_field_memory_v2(const Config& config) {
                                                       field_meta_.segment_id,
                                                       field_id,
                                                       field_schema};
-            auto field_datas = GetFieldDatasFromManifest(manifest_path_str,
+            auto field_data = GetFieldDataFromManifest(manifest_path_str,
                                                          loon_ffi_properties_,
                                                          field_meta_,
                                                          field_type,
                                                          1,  // scalar field
                                                          element_type);
 
-            res[field_id] = GetOptFieldIvfData(field_type, field_datas);
+            res[field_id] = GetOptFieldIvfData(field_type, field_data);
         }
         return res;
     }
@@ -439,10 +439,10 @@ MemFileManagerImpl::cache_opt_field_memory_v2(const Config& config) {
         const auto& field_type = std::get<1>(tup);
         const auto& element_type = std::get<2>(tup);
 
-        auto field_datas = GetFieldDatasFromStorageV2(
+        auto field_data = GetFieldDataFromStorageV2(
             remote_files, field_id, field_type, element_type, 1, fs_);
 
-        res[field_id] = GetOptFieldIvfData(field_type, field_datas);
+        res[field_id] = GetOptFieldIvfData(field_type, field_data);
     }
     return res;
 }

@@ -124,7 +124,7 @@ func (s *RBACBasicTestSuite) TestInvalidGrantV2() {
 	resp, _ := s.operatePrivilegeV2(ctx, "role", "Insert", util.AnyWord, util.AnyWord, milvuspb.OperatePrivilegeType(-1))
 	s.False(merr.Ok(resp))
 
-	// invlaid database name
+	// invalid database name
 	resp, _ = s.operatePrivilegeV2(ctx, "role", "Insert", "%$", util.AnyWord, milvuspb.OperatePrivilegeType_Grant)
 	s.False(merr.Ok(resp))
 

@@ -397,9 +397,9 @@ func (dr *deleteRunner) produce(ctx context.Context, primaryKeys *schemapb.IDs, 
 	return dt, nil
 }
 
-// getStreamingQueryAndDelteFunc return query function used by LBPolicy
+// getStreamingQueryAndDeleteFunc return query function used by LBPolicy
 // make sure it concurrent safe
-func (dr *deleteRunner) getStreamingQueryAndDelteFunc(plan *planpb.PlanNode) shardclient.ExecuteFunc {
+func (dr *deleteRunner) getStreamingQueryAndDeleteFunc(plan *planpb.PlanNode) shardclient.ExecuteFunc {
 	return func(ctx context.Context, nodeID int64, qn types.QueryNodeClient, channel string) error {
 		log := log.Ctx(ctx).With(
 			zap.Int64("collectionID", dr.collectionID),
@@ -551,7 +551,7 @@ func (dr *deleteRunner) complexDelete(ctx context.Context, plan *planpb.PlanNode
 		CollectionName: dr.req.GetCollectionName(),
 		CollectionID:   dr.collectionID,
 		Nq:             1,
-		Exec:           dr.getStreamingQueryAndDelteFunc(plan),
+		Exec:           dr.getStreamingQueryAndDeleteFunc(plan),
 	})
 	dr.result.DeleteCnt = dr.count.Load()
 	dr.result.Timestamp = dr.sessionTS.Load()
@@ -640,7 +640,7 @@ func getPrimaryKeysFromUnaryRangeExpr(schema *schemapb.CollectionSchema, unaryRa
 			},
 		}
 	default:
-		return pks, errors.New("invalid field data type specifyed in simple delete expr")
+		return pks, errors.New("invalid field data type specified in simple delete expr")
 	}
 
 	return pks, nil
@@ -671,7 +671,7 @@ func getPrimaryKeysFromTermExpr(schema *schemapb.CollectionSchema, termExpr *pla
 			},
 		}
 	default:
-		return pks, 0, errors.New("invalid field data type specifyed in simple delete expr")
+		return pks, 0, errors.New("invalid field data type specified in simple delete expr")
 	}
 
 	return pks, pkCount, nil

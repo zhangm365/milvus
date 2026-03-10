@@ -47,4 +47,4 @@ Refer to [https://milvus.io/api-reference/go/v2.5.x/About.md](https://milvus.io/
 
 ## Code format
 
-The Go source code is formatted using gci & gofumpt. Please run `make lint-fix` before sumbit a PR.
+The Go source code is formatted using gci & gofumpt. Please run `make lint-fix` before submit a PR.

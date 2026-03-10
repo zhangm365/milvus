@@ -799,7 +799,7 @@ func reflectValueCandi(v reflect.Value) (map[string]fieldCandi, error) {
 		}
 		return result, nil
 	default:
-		return nil, fmt.Errorf("unsupport row type: %s", v.Kind().String())
+		return nil, fmt.Errorf("unsupported row type: %s", v.Kind().String())
 	}
 }
 

@@ -56,7 +56,7 @@ func NewPool[T any](cap int, opts ...PoolOption) *Pool[T] {
 }
 
 // NewDefaultPool returns a pool with cap of the number of logical CPU,
-// and pre-alloced goroutines.
+// and pre-allocated goroutines.
 func NewDefaultPool[T any]() *Pool[T] {
 	return NewPool[T](hardware.GetCPUNum(), WithPreAlloc(true))
 }

@@ -31,9 +31,9 @@ default_search_exp = "id >= 0"
 exp_res = "exp_res"
 default_search_string_exp = "varchar >= \"0\""
 default_search_mix_exp = "int64 >= 0 && varchar >= \"0\""
-default_invaild_string_exp = "varchar >= 0"
+default_invalid_string_exp = "varchar >= 0"
 default_json_search_exp = "json_field[\"number\"] >= 0"
-perfix_expr = 'varchar like "0%"'
+prefix_expr = 'varchar like "0%"'
 default_search_field = ct.default_float_vec_field_name
 default_search_params = ct.default_search_params
 default_primary_key_field_name = "id"
@@ -583,7 +583,7 @@ class TestMilvusClientSearchInvalid(TestMilvusClientV2Base):
             field_type = "JSON"
         vectors_to_search = rng.random((1, dim))
         error = {ct.err_code: 65535,
-                 ct.err_msg: f"Decay rerank: unsupported input field type:{field_type}, only support numberic field"}
+                 ct.err_msg: f"Decay rerank: unsupported input field type:{field_type}, only support numeric field"}
         self.search(client, collection_name, vectors_to_search, ranker=my_rerank_fn,
                     check_task=CheckTasks.err_res, check_items=error)
 
@@ -628,7 +628,7 @@ class TestMilvusClientSearchInvalid(TestMilvusClientV2Base):
         )
         vectors_to_search = rng.random((1, dim))
         error = {ct.err_code: 65535,
-                 ct.err_msg: "Decay rerank: unsupported input field type:Array, only support numberic field"}
+                 ct.err_msg: "Decay rerank: unsupported input field type:Array, only support numeric field"}
         self.search(client, collection_name, vectors_to_search, ranker=my_rerank_fn,
                     check_task=CheckTasks.err_res, check_items=error)
 
@@ -672,7 +672,7 @@ class TestMilvusClientSearchInvalid(TestMilvusClientV2Base):
         )
         vectors_to_search = rng.random((1, dim))
         error = {ct.err_code: 65535,
-                 ct.err_msg: "Decay rerank: unsupported input field type:FloatVector, only support numberic field"}
+                 ct.err_msg: "Decay rerank: unsupported input field type:FloatVector, only support numeric field"}
         self.search(client, collection_name, vectors_to_search, ranker=my_rerank_fn,
                     check_task=CheckTasks.err_res, check_items=error)
 
@@ -1154,7 +1154,7 @@ class TestMilvusClientSearchInvalid(TestMilvusClientV2Base):
         )
         vectors_to_search = rng.random((1, dim))
         error = {ct.err_code: 65535,
-                 ct.err_msg: "Invaild decay function: decay, only support [gauss,linear,exp]"}
+                 ct.err_msg: "Invalid decay function: decay, only support [gauss,linear,exp]"}
         self.search(client, collection_name, vectors_to_search, ranker=my_rerank_fn,
                     check_task=CheckTasks.err_res, check_items=error)
 

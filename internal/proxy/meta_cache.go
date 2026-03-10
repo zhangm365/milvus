@@ -139,7 +139,7 @@ type schemaInfo struct {
 	fieldMap              *typeutil.ConcurrentMap[string, int64] // field name to id mapping
 	hasPartitionKeyField  bool
 	pkField               *schemapb.FieldSchema
-	multiAnalyzerFieldMap *typeutil.ConcurrentMap[int64, int64] // multi analzyer field id to dependent field id mapping
+	multiAnalyzerFieldMap *typeutil.ConcurrentMap[int64, int64] // multi analyzer field id to dependent field id mapping
 	schemaHelper          *typeutil.SchemaHelper
 }
 
@@ -325,7 +325,7 @@ func (s *schemaInfo) CanRetrieveRawFieldData(field *schemapb.FieldSchema) bool {
 	return s.schemaHelper.CanRetrieveRawFieldData(field)
 }
 
-// partitionInfos contains the cached collection partition informations.
+// partitionInfos contains the cached collection partition information.
 type partitionInfos struct {
 	partitionInfos        []*partitionInfo
 	name2Info             map[string]*partitionInfo // map[int64]*partitionInfo

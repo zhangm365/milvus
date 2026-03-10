@@ -160,7 +160,7 @@ func GenerateJSONArray(numRows int) [][]byte {
 	return ret
 }
 
-// milvus core compoent view geometry as wkb bytes
+// milvus core component view geometry as wkb bytes
 func GenerateGeometryArray(numRows int) [][]byte {
 	ret := make([][]byte, 0, numRows)
 	const (
@@ -1292,7 +1292,7 @@ func GenerateVectorFieldDataWithValue(dType schemapb.DataType, fieldName string,
 	return fieldData
 }
 
-// Generate number of fields in StructField FieldDatas where each field is an ArrayType of something
+// Generate number of fields in StructField FieldData where each field is an ArrayType of something
 func GenerateArrayOfStructArray(schema *schemapb.StructArrayFieldSchema, numRows int, dim int) []*schemapb.FieldData {
 	ret := make([]*schemapb.FieldData, 0, numRows)
 	for _, field := range schema.Fields {

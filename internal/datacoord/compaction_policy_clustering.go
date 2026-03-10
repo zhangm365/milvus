@@ -115,7 +115,7 @@ func (policy *clusteringCompactionPolicy) triggerOneCollection(ctx context.Conte
 	}
 	clusteringKeyField := clustering.GetClusteringKeyField(collection.Schema)
 	if clusteringKeyField == nil {
-		log.Info("the collection has no clustering key, skip tigger clustering compaction")
+		log.Info("the collection has no clustering key, skip trigger clustering compaction")
 		return nil, 0, nil
 	}
 

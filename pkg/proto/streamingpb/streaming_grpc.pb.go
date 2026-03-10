@@ -483,7 +483,7 @@ type StreamingNodeHandlerServiceClient interface {
 	// All messages sent to a channel will be assigned a unique messageID.
 	// The messageID is used to identify the message in the channel.
 	// The messageID isn't promised to be monotonous increasing with the
-	// sequence of responsing. Error: If channel isn't assign to this log node,
+	// sequence of responding. Error: If channel isn't assign to this log node,
 	// the RPC will return error CHANNEL_NOT_EXIST. If channel is moving away to
 	// other log node, the RPC will return error CHANNEL_FENCED.
 	Produce(ctx context.Context, opts ...grpc.CallOption) (StreamingNodeHandlerService_ProduceClient, error)
@@ -586,7 +586,7 @@ type StreamingNodeHandlerServiceServer interface {
 	// All messages sent to a channel will be assigned a unique messageID.
 	// The messageID is used to identify the message in the channel.
 	// The messageID isn't promised to be monotonous increasing with the
-	// sequence of responsing. Error: If channel isn't assign to this log node,
+	// sequence of responding. Error: If channel isn't assign to this log node,
 	// the RPC will return error CHANNEL_NOT_EXIST. If channel is moving away to
 	// other log node, the RPC will return error CHANNEL_FENCED.
 	Produce(StreamingNodeHandlerService_ProduceServer) error
@@ -746,7 +746,7 @@ type StreamingNodeManagerServiceClient interface {
 	// with code CHANNEL_NOT_EXIST.
 	Remove(ctx context.Context, in *StreamingNodeManagerRemoveRequest, opts ...grpc.CallOption) (*StreamingNodeManagerRemoveResponse, error)
 	// rpc CollectStatus() ...
-	// CollectStatus is unary RPC to collect all avaliable channel info and load
+	// CollectStatus is unary RPC to collect all available channel info and load
 	// balance info on a log node. Used to recover channel info on log coord,
 	// collect balance info and health check.
 	CollectStatus(ctx context.Context, in *StreamingNodeManagerCollectStatusRequest, opts ...grpc.CallOption) (*StreamingNodeManagerCollectStatusResponse, error)
@@ -804,7 +804,7 @@ type StreamingNodeManagerServiceServer interface {
 	// with code CHANNEL_NOT_EXIST.
 	Remove(context.Context, *StreamingNodeManagerRemoveRequest) (*StreamingNodeManagerRemoveResponse, error)
 	// rpc CollectStatus() ...
-	// CollectStatus is unary RPC to collect all avaliable channel info and load
+	// CollectStatus is unary RPC to collect all available channel info and load
 	// balance info on a log node. Used to recover channel info on log coord,
 	// collect balance info and health check.
 	CollectStatus(context.Context, *StreamingNodeManagerCollectStatusRequest) (*StreamingNodeManagerCollectStatusResponse, error)

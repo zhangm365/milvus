@@ -61,7 +61,7 @@ func (s *LevelZeroSuite) TestDeletePartitionKeyHint() {
 	s.Require().NoError(err)
 	s.WaitForLoad(ctx, collectionName)
 
-	// Generate 2 growing segments with 2 differenct partition key 0, 1001, with exactlly same PK start from 0
+	// Generate 2 growing segments with 2 different partition key 0, 1001, with exactlly same PK start from 0
 	s.generateSegment(collectionName, 1000, 0, false, 0)
 	s.generateSegment(collectionName, 1001, 0, false, 1001)
 
