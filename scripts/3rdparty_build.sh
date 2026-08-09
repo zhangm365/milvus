@@ -138,6 +138,9 @@ export CFLAGS="-Wno-error=address -Wno-error=deprecated-declarations"
 # macOS SDK headers to exclude macOS-specific APIs (SecImportExport, SCPreferences, etc.).
 # This fixes aws-c-cal, c-ares, and other packages that depend on macOS Security/SystemConfig APIs.
 if [[ "$(uname -s)" == "Darwin" ]]; then
+    if [[ "${llvm_version}" -ge 21 ]]; then
+        export CXXFLAGS="${CXXFLAGS} -include cstdlib"
+    fi
     arm_crypto_flags=""
     if [[ "$(uname -m)" == "arm64" ]]; then
         # Homebrew LLVM needs ARM crypto enabled for libsodium armcrypto sources on macOS arm64.
@@ -214,7 +217,7 @@ case "${unameOut}" in
     export CMAKE_CXX_COMPILER_LAUNCHER=ccache
     echo "Using CXX: $CXX"
     echo "Using CC: $CC"
-    CONAN_ARGS="--output-folder conan --build=missing -s build_type=${BUILD_TYPE} -s compiler=clang -s compiler.version=${llvm_version} -s compiler.libcxx=libc++ -s compiler.cppstd=20 -u"
+    CONAN_ARGS="--output-folder conan --build=missing -s build_type=${BUILD_TYPE} -s compiler=clang -s compiler.version=${llvm_version} -s compiler.libcxx=libc++ -s compiler.cppstd=20 -s:b compiler=clang -s:b compiler.version=${llvm_version} -s:b compiler.libcxx=libc++ -s:b compiler.cppstd=20 -u"
 
     # On macOS, Conan packages with shared libraries (protobuf, grpc) produce
     # binaries (protoc, grpc_cpp_plugin) whose install rpaths don't include
@@ -227,6 +230,23 @@ case "${unameOut}" in
     mkdir -p "$CONAN_HOME_DIR/extensions/hooks"
     cat > "$CONAN_HOME_DIR/extensions/hooks/hook_fix_macos_rpaths.py" << 'HOOK_EOF'
 import os, platform, subprocess, stat
+
+def existing_rpaths(path):
+    result = subprocess.run(["otool", "-l", path], capture_output=True, text=True)
+    if result.returncode != 0:
+        return set()
+
+    rpaths = set()
+    lines = result.stdout.splitlines()
+    for index, line in enumerate(lines):
+        if line.strip() != "cmd LC_RPATH":
+            continue
+        for candidate in lines[index + 1:index + 4]:
+            candidate = candidate.strip()
+            if candidate.startswith("path "):
+                rpaths.add(candidate[5:].split(" (offset", 1)[0])
+                break
+    return rpaths
 
 def post_package(conanfile, **kwargs):
     if platform.system() != "Darwin":
@@ -256,12 +276,20 @@ def post_package(conanfile, **kwargs):
         r = subprocess.run(["file", fp], capture_output=True, text=True)
         if "Mach-O" not in r.stdout:
             continue
+        rpaths = existing_rpaths(fp)
+        changed = False
         for lib_path in dep_lib_dirs:
+            if lib_path in rpaths:
+                continue
             r = subprocess.run(["install_name_tool", "-add_rpath", lib_path, fp],
                                capture_output=True, text=True)
-            if r.returncode != 0:
+            if r.returncode == 0:
+                rpaths.add(lib_path)
+                changed = True
+            else:
                 conanfile.output.warning("install_name_tool failed for %s: %s" % (name, r.stderr.strip()))
-        fixed.append(name)
+        if changed:
+            fixed.append(name)
     if fixed:
         conanfile.output.info("Fixed macOS rpaths for: %s" % ", ".join(fixed))
 HOOK_EOF

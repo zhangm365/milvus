@@ -63,16 +63,33 @@ case "${unameOut}" in
       # detect llvm version by valid list (supports LLVM 14-21)
       # Prefer 19+ on macOS: libc++ 17/18 has a chrono operator<< that conflicts
       # with arrow's vendored date library; libc++ 19 resolves it.
-      for llvm_version in 21 20 19 18 17 16 15 14 NOT_FOUND ; do
+      llvm_formula=""
+      for llvm_version in 21 20 19; do
         if brew ls --versions llvm@${llvm_version} > /dev/null 2>&1; then
+          llvm_formula="llvm@${llvm_version}"
           break
         fi
       done
-      if [ "${llvm_version}" = "NOT_FOUND" ] ; then
-        echo "ERROR: Valid LLVM (14-18) not installed. Run: brew install llvm@17"
+      if [ -z "${llvm_formula}" ] && brew ls --versions llvm > /dev/null 2>&1; then
+        detected_llvm_version="$(brew list --versions llvm | awk '{print $2}' | cut -d. -f1)"
+        if [ "${detected_llvm_version}" -ge 19 ]; then
+          llvm_formula="llvm"
+          llvm_version="${detected_llvm_version}"
+        fi
+      fi
+      if [ -z "${llvm_formula}" ]; then
+        for llvm_version in 18 17 16 15 14; do
+          if brew ls --versions llvm@${llvm_version} > /dev/null 2>&1; then
+            llvm_formula="llvm@${llvm_version}"
+            break
+          fi
+        done
+      fi
+      if [ -z "${llvm_formula}" ] ; then
+        echo "ERROR: Valid LLVM (14-21) not installed. Run: brew install llvm"
         exit 1
       fi
-      llvm_prefix="$(brew --prefix llvm@${llvm_version})"
+      llvm_prefix="$(brew --prefix ${llvm_formula})"
       export CLANG_TOOLS_PATH="${llvm_prefix}/bin"
       export CC=${llvm_prefix}/bin/clang
       export CXX=${llvm_prefix}/bin/clang++
