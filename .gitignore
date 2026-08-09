@@ -135,3 +135,9 @@ docs/plans/
 
 # agent context
 .context/
+
+# for local standalone start
+/default.etcd/
+/rdb_data/
+/rdb_data_meta_kv/
+/examples/milvus-client-demo/

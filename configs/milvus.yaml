@@ -58,11 +58,10 @@ etcd:
   dialKeepAliveTimeout: 2000 # Timeout in milliseconds waiting for keepalive responses before marking the connection as unhealthy.
   use:
     embed: true # Whether to enable embedded Etcd (an in-process EtcdServer).
-    embed: true # Whether to enable embedded Etcd (an in-process EtcdServer).
   data:
     dir: default.etcd # Embedded Etcd only. please adjust in embedded Milvus: /tmp/milvus/etcdData/
   auth:
-    enabled: true # Whether to enable authentication
+    enabled: false # Embedded Etcd does not support authentication.
     userName: etcdadmin # username for etcd authentication
     password: etcdadmin # password for etcd authentication
 
@@ -90,7 +89,6 @@ localStorage:
   # Local path to where vector data are stored during a search or a query to avoid repetitve access to MinIO or S3 service.
   # Caution: Changing this parameter after using Milvus for a period of time will affect your access to old data.
   # It is recommended to change this parameter before starting Milvus for the first time.
-  path: /Users/zhangmao/github/milvus/data/
   path: /Users/zhangmao/github/milvus/data/
 
 # Related configuration of MinIO/S3/GCS or any other service supports S3 API, which is responsible for data persistence for Milvus.
@@ -323,7 +321,6 @@ rocksmq:
   # Caution: Changing this parameter after using Milvus for a period of time will affect your access to old data.
   # It is recommended to change this parameter before starting Milvus for the first time.
   # Set an easy-to-identify root key prefix for Milvus if etcd service already exists.
-  path: /Users/zhangmao/github/milvus/rdb_data
   path: /Users/zhangmao/github/milvus/rdb_data
   lrucacheratio: 0.06 # rocksdb cache memory ratio
   rocksmqPageSize: 67108864 # The maximum size of messages in each page in RocksMQ. Messages in RocksMQ are checked and cleared (when expired) in batch based on this parameters. Unit: Byte.
@@ -1060,7 +1057,7 @@ common:
   gracefulStopTimeout: 1800 # seconds. it will force quit the server if the graceful stop process is not completed during this time.
   parquetStatsSkipIndex:
     enabled: false # whether to skip parquet stats index when reading; set true to enable skipping.
-  storageType: remote # please adjust in embedded Milvus: local, available values are [local, remote], value minio is deprecated, use remote instead
+  storageType: local # Store standalone data locally without requiring MinIO/S3.
   storage:
     manifestTransactionRetryLimit: 10 # Maximum number of retry attempts for V3 storage manifest transaction commits on optimistic concurrency conflicts
     stv2:

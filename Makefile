@@ -107,9 +107,9 @@ ifeq (${ENABLE_AZURE}, false)
 	AZURE_OPTION := -Z
 endif
 
-milvus: build-cpp print-build-info build-go
+milvus: build-go
 
-build-go:
+build-go: build-cpp print-build-info
 	@echo "Building Milvus ..."
 	@source $(PWD)/scripts/setenv.sh && \
 		mkdir -p $(INSTALL_PATH) && go env -w CGO_ENABLED="1" && \
