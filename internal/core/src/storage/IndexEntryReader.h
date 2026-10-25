@@ -43,8 +43,27 @@ struct Entry {
     std::vector<uint8_t> data;
 };
 
+struct EntryStreamLoadInfo {
+    // Exact encrypted-stream task bounds derived from persisted V3 directory
+    // slice metadata. Plaintext files leave both byte counts at zero.
+    bool encrypted{false};
+    size_t total_transient_bytes{0};
+    size_t max_task_transient_bytes{0};
+    // Worker-owned download/write scratch, including direct-I/O alignment.
+    size_t positioned_total_transient_bytes{0};
+    size_t positioned_max_task_transient_bytes{0};
+    // Legacy scalar families retain whole null / JSON non-exist offset sidecars.
+    size_t retained_sidecar_bytes{0};
+};
+
 class IndexEntryReader {
  public:
+    static EntryStreamLoadInfo
+    InspectStreamLoadInfo(std::shared_ptr<milvus::InputStream> input,
+                          int64_t file_size,
+                          folly::CancellationToken cancellation_token =
+                              folly::CancellationToken());
+
     static std::unique_ptr<IndexEntryReader>
     Open(std::shared_ptr<milvus::InputStream> input,
          int64_t file_size,
@@ -52,6 +71,11 @@ class IndexEntryReader {
          ThreadPoolPriority priority = ThreadPoolPriority::HIGH,
          folly::CancellationToken cancellation_token =
              folly::CancellationToken());
+
+    const EntryStreamLoadInfo&
+    GetStreamLoadInfo() const {
+        return stream_load_info_;
+    }
 
     std::vector<std::string>
     GetEntryNames() const;
@@ -75,6 +99,17 @@ class IndexEntryReader {
     ReadEntriesStreamToFiles(
         const std::vector<std::pair<std::string, std::string>>& name_path_pairs,
         io::Priority write_priority = io::Priority::MIDDLE);
+
+    /// Consume disjoint slices on the downloading worker, before its temporary
+    /// buffers and admission reservation are released. Calls may arrive out of
+    /// order and concurrently. The callback must write synchronously to a
+    /// preallocated destination and must not retain the data pointer. All issued
+    /// tasks drain before return or throw; CRC is combined in entry order.
+    void
+    ReadEntryStreamAt(
+        const std::string& name,
+        std::function<void(size_t offset, const uint8_t* data, size_t len)>
+            write);
 
     /// Stream entry data via transient memory budget.
     /// Downloads are concurrent (full bandwidth). Slices are delivered in entry
@@ -195,6 +230,7 @@ class IndexEntryReader {
     struct EntryStreamDownloadState {
         std::string name;
         std::unique_ptr<PositionedFileWriter> writer;
+        std::function<void(size_t, const uint8_t*, size_t)> write;
         uint32_t expected_crc;
         std::vector<RangeCrc> range_crcs;
     };
@@ -227,10 +263,13 @@ class IndexEntryReader {
                                const EntryMeta& meta,
                                io::Priority write_priority);
 
+    struct EntryStreamFailure;
+
     void
     SubmitEntryStreamDownloadTasks(const EntryMeta& meta,
                                    EntryStreamDownloadState& state,
-                                   std::vector<std::future<void>>& futures);
+                                   std::vector<std::future<void>>& futures,
+                                   EntryStreamFailure& failure);
 
     static size_t
     StreamDownloadTaskCount(const EntryMeta& meta);
@@ -252,6 +291,7 @@ class IndexEntryReader {
     std::shared_ptr<plugin::ICipherPlugin> cipher_plugin_;
 
     std::unordered_map<std::string, EntryMeta> entry_index_;
+    EntryStreamLoadInfo stream_load_info_;
     std::vector<std::string> entry_names_;
 
     static constexpr size_t kSmallEntryCacheThreshold = 1 * 1024 * 1024;

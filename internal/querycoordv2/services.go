@@ -197,7 +197,7 @@ func (s *Server) LoadCollection(ctx context.Context, req *querypb.LoadCollection
 	)
 
 	logger.Info(ctx, "load collection request received",
-		mlog.Any("schema", req.Schema),
+		mlog.FieldSchema(req.Schema),
 		mlog.Int64s("fieldIndexes", lo.Values(req.GetFieldIndexID())),
 	)
 	metrics.QueryCoordLoadCount.WithLabelValues(metrics.TotalLabel).Inc()
@@ -223,7 +223,7 @@ func (s *Server) LoadCollection(ctx context.Context, req *querypb.LoadCollection
 	if err := s.broadcastAlterLoadConfigCollectionV2ForLoadCollection(ctx, req); err != nil {
 		logger.Warn(ctx, "failed to load collection", mlog.Err(err))
 		metrics.QueryCoordLoadCount.WithLabelValues(metrics.FailLabel).Inc()
-		return merr.Status(err), nil
+		return statusWithLoadResourcePrecheckSuggestion(err), nil
 	}
 
 	logger.Info(ctx, "load collection done")
@@ -271,7 +271,7 @@ func (s *Server) LoadPartitions(ctx context.Context, req *querypb.LoadPartitions
 	)
 
 	logger.Info(ctx, "received load partitions request",
-		mlog.Any("schema", req.Schema))
+		mlog.FieldSchema(req.Schema))
 	metrics.QueryCoordLoadCount.WithLabelValues(metrics.TotalLabel).Inc()
 
 	if err := merr.CheckHealthy(s.State()); err != nil {
@@ -296,7 +296,7 @@ func (s *Server) LoadPartitions(ctx context.Context, req *querypb.LoadPartitions
 	if err := s.broadcastAlterLoadConfigCollectionV2ForLoadPartitions(ctx, req); err != nil {
 		logger.Warn(ctx, "failed to load partitions", mlog.Err(err))
 		metrics.QueryCoordLoadCount.WithLabelValues(metrics.FailLabel).Inc()
-		return merr.Status(err), nil
+		return statusWithLoadResourcePrecheckSuggestion(err), nil
 	}
 	logger.Info(ctx, "load partitions done")
 	metrics.QueryCoordLoadCount.WithLabelValues(metrics.SuccessLabel).Inc()

@@ -53,7 +53,6 @@ import (
 	"github.com/milvus-io/milvus/pkg/v3/proto/datapb"
 	"github.com/milvus-io/milvus/pkg/v3/proto/querypb"
 	"github.com/milvus-io/milvus/pkg/v3/util"
-	"github.com/milvus-io/milvus/pkg/v3/util/expr"
 	"github.com/milvus-io/milvus/pkg/v3/util/lock"
 	"github.com/milvus-io/milvus/pkg/v3/util/logutil"
 	"github.com/milvus-io/milvus/pkg/v3/util/merr"
@@ -127,7 +126,8 @@ type Server struct {
 	copySegmentInspector CopySegmentInspector
 	copySegmentChecker   CopySegmentChecker
 
-	snapshotManager SnapshotManager
+	snapshotManager       SnapshotManager
+	snapshotExportManager *snapshotExportManager
 
 	compactionTrigger        trigger
 	compactionInspector      CompactionInspector
@@ -171,6 +171,7 @@ type Server struct {
 
 type FileResourceObserver interface {
 	InitDataCoord(manager session.NodeManager)
+	IsEmpty() bool
 	Notify()
 }
 
@@ -220,7 +221,6 @@ func CreateServer(ctx context.Context, factory dependency.Factory, opts ...Optio
 	for _, opt := range opts {
 		opt(s)
 	}
-	expr.Register("datacoord", s)
 	return s
 }
 
@@ -344,9 +344,10 @@ func (s *Server) initDataCoord() error {
 	s.importInspector = NewImportInspector(s.ctx, s.meta, s.importMeta, s.globalScheduler)
 
 	s.importChecker = NewImportChecker(s.ctx, s.meta, s.broker, s.allocator, s.importMeta, s.compactionInspector, s.handler, importCheckerHooks{
-		commitImport:         s.broadcastCommitImportMessage,
-		rollbackImport:       s.broadcastRollbackImportMessage,
-		isReplicatingCluster: s.isReplicatingClusterNow,
+		commitImport:       s.broadcastCommitImportMessage,
+		rollbackImport:     s.broadcastRollbackImportMessage,
+		assignUpdateImport: s.broadcastUpdateImportMessage,
+		getReplicationRole: s.getReplicationRole,
 	})
 
 	// init file resource observer
@@ -376,7 +377,7 @@ func (s *Server) initDataCoord() error {
 	mlog.Info(s.ctx, "init copy segment inspector and checker done")
 
 	// Initialize snapshot manager
-	s.snapshotManager = NewSnapshotManager(
+	snapshotManager := NewSnapshotManager(
 		s.meta,
 		s.meta.snapshotMeta,
 		s.copySegmentMeta,
@@ -386,6 +387,13 @@ func (s *Server) initDataCoord() error {
 		s.getChannelsByCollectionID,
 		s.indexEngineVersionManager,
 	)
+	s.snapshotManager = snapshotManager
+	snapshotExportMeta, err := newSnapshotExportMeta(s.ctx, s.meta.catalog)
+	if err != nil {
+		return err
+	}
+	s.snapshotExportManager = newSnapshotExportManager(s.ctx, snapshotExportMeta, snapshotManager)
+	snapshotManager.exportManager = s.snapshotExportManager
 	mlog.Info(s.ctx, "init snapshot manager done")
 
 	s.serverLoopCtx, s.serverLoopCancel = context.WithCancel(s.ctx)
@@ -634,7 +642,6 @@ func (s *Server) initMeta(chunkManager storage.ChunkManager) error {
 		if err != nil {
 			return err
 		}
-
 		// Load collection information asynchronously
 		// HINT: please make sure this is the last step in the `reloadEtcdFn` function !!!
 		go func() {
@@ -727,6 +734,9 @@ func (s *Server) startServerLoop() {
 
 	// Start external collection refresh manager (includes inspector and checker)
 	s.externalCollectionRefreshManager.Start()
+	if s.snapshotExportManager != nil {
+		s.snapshotExportManager.Start()
+	}
 
 	s.garbageCollector.start()
 }
@@ -868,7 +878,7 @@ func (s *Server) handleSessionEvent(ctx context.Context, role string, event *ses
 			}
 
 			// notify file manager sync file resource to new node
-			if s.fileResourceObserver != nil {
+			if s.fileResourceObserver != nil && !s.fileResourceObserver.IsEmpty() {
 				s.fileResourceObserver.Notify()
 			}
 		case sessionutil.SessionDelEvent:
@@ -967,23 +977,17 @@ func (s *Server) postFlush(ctx context.Context, segmentID UniqueID) error {
 		}
 	}
 
-	insertFileNum := 0
-	for _, fieldBinlog := range segment.GetBinlogs() {
-		insertFileNum += len(fieldBinlog.GetBinlogs())
-	}
-	metrics.FlushedSegmentFileNum.WithLabelValues(metrics.InsertFileLabel).Observe(float64(insertFileNum))
-
+	// Insert / delta counts come from Statistics. Stats array is iterated
+	// because Statistics doesn't carry a per-segment stat-file count — V3
+	// reports 0, matching the manifest-driven layout.
+	stats := segment.EnsureStats()
+	metrics.FlushedSegmentFileNum.WithLabelValues(metrics.InsertFileLabel).Observe(float64(stats.GetInsertBinlogCount()))
 	statFileNum := 0
 	for _, fieldBinlog := range segment.GetStatslogs() {
 		statFileNum += len(fieldBinlog.GetBinlogs())
 	}
 	metrics.FlushedSegmentFileNum.WithLabelValues(metrics.StatFileLabel).Observe(float64(statFileNum))
-
-	deleteFileNum := 0
-	for _, filedBinlog := range segment.GetDeltalogs() {
-		deleteFileNum += len(filedBinlog.GetBinlogs())
-	}
-	metrics.FlushedSegmentFileNum.WithLabelValues(metrics.DeleteFileLabel).Observe(float64(deleteFileNum))
+	metrics.FlushedSegmentFileNum.WithLabelValues(metrics.DeleteFileLabel).Observe(float64(stats.GetDeltaBinlogCount()))
 
 	mlog.Info(ctx, "flush segment complete", mlog.Int64("id", segmentID))
 	return nil
@@ -1051,6 +1055,10 @@ func (s *Server) Stop() error {
 	mlog.Info(s.ctx, "datacoord server shutdown")
 	s.garbageCollector.close()
 	mlog.Info(s.ctx, "datacoord garbage collector stopped")
+	if s.snapshotExportManager != nil {
+		s.snapshotExportManager.Close()
+		mlog.Info(s.ctx, "datacoord snapshot export manager stopped")
+	}
 
 	if s.meta != nil {
 		s.meta.GetSnapshotMeta().Close()

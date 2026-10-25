@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/samber/lo"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/time/rate"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/milvus-io/milvus-proto/go-api/v3/commonpb"
 	"github.com/milvus-io/milvus-proto/go-api/v3/milvuspb"
@@ -34,11 +36,13 @@ import (
 	"github.com/milvus-io/milvus/internal/coordinator/snmanager"
 	"github.com/milvus-io/milvus/internal/distributed/streaming"
 	"github.com/milvus-io/milvus/internal/metastore/kv/binlog"
+	snapshotstorage "github.com/milvus-io/milvus/internal/snapshotio/storage"
 	"github.com/milvus-io/milvus/internal/storage"
 	"github.com/milvus-io/milvus/internal/streamingcoord/server/balancer/channel"
 	"github.com/milvus-io/milvus/internal/streamingcoord/server/broadcaster/broadcast"
 	"github.com/milvus-io/milvus/internal/util/componentutil"
 	"github.com/milvus-io/milvus/internal/util/importutilv2"
+	"github.com/milvus-io/milvus/internal/util/importutilv2/importid"
 	"github.com/milvus-io/milvus/internal/util/segmentutil"
 	"github.com/milvus-io/milvus/internal/util/streamingutil"
 	"github.com/milvus-io/milvus/pkg/v3/common"
@@ -49,6 +53,7 @@ import (
 	"github.com/milvus-io/milvus/pkg/v3/proto/messagespb"
 	"github.com/milvus-io/milvus/pkg/v3/streaming/util/message"
 	"github.com/milvus-io/milvus/pkg/v3/util/funcutil"
+	"github.com/milvus-io/milvus/pkg/v3/util/interceptor"
 	"github.com/milvus-io/milvus/pkg/v3/util/merr"
 	"github.com/milvus-io/milvus/pkg/v3/util/metricsinfo"
 	"github.com/milvus-io/milvus/pkg/v3/util/paramtable"
@@ -183,7 +188,7 @@ func (s *Server) FlushAll(ctx context.Context, req *datapb.FlushAllRequest) (*da
 	}
 
 	// Create a new broadcaster with exclusive cluster resource key.
-	broadcaster, err := broadcast.StartBroadcastWithResourceKeys(ctx, message.NewExclusiveClusterResourceKey())
+	broadcaster, err := broadcast.StartUnreplicableBroadcastWithResourceKeys(ctx, message.NewExclusiveClusterResourceKey())
 	if err != nil {
 		return &datapb.FlushAllResponse{
 			Status: merr.Status(err),
@@ -193,6 +198,7 @@ func (s *Server) FlushAll(ctx context.Context, req *datapb.FlushAllRequest) (*da
 
 	cc := channel.GetClusterChannels()
 	broadcastFlushAllMsg := message.NewFlushAllMessageBuilderV2().
+		WithUnreplicable().
 		WithHeader(&message.FlushAllMessageHeader{}).
 		WithBody(&message.FlushAllMessageBody{}).
 		WithClusterLevelBroadcast(cc).
@@ -700,6 +706,12 @@ func (s *Server) SaveBinlogPaths(ctx context.Context, req *datapb.SaveBinlogPath
 		UpdateManifest(req.GetSegmentID(), req.GetManifestPath()),
 		UpdateStartPosition(req.GetStartPositions()),
 		UpdateAsDroppedIfEmptyWhenFlushing(req.GetSegmentID()),
+		// The request ships the complete cumulative Statistics published
+		// from the growing-segment collector; the receiver stores it
+		// wholesale. Only nil-stats flushes (storage V1 / pre-Statistics
+		// datanodes during rolling upgrade) fall back to deriving from
+		// the binlog arrays. See UpdateSegmentStats for the full contract.
+		UpdateSegmentStats(req.GetSegmentID(), req.GetStats()),
 	)
 
 	// Update segment info in memory and meta. Stale updates (segment already
@@ -757,14 +769,26 @@ func (s *Server) validateTextSegmentStorage(req *datapb.SaveBinlogPathsRequest, 
 	if req.GetSegLevel() == datapb.SegmentLevel_L0 || req.GetDropped() {
 		return nil
 	}
-	if !s.meta.collectionHasTextFields(req.GetCollectionID()) {
+	textFieldIDs := s.meta.collectionTextFieldIDs(req.GetCollectionID())
+	if len(textFieldIDs) == 0 {
 		return nil
 	}
 	if storageVersion < storage.StorageV3 {
-		return merr.WrapErrParameterInvalidMsg(
-			"TEXT segment %d must be saved with StorageV3 manifest, got storage version %d",
-			req.GetSegmentID(),
-			storageVersion)
+		// A legacy V2 segment whose data was written before the collection gained
+		// TEXT fields carries no TEXT column in its binlogs and can be flushed
+		// safely without a StorageV3 manifest (the query path fills the missing
+		// TEXT column with empty values). A V2 segment that DOES carry a TEXT
+		// column is still rejected: TEXT cannot be persisted without a StorageV3
+		// manifest (LOB spillover / query path requires it).
+		for _, fieldBinlog := range req.GetField2BinlogPaths() {
+			if lo.Contains(textFieldIDs, fieldBinlog.GetFieldID()) {
+				return merr.WrapErrParameterInvalidMsg(
+					"TEXT segment %d must be saved with StorageV3 manifest, got storage version %d",
+					req.GetSegmentID(),
+					storageVersion)
+			}
+		}
+		return nil
 	}
 	if req.GetManifestPath() == "" {
 		return merr.WrapErrParameterInvalidMsg(
@@ -970,13 +994,19 @@ func (s *Server) GetRecoveryInfo(ctx context.Context, req *datapb.GetRecoveryInf
 			segment2Binlogs[id] = append(segment2Binlogs[id], fieldBinlogs)
 		}
 
-		if newCount := segmentutil.CalcRowCountFromBinLog(segment.SegmentInfo); newCount != segment.NumOfRows && newCount > 0 {
-			mlog.Warn(context.TODO(), "segment row number meta inconsistent with bin log row count and will be corrected",
-				mlog.Int64("segmentID", segment.GetID()),
-				mlog.Int64("segment meta row count (wrong)", segment.GetNumOfRows()),
-				mlog.Int64("segment bin log row count (correct)", newCount))
-			segmentsNumOfRows[id] = newCount
+		if segment.GetStorageVersion() != storage.StorageV3 {
+			if newCount := segmentutil.CalcRowCountFromBinLog(segment.SegmentInfo); newCount != segment.NumOfRows && newCount > 0 {
+				mlog.Warn(context.TODO(), "segment row number meta inconsistent with bin log row count and will be corrected",
+					mlog.Int64("segmentID", segment.GetID()),
+					mlog.Int64("segment meta row count (wrong)", segment.GetNumOfRows()),
+					mlog.Int64("segment bin log row count (correct)", newCount))
+				segmentsNumOfRows[id] = newCount
+			} else {
+				segmentsNumOfRows[id] = segment.NumOfRows
+			}
 		} else {
+			// V3 segments: NumOfRows is authoritative (advanced from the writer
+			// checkpoint); binlog arrays may be empty or delta-only.
 			segmentsNumOfRows[id] = segment.NumOfRows
 		}
 
@@ -996,7 +1026,7 @@ func (s *Server) GetRecoveryInfo(ctx context.Context, req *datapb.GetRecoveryInf
 
 		segment2TextStatsLogs[id] = segment.GetTextStatsLogs()
 
-		if len(segment.GetDeltalogs()) > 0 {
+		if segment.EnsureStats().GetDeltaBinlogCount() > 0 {
 			segment2DeltaBinlogs[id] = append(segment2DeltaBinlogs[id], segment.GetDeltalogs()...)
 		}
 	}
@@ -1080,14 +1110,15 @@ func (s *Server) GetRecoveryInfoV2(ctx context.Context, req *datapb.GetRecoveryI
 		if len(binlogs) == 0 && segment.GetLevel() != datapb.SegmentLevel_L0 && segment.GetManifestPath() == "" {
 			continue
 		}
-		rowCount := segmentutil.CalcRowCountFromBinLog(segment.SegmentInfo)
-		if rowCount != segment.NumOfRows && rowCount > 0 {
-			mlog.Warn(context.TODO(), "segment row number meta inconsistent with bin log row count and will be corrected",
-				mlog.Int64("segmentID", segment.GetID()),
-				mlog.Int64("segment meta row count (wrong)", segment.GetNumOfRows()),
-				mlog.Int64("segment bin log row count (correct)", rowCount))
-		} else {
-			rowCount = segment.NumOfRows
+		rowCount := segment.NumOfRows
+		if segment.GetStorageVersion() != storage.StorageV3 {
+			if binlogCount := segmentutil.CalcRowCountFromBinLog(segment.SegmentInfo); binlogCount != segment.NumOfRows && binlogCount > 0 {
+				mlog.Warn(context.TODO(), "segment row number meta inconsistent with bin log row count and will be corrected",
+					mlog.Int64("segmentID", segment.GetID()),
+					mlog.Int64("segment meta row count (wrong)", segment.GetNumOfRows()),
+					mlog.Int64("segment bin log row count (correct)", binlogCount))
+				rowCount = binlogCount
+			}
 		}
 
 		segmentInfos = append(segmentInfos, &datapb.SegmentInfo{
@@ -1220,6 +1251,11 @@ func (s *Server) GetSegmentsByStates(ctx context.Context, req *datapb.GetSegment
 			Status: merr.Status(err),
 		}, nil
 	}
+	statesDict := make(map[commonpb.SegmentState]bool)
+	for _, state := range states {
+		statesDict[state] = true
+	}
+
 	var segmentIDs []UniqueID
 	channels, err := s.getChannelsByCollectionID(ctx, collectionID)
 	if err != nil {
@@ -1237,16 +1273,26 @@ func (s *Server) GetSegmentsByStates(ctx context.Context, req *datapb.GetSegment
 		segmentIDs = append(segmentIDs, channelSegmentsView.L0SegmentIDs...)
 		segmentIDs = append(segmentIDs, channelSegmentsView.ImportingSegmentIDs...)
 	}
-	ret := make([]UniqueID, 0, len(segmentIDs))
 
-	statesDict := make(map[commonpb.SegmentState]bool)
-	for _, state := range states {
-		statesDict[state] = true
-	}
+	ret := make([]UniqueID, 0, len(segmentIDs))
 	for _, id := range segmentIDs {
 		segment := s.meta.GetHealthySegment(ctx, id)
 		if segment != nil && statesDict[segment.GetState()] {
 			ret = append(ret, id)
+		}
+	}
+
+	if statesDict[commonpb.SegmentState_Dropped] {
+		droppedSegments := s.meta.SelectSegments(ctx,
+			WithCollection(collectionID),
+			SegmentFilterFunc(func(segment *SegmentInfo) bool {
+				return segment != nil &&
+					segment.GetState() == commonpb.SegmentState_Dropped &&
+					(partitionID < 0 || segment.GetPartitionID() == partitionID)
+			}),
+		)
+		for _, segment := range droppedSegments {
+			ret = append(ret, segment.GetID())
 		}
 	}
 
@@ -1405,14 +1451,21 @@ func (s *Server) GetCompactionStateWithPlans(ctx context.Context, req *milvuspb.
 		return resp, nil
 	}
 
-	info := s.compactionInspector.getCompactionInfo(ctx, req.GetCompactionID())
+	var info *compactionInfo
+	if req.GetCollectionId() != 0 {
+		tasksByTrigger := s.meta.GetCompactionTaskMeta().GetCompactionTasksByCollection(req.GetCollectionId())
+		tasks := lo.Flatten(lo.Values(tasksByTrigger))
+		info = summaryCompactionState(0, tasks)
+	} else {
+		info = s.compactionInspector.getCompactionInfo(ctx, req.GetCompactionID())
+	}
 	resp.State = info.state
-	resp.MergeInfos = lo.MapToSlice[int64, *milvuspb.CompactionMergeInfo](info.mergeInfos, func(_ int64, merge *milvuspb.CompactionMergeInfo) *milvuspb.CompactionMergeInfo {
-		return merge
-	})
-
-	planIDs := lo.MapToSlice[int64, *milvuspb.CompactionMergeInfo](info.mergeInfos, func(planID int64, _ *milvuspb.CompactionMergeInfo) int64 { return planID })
-	mlog.Info(context.TODO(), "success to get state with plans", mlog.Any("state", info.state), mlog.Any("merge infos", resp.MergeInfos),
+	planIDs := lo.Keys(info.mergeInfos)
+	sort.Slice(planIDs, func(i, j int) bool { return planIDs[i] < planIDs[j] })
+	for _, planID := range planIDs {
+		resp.MergeInfos = append(resp.MergeInfos, info.mergeInfos[planID])
+	}
+	mlog.Info(ctx, "success to get state with plans", mlog.Any("state", info.state), mlog.Any("merge infos", resp.MergeInfos),
 		mlog.Int64s("plans", planIDs))
 	return resp, nil
 }
@@ -1825,9 +1878,9 @@ func (s *Server) GcControl(ctx context.Context, request *datapb.GcControlRequest
 		ticket, _ := common.GetStringValue(request.GetParams(), "ticket")
 
 		if err := s.garbageCollector.Pause(ctx, collectionID, ticket, time.Duration(pauseSeconds)*time.Second); err != nil {
-			status.ErrorCode = commonpb.ErrorCode_UnexpectedError
-			status.Reason = fmt.Sprintf("failed to pause gc, %s", err.Error())
-			return status, nil
+			// merr.Status keeps Code/Retriable, so callers can tell a timeout or a
+			// transient "collector is closing" apart from a genuine failure.
+			return merr.Status(err), nil
 		}
 	case datapb.GcCommand_Resume:
 		collectionID, err, _ := common.GetInt64Value(request.GetParams(), "collection_id")
@@ -1836,9 +1889,7 @@ func (s *Server) GcControl(ctx context.Context, request *datapb.GcControlRequest
 		}
 		ticket, _ := common.GetStringValue(request.GetParams(), "ticket")
 		if err := s.garbageCollector.Resume(ctx, collectionID, ticket); err != nil {
-			status.ErrorCode = commonpb.ErrorCode_UnexpectedError
-			status.Reason = fmt.Sprintf("failed to pause gc, %s", err.Error())
-			return status, nil
+			return merr.Status(err), nil
 		}
 	default:
 		status.ErrorCode = commonpb.ErrorCode_UnexpectedError
@@ -1877,10 +1928,10 @@ func (s *Server) ImportV2(ctx context.Context, in *internalpb.ImportRequestInter
 		Status: merr.Success(),
 	}
 
-	mlog.Info(context.TODO(), "receive import request from proxy",
+	mlog.Info(ctx, "receive import request from proxy",
 		mlog.Int("fileNum", len(in.GetFiles())),
 		mlog.Any("files", in.GetFiles()),
-		mlog.Any("options", in.GetOptions()))
+		mlog.Any("options", importutilv2.RedactOptions(in.GetOptions())))
 
 	// Validate timeout before allocating resources
 	// Full validation will happen during broadcast
@@ -1920,20 +1971,37 @@ func (s *Server) ImportV2(ctx context.Context, in *internalpb.ImportRequestInter
 
 	// Broadcast the import message
 	// dbName is retrieved inside broadcastImport via broker.DescribeCollectionInternal
-	err = s.broadcastImport(
+	duplicatedJobID, duplicated, err := s.broadcastImport(
 		ctx,
-		in.GetCollectionName(),
 		in.GetCollectionID(),
 		in.GetPartitionIDs(),
 		in.GetFiles(),
 		in.GetOptions(),
-		in.GetSchema(),
 		jobID,
 		in.GetChannelNames(),
+		interceptor.IdempotencyKeyFromContext(ctx),
 	)
 	if err != nil {
 		mlog.Warn(context.TODO(), "failed to broadcast import message", mlog.Err(err))
 		resp.Status = merr.Status(merr.Wrap(err, "failed to broadcast import"))
+		return resp, nil
+	}
+	if duplicated {
+		// The idempotency window still holds this key, so the original job is the
+		// answer. Whether that job is still queryable is not checked here: the client
+		// takes the jobID to GetImportProgress, which reports a missing job on its own.
+		resp.JobID = fmt.Sprint(duplicatedJobID)
+		// Log the original job's state, not just its ID. A key whose original ended
+		// Failed resolves to that same job for the rest of the window, so a client
+		// retrying it never makes progress; without the state here that looks
+		// indistinguishable from a key stuck on a healthy job.
+		originalState := "gone"
+		if job := s.importMeta.GetJob(ctx, duplicatedJobID); job != nil {
+			originalState = job.GetState().String()
+		}
+		mlog.Info(ctx, "import request resolved to an existing job",
+			mlog.String("jobID", resp.JobID),
+			mlog.String("originalState", originalState))
 		return resp, nil
 	}
 
@@ -1944,16 +2012,13 @@ func (s *Server) ImportV2(ctx context.Context, in *internalpb.ImportRequestInter
 
 // createImportJobFromAck creates an import job from ack callback.
 // This is called internally when broadcast ack is received.
-// Note: the pre-broadcast L0-import gate in ImportV2 covers only locally
-// originated imports. Replicated import messages (CDC) from a cluster with
-// enableL0Import=true land here directly without passing that gate, so it must
-// be re-checked. The gate here must NOT return an error: ack callbacks are
-// retried forever (callMessageAckCallbackUntilDone), and skipping job creation
-// would wedge the replicated CommitImport path (HandleCommitVchannel retries
-// on job-not-found). Instead the job is created directly in Failed state — a
-// terminal no-op for both commitImportV2AckCallback and HandleCommitVchannel —
-// and the failure stays visible via GetImportProgress.
-func (s *Server) createImportJobFromAck(ctx context.Context, in *internalpb.ImportRequestInternal) (*internalpb.ImportResponse, error) {
+// Note: pre-broadcast feature gates cover only locally originated imports.
+// Replicated or old-Proxy messages land here directly, so the gates must be
+// re-checked. A disabled gate must create a Failed job instead of returning a
+// retryable error: ack callbacks retry forever while holding the collection
+// resource guard. The terminal job also keeps the failure visible through
+// GetImportProgress.
+func (s *Server) createImportJobFromAck(ctx context.Context, result message.BroadcastResultImportMessageV1) (*internalpb.ImportResponse, error) {
 	if err := merr.CheckHealthy(s.GetStateCode()); err != nil {
 		return &internalpb.ImportResponse{
 			Status: merr.Status(err),
@@ -1964,27 +2029,52 @@ func (s *Server) createImportJobFromAck(ctx context.Context, in *internalpb.Impo
 		Status: merr.Success(),
 	}
 
-	mlog.Info(context.TODO(), "creating import job from ack callback",
-		mlog.Int("fileNum", len(in.GetFiles())),
-		mlog.Any("files", in.GetFiles()),
-		mlog.Any("options", in.GetOptions()))
+	body := result.Message.MustBody()
+	options := funcutil.Map2KeyValuePair(body.GetOptions())
+	files := importFilesFromMessage(body.GetFiles(), options)
+	if body.Schema != nil {
+		body.Schema.DbName = body.DbName
+	}
+	// The control channel orders the broadcast but is not a data vchannel.
+	// DataTs still uses the maximum tick across all broadcast results.
+	vchannels := make([]string, 0, len(result.Results))
+	for vchannel := range result.Results {
+		if !funcutil.IsControlChannel(vchannel) {
+			vchannels = append(vchannels, vchannel)
+		}
+	}
 
-	timeoutTs, err := importutilv2.GetTimeoutTs(in.GetOptions())
+	mlog.Info(ctx, "creating import job from ack callback", append(importFilesLogFields(files),
+		mlog.FieldJobID(body.GetJobID()),
+		mlog.FieldCollectionID(body.GetCollectionID()),
+		mlog.Any("options", importutilv2.RedactOptions(options)))...)
+
+	// Persist malformed durable input as a Failed job rather than retrying the
+	// same ACK forever. This validation is pure: source reads belong to Pending.
+	sourceErr := importutilv2.ValidateSnapshotImportPlan(files, options, nil)
+	timeoutTs, err := importutilv2.GetTimeoutTs(options)
 	if err != nil {
-		resp.Status = merr.Status(merr.WrapErrImportFailed(err.Error()))
-		return resp, nil
+		if sourceErr == nil && !importutilv2.IsSnapshotSource(options) {
+			resp.Status = merr.Status(merr.WrapErrImportFailed(err.Error()))
+			return resp, nil
+		}
+		// A corrupt snapshot ACK is already durable. Even malformed options
+		// must reach the terminal-job path rather than retry forever.
+		if sourceErr == nil {
+			sourceErr = err
+		}
+		timeoutTs = math.MaxUint64
 	}
 
 	// See the function comment: an L0 import reaching this callback while the
 	// gate is disabled (replicated from a cluster where it is enabled, or a
 	// config flip between broadcast and ack) is terminally failed below instead
 	// of running ungated or returning an error (which would retry forever).
-	l0ImportDisabled := importutilv2.IsL0Import(in.GetOptions()) && !Params.DataCoordCfg.EnableL0Import.GetAsBool()
+	l0ImportDisabled := importutilv2.IsL0Import(options) && !Params.DataCoordCfg.EnableL0Import.GetAsBool()
 
-	files := in.GetFiles()
-	isBackup := importutilv2.IsBackup(in.GetOptions())
-	if isBackup && !l0ImportDisabled {
-		files, err = ListBinlogImportRequestFiles(ctx, s.meta.chunkManager, files, in.GetOptions())
+	isBackup := importutilv2.IsBackup(options)
+	if isBackup && !importutilv2.IsSnapshotSource(options) && !l0ImportDisabled && sourceErr == nil {
+		files, err = ListBinlogImportRequestFiles(ctx, s.meta.chunkManager, files, options)
 		if err != nil {
 			resp.Status = merr.Status(err)
 			return resp, nil
@@ -2001,9 +2091,9 @@ func (s *Server) createImportJobFromAck(ctx context.Context, in *internalpb.Impo
 		importFile.Id = idStart + int64(i) + 1
 		return importFile
 	})
-	importCollectionInfo, err := s.handler.GetCollection(ctx, in.GetCollectionID())
+	importCollectionInfo, err := s.handler.GetCollection(ctx, body.GetCollectionID())
 	if errors.Is(err, merr.ErrCollectionNotFound) {
-		resp.Status = merr.Status(merr.WrapErrCollectionNotFound(in.GetCollectionID()))
+		resp.Status = merr.Status(merr.WrapErrCollectionNotFound(body.GetCollectionID()))
 		return resp, nil
 	}
 	if err != nil {
@@ -2011,11 +2101,11 @@ func (s *Server) createImportJobFromAck(ctx context.Context, in *internalpb.Impo
 		return resp, nil
 	}
 	if importCollectionInfo == nil {
-		resp.Status = merr.Status(merr.WrapErrCollectionNotFound(in.GetCollectionID()))
+		resp.Status = merr.Status(merr.WrapErrCollectionNotFound(body.GetCollectionID()))
 		return resp, nil
 	}
 
-	jobID := in.GetJobID()
+	jobID := body.GetJobID()
 	if jobID == 0 {
 		jobID = idStart
 	}
@@ -2023,30 +2113,36 @@ func (s *Server) createImportJobFromAck(ctx context.Context, in *internalpb.Impo
 	job := &importJob{
 		ImportJob: &datapb.ImportJob{
 			JobID:          jobID,
-			CollectionID:   in.GetCollectionID(),
-			CollectionName: in.GetCollectionName(),
-			PartitionIDs:   in.GetPartitionIDs(),
+			CollectionID:   body.GetCollectionID(),
+			CollectionName: body.GetCollectionName(),
+			PartitionIDs:   body.GetPartitionIDs(),
 			Vchannels:      importCollectionInfo.VChannelNames,
-			Schema:         in.GetSchema(),
+			Schema:         body.GetSchema(),
 			TimeoutTs:      timeoutTs,
 			CleanupTs:      math.MaxUint64,
 			State:          internalpb.ImportJobState_Pending,
 			Files:          files,
-			Options:        in.GetOptions(),
+			Options:        options,
 			CreateTime:     createTime.Format("2006-01-02T15:04:05Z07:00"),
-			ReadyVchannels: in.GetChannelNames(),
-			DataTs:         in.GetDataTimestamp(),
-			AutoCommit:     importutilv2.IsAutoCommit(in.GetOptions()),
+			ReadyVchannels: vchannels,
+			DataTs:         result.GetMaxTimeTick(), // TODO: use per-vchannel TimeTick in future, must be supported for CDC.
+			AutoCommit:     importutilv2.IsAutoCommit(options),
 		},
 		tr: timerecord.NewTimeRecorder("import job"),
 	}
 	if l0ImportDisabled {
 		mlog.Warn(ctx, "l0 import is disabled, creating the job in Failed state",
-			mlog.Int64("jobID", jobID), mlog.Int64("collectionID", in.GetCollectionID()))
+			mlog.Int64("jobID", jobID), mlog.Int64("collectionID", body.GetCollectionID()))
 		UpdateJobState(internalpb.ImportJobState_Failed)(job)
 		UpdateJobReason("l0 import is disabled (dataCoord.import.enableL0Import=false); fold L0 deletes " +
 			"into data segment deltalogs before restore, or set the config to true on this cluster " +
 			"to re-enable the legacy L0 import")(job)
+	}
+	if sourceErr != nil {
+		// ACK callbacks retry indefinitely. Persist malformed/lost source
+		// context as a terminal job instead of retrying or omitting deletes.
+		UpdateJobState(internalpb.ImportJobState_Failed)(job)
+		UpdateJobReason(sourceErr.Error())(job)
 	}
 	err = s.importMeta.AddJob(ctx, job)
 	if err != nil {
@@ -2055,13 +2151,28 @@ func (s *Server) createImportJobFromAck(ctx context.Context, in *internalpb.Impo
 	}
 
 	resp.JobID = fmt.Sprint(job.GetJobID())
-	mlog.Info(context.TODO(), "add import job done",
-		mlog.Int64("jobID", job.GetJobID()),
-		mlog.Int("fileNum", len(files)),
-		mlog.Any("files", files),
-		mlog.Strings("readyChannels", in.GetChannelNames()),
-	)
+	mlog.Info(ctx, "add import job done", append(importFilesLogFields(files),
+		mlog.FieldJobID(job.GetJobID()),
+		mlog.FieldCollectionID(job.GetCollectionID()),
+		mlog.Strings("readyChannels", vchannels),
+	)...)
 	return resp, nil
+}
+
+func importFilesLogFields(files []*internalpb.ImportFile) []mlog.Field {
+	fields := []mlog.Field{mlog.Int("fileNum", len(files))}
+	var versions []uint32
+	for _, file := range files {
+		if source := file.GetSnapshotSource(); source != nil {
+			versions = append(versions, source.GetVersion())
+		}
+	}
+	if len(versions) != 0 {
+		// ACK logs run before source validation. Keep snapshot diagnostics
+		// bounded rather than serializing source descriptors.
+		return append(fields, mlog.Uint32s("snapshotSourceVersions", versions))
+	}
+	return append(fields, mlog.Any("files", files))
 }
 
 func (s *Server) GetImportProgress(ctx context.Context, in *internalpb.GetImportProgressRequest) (*internalpb.GetImportProgressResponse, error) {
@@ -2090,6 +2201,7 @@ func (s *Server) GetImportProgress(ctx context.Context, in *internalpb.GetImport
 	resp.Reason = reason
 	resp.Progress = progress
 	resp.CollectionName = job.GetCollectionName()
+	resp.CollectionId = job.GetCollectionID()
 	resp.CreateTime = job.GetCreateTime()
 	resp.CompleteTime = job.GetCompleteTime()
 	resp.ImportedRows = importedRows
@@ -2128,6 +2240,7 @@ func (s *Server) ListImports(ctx context.Context, req *internalpb.ListImportsReq
 		resp.Reasons = append(resp.Reasons, reason)
 		resp.Progresses = append(resp.Progresses, progress)
 		resp.CollectionNames = append(resp.CollectionNames, job.GetCollectionName())
+		resp.CollectionIds = append(resp.CollectionIds, job.GetCollectionID())
 	}
 	return resp, nil
 }
@@ -2268,8 +2381,8 @@ func (s *Server) CreateSnapshot(ctx context.Context, req *datapb.CreateSnapshotR
 			CompactionProtectionSeconds: req.GetCompactionProtectionSeconds(),
 		}).
 		WithBody(&message.CreateSnapshotMessageBody{}).
-		WithBroadcast([]string{streaming.WAL().ControlChannel()}).
 		WithUnreplicable().
+		WithControlChannelBroadcast().
 		MustBuildBroadcast(),
 	); err != nil {
 		mlog.Error(context.TODO(), "CreateSnapshot broadcast failed", mlog.Err(err))
@@ -2319,8 +2432,8 @@ func (s *Server) BatchUpdateManifest(ctx context.Context, req *datapb.BatchUpdat
 		WithBody(&message.BatchUpdateManifestMessageBody{
 			Items: items,
 		}).
-		WithBroadcast([]string{streaming.WAL().ControlChannel()}).
 		WithUnreplicable().
+		WithControlChannelBroadcast().
 		MustBuildBroadcast(),
 	); err != nil {
 		mlog.Error(context.TODO(), "BatchUpdateManifest broadcast failed", mlog.Err(err))
@@ -2423,8 +2536,8 @@ func (s *Server) DropSnapshot(ctx context.Context, req *datapb.DropSnapshotReque
 			CollectionId: req.GetCollectionId(),
 		}).
 		WithBody(&message.DropSnapshotMessageBody{}).
-		WithBroadcast([]string{streaming.WAL().ControlChannel()}).
 		WithUnreplicable().
+		WithControlChannelBroadcast().
 		MustBuildBroadcast(),
 	); err != nil {
 		mlog.Error(context.TODO(), "DropSnapshot broadcast failed", mlog.Err(err))
@@ -2451,10 +2564,22 @@ func (s *Server) DescribeSnapshot(ctx context.Context, req *datapb.DescribeSnaps
 			Status: merr.Status(err),
 		}, nil
 	}
+	if snapshotData == nil || snapshotData.SnapshotInfo == nil {
+		err := merr.WrapErrDataIntegrityMsg("snapshot info cannot be nil")
+		return &datapb.DescribeSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+	snapshotInfo := proto.Clone(snapshotData.SnapshotInfo).(*datapb.SnapshotInfo)
+	snapshotInfo.S3Location, err = snapshotstorage.BuildInstanceSnapshotURI(
+		snapshotstorage.InstanceConfigFromParamtable(Params),
+		snapshotInfo.GetS3Location(),
+	)
+	if err != nil {
+		return &datapb.DescribeSnapshotResponse{Status: merr.Status(err)}, nil
+	}
 
 	resp := &datapb.DescribeSnapshotResponse{
 		Status:       merr.Success(),
-		SnapshotInfo: snapshotData.SnapshotInfo,
+		SnapshotInfo: snapshotInfo,
 	}
 	if req.GetIncludeCollectionInfo() {
 		resp.CollectionInfo = snapshotData.Collection
@@ -2471,20 +2596,26 @@ func (s *Server) RestoreSnapshot(ctx context.Context, req *datapb.RestoreSnapsho
 			Status: merr.Status(err),
 		}, nil
 	}
-	mlog.Info(context.TODO(), "receive RestoreSnapshot request")
+	mlog.Info(ctx, "receive RestoreSnapshot request",
+		mlog.String("snapshot", req.GetName()),
+		mlog.Int64("sourceCollectionID", req.GetSourceCollectionId()),
+		mlog.String("targetDbName", req.GetTargetDbName()),
+		mlog.String("targetCollectionName", req.GetTargetCollectionName()),
+		mlog.Bool("external", req.GetExternal()),
+		mlog.String("snapshotS3Location", snapshotstorage.RedactSnapshotObjectPath(req.GetSnapshotS3Location())),
+		mlog.Bool("externalSpecSet", req.GetExternalSpec() != ""))
 
-	if req.GetExternal() {
-		err := merr.WrapErrServiceUnimplemented(errors.New("RestoreExternalSnapshot is not implemented"))
-		mlog.Warn(ctx, "restore external snapshot is not implemented", mlog.Err(err))
+	// Validate parameters
+	if !req.GetExternal() && req.GetName() == "" {
+		err := merr.WrapErrParameterMissingMsg("snapshot name is required")
+		mlog.Warn(ctx, "invalid request", mlog.Err(err))
 		return &datapb.RestoreSnapshotResponse{
 			Status: merr.Status(err),
 		}, nil
 	}
-
-	// Validate parameters
-	if req.GetName() == "" {
-		err := merr.WrapErrParameterMissingMsg("snapshot name is required")
-		mlog.Warn(context.TODO(), "invalid request", mlog.Err(err))
+	if req.GetExternal() && req.GetSnapshotS3Location() == "" {
+		err := merr.WrapErrParameterInvalidMsg("snapshot_s3_location is required")
+		mlog.Warn(ctx, "invalid request", mlog.Err(err))
 		return &datapb.RestoreSnapshotResponse{
 			Status: merr.Status(err),
 		}, nil
@@ -2494,6 +2625,32 @@ func (s *Server) RestoreSnapshot(ctx context.Context, req *datapb.RestoreSnapsho
 		mlog.Warn(context.TODO(), "invalid request", mlog.Err(err))
 		return &datapb.RestoreSnapshotResponse{
 			Status: merr.Status(err),
+		}, nil
+	}
+
+	if req.GetExternal() {
+		jobID, err := s.snapshotManager.RestoreExternalSnapshot(
+			ctx,
+			req.GetSnapshotS3Location(),
+			req.GetTargetCollectionName(),
+			req.GetTargetDbName(),
+			req.GetExternalSpec(),
+			s.startExternalRestoreSnapshotLock,
+			s.startBroadcastForRestoreSnapshot,
+			s.rollbackRestoreSnapshot,
+			s.validateRestoredCollectionResources,
+		)
+		if err != nil {
+			mlog.Error(ctx, "restore external snapshot failed", mlog.Err(err))
+			return &datapb.RestoreSnapshotResponse{
+				Status: merr.Status(err),
+			}, nil
+		}
+
+		mlog.Info(ctx, "restore external snapshot completed", mlog.Int64("jobID", jobID))
+		return &datapb.RestoreSnapshotResponse{
+			Status: merr.Success(),
+			JobId:  jobID,
 		}, nil
 	}
 
@@ -2527,8 +2684,90 @@ func (s *Server) ExportSnapshot(ctx context.Context, req *datapb.ExportSnapshotR
 	if err := merr.CheckHealthy(s.GetStateCode()); err != nil {
 		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
 	}
+	if req == nil {
+		err := merr.WrapErrParameterInvalidMsg("export snapshot request is nil")
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+	mlog.Info(ctx, "receive ExportSnapshot request",
+		mlog.String("snapshot", req.GetName()),
+		mlog.Int64("collectionID", req.GetCollectionId()),
+		mlog.String("targetS3Path", snapshotstorage.RedactSnapshotObjectPath(req.GetTargetS3Path())),
+		mlog.Bool("externalSpecSet", req.GetExternalSpec() != ""))
+
+	if req.GetName() == "" {
+		err := merr.WrapErrParameterInvalidMsg("snapshot name is required")
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+	if req.GetCollectionId() == 0 {
+		err := merr.WrapErrParameterInvalidMsg("collection_id is required")
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+	if req.GetTargetS3Path() == "" {
+		err := merr.WrapErrParameterInvalidMsg("target_s3_path is required")
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+
+	coll, err := s.handler.GetCollection(ctx, req.GetCollectionId())
+	if err != nil {
+		mlog.Warn(ctx, "ExportSnapshot failed to resolve collection", mlog.Err(err))
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+	if coll == nil {
+		mlog.Warn(ctx, "ExportSnapshot: collection not found")
+		return &datapb.ExportSnapshotResponse{
+			Status: merr.Status(merr.WrapErrCollectionNotFound(req.GetCollectionId())),
+		}, nil
+	}
+	dbName := coll.DatabaseName
+	collectionName := coll.Schema.GetName()
+	locker, err := broadcast.StartBroadcastWithResourceKeys(ctx,
+		message.NewSharedDBNameResourceKey(dbName),
+		message.NewSharedCollectionNameResourceKey(dbName, collectionName),
+		message.NewSharedSnapshotNameResourceKey(req.GetCollectionId(), req.GetName()),
+	)
+	if err != nil {
+		mlog.Warn(ctx, "ExportSnapshot failed to acquire resource key lock", mlog.Err(err))
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
+	defer locker.Close()
+
+	jobID, err := s.snapshotManager.ExportSnapshot(
+		ctx,
+		req.GetCollectionId(),
+		req.GetName(),
+		dbName,
+		collectionName,
+		req.GetTargetS3Path(),
+		req.GetExternalSpec(),
+	)
+	if err != nil {
+		mlog.Warn(ctx, "export snapshot failed", mlog.Err(err))
+		return &datapb.ExportSnapshotResponse{Status: merr.Status(err)}, nil
+	}
 	return &datapb.ExportSnapshotResponse{
-		Status: merr.Status(merr.WrapErrServiceUnimplemented(errors.New("ExportSnapshot is not implemented"))),
+		Status: merr.Success(),
+		JobId:  jobID,
+	}, nil
+}
+
+func (s *Server) GetExportSnapshotState(
+	ctx context.Context,
+	req *datapb.GetExportSnapshotStateRequest,
+) (*datapb.GetExportSnapshotStateResponse, error) {
+	if err := merr.CheckHealthy(s.GetStateCode()); err != nil {
+		return &datapb.GetExportSnapshotStateResponse{Status: merr.Status(err)}, nil
+	}
+	if req == nil || req.GetJobId() <= 0 {
+		err := merr.WrapErrParameterInvalidMsg("valid snapshot export job_id is required")
+		return &datapb.GetExportSnapshotStateResponse{Status: merr.Status(err)}, nil
+	}
+	info, err := s.snapshotManager.GetExportSnapshotState(req.GetJobId())
+	if err != nil {
+		return &datapb.GetExportSnapshotStateResponse{Status: merr.Status(err)}, nil
+	}
+	return &datapb.GetExportSnapshotStateResponse{
+		Status: merr.Success(),
+		Info:   info,
 	}, nil
 }
 
@@ -2781,8 +3020,8 @@ func (s *Server) RefreshExternalCollection(ctx context.Context, req *datapb.Refr
 			ExternalSpec:   req.GetExternalSpec(),
 		}).
 		WithBody(&message.RefreshExternalCollectionMessageBody{}).
-		WithBroadcast([]string{streaming.WAL().ControlChannel()}).
 		WithUnreplicable().
+		WithControlChannelBroadcast().
 		MustBuildBroadcast()
 
 	if _, err := b.Broadcast(ctx, msg); err != nil {
@@ -2873,13 +3112,14 @@ func (s *Server) ListRefreshExternalCollectionJobs(ctx context.Context, req *dat
 // The message is broadcast to the job's data vchannels so each vchannel's WAL flusher
 // can observe the commit fence, flush pending DML, and call HandleCommitVchannel.
 // (Control-channel-only broadcast is dropped by the flusher's IsControlChannel guard
-// before reaching the CommitImport case, so it cannot drive per-vchannel commits.)
+// before reaching the CommitImport case, so it cannot drive per-vchannel commits; the
+// control channel is added on top of the data vchannels for ordering only.)
 func (s *Server) broadcastCommitImportMessage(ctx context.Context, job ImportJob) error {
 	vchannels := job.GetVchannels()
 	if len(vchannels) == 0 {
 		return merr.WrapErrImportSysFailedMsg("job %d has no vchannels", job.GetJobID())
 	}
-
+	channels := append(vchannels, streaming.WAL().ControlChannel())
 	broadcaster, err := s.startBroadcastWithCollectionID(ctx, job.GetCollectionID())
 	if err != nil {
 		return err
@@ -2892,7 +3132,7 @@ func (s *Server) broadcastCommitImportMessage(ctx context.Context, job ImportJob
 			JobId:        job.GetJobID(),
 		}).
 		WithBody(&messagespb.CommitImportMessageBody{}).
-		WithBroadcast(vchannels).
+		WithBroadcast(channels).
 		MustBuildBroadcast()
 
 	_, err = broadcaster.Broadcast(ctx, msg)
@@ -2914,7 +3154,7 @@ func (s *Server) broadcastRollbackImportMessage(ctx context.Context, job ImportJ
 	if len(vchannels) == 0 {
 		return errors.Mark(merr.WrapErrImportSysFailedMsg("job %d has no vchannels", job.GetJobID()), errRollbackImportNoVchannels)
 	}
-
+	channels := append(vchannels, streaming.WAL().ControlChannel())
 	broadcaster, err := s.startBroadcastWithCollectionID(ctx, job.GetCollectionID())
 	if err != nil {
 		return err
@@ -2927,7 +3167,62 @@ func (s *Server) broadcastRollbackImportMessage(ctx context.Context, job ImportJ
 			JobId:        job.GetJobID(),
 		}).
 		WithBody(&messagespb.RollbackImportMessageBody{}).
-		WithBroadcast(vchannels).
+		WithBroadcast(channels).
+		MustBuildBroadcast()
+
+	_, err = broadcaster.Broadcast(ctx, msg)
+	return err
+}
+
+// broadcastUpdateImportMessage allocates the per-file ID ranges for an import job
+// and broadcasts them as an UpdateImport WAL message to the job's data vchannels.
+// It runs on the cluster acting as primary, inside the import checker's PreImporting
+// gate, once the post-preimport row counts are known. Each cluster's
+// updateImportAckCallback then applies the ranges to its local job meta so both derive
+// identical autoID primary keys. fileRows is aligned with job.GetFiles() order.
+//
+// An allocation failure (rootcoord unavailable) is transient — the checker retries on the
+// next tick, and every retry allocates a fresh range. Ids allocated but not (yet) carried
+// by any persisted message leak harmlessly (the id space is TSO-derived): the persisted
+// WAL message, not local memory, decides which range is applied, and if a retry races a
+// persisted-but-errored broadcast, the control-channel order makes the first range win on
+// every cluster (a duplicate is ignored, never applied on one cluster only).
+func (s *Server) broadcastUpdateImportMessage(ctx context.Context, job ImportJob, fileRows []int64) error {
+	ranges, err := importid.ReserveFileIDRanges(fileRows, s.allocator.AllocN, Params.CommonCfg.ClusterID.GetAsUint64())
+	if err != nil {
+		return err
+	}
+
+	vchannels := job.GetVchannels()
+	if len(vchannels) == 0 {
+		return merr.WrapErrImportSysFailedMsg("job %d has no vchannels", job.GetJobID())
+	}
+	channels := append(vchannels, streaming.WAL().ControlChannel())
+
+	broadcaster, err := s.startBroadcastWithCollectionID(ctx, job.GetCollectionID())
+	if err != nil {
+		return err
+	}
+	defer broadcaster.Close()
+
+	idRanges := make(map[int64]*commonpb.IDRange, len(ranges))
+	for i, r := range ranges {
+		idRanges[int64(i)] = r
+	}
+
+	// No idempotency key. A checker retry that races a persisted-but-errored broadcast may
+	// mint a second UpdateImport, but the control-channel copy orders it after the first
+	// on every cluster and first-wins ignores it, so a duplicate can no longer diverge.
+	// Its freshly allocated ids leak harmlessly (the id space is TSO-derived).
+	msg := message.NewUpdateImportMessageBuilderV2().
+		WithHeader(&message.UpdateImportMessageHeader{
+			CollectionId: job.GetCollectionID(),
+			JobId:        job.GetJobID(),
+		}).
+		WithBody(&messagespb.UpdateImportMessageBody{
+			IdRanges: idRanges,
+		}).
+		WithBroadcast(channels).
 		MustBuildBroadcast()
 
 	_, err = broadcaster.Broadcast(ctx, msg)
@@ -3021,8 +3316,7 @@ func (s *Server) AbortImport(ctx context.Context, req *datapb.AbortImportRequest
 				return merr.Success()
 			}
 			// Committed states are truly terminal and cannot be rolled back.
-			if state == internalpb.ImportJobState_Committing ||
-				state == internalpb.ImportJobState_Completed {
+			if UnfailableJobStates.Contain(state) {
 				return merr.Status(merr.WrapErrImportFailed(
 					fmt.Sprintf("job %d is in terminal/committed state %s, abort not allowed", req.GetJobId(), state)))
 			}
@@ -3045,6 +3339,15 @@ func (s *Server) HandleCommitVchannel(ctx context.Context, req *datapb.HandleCom
 	}
 	jobID := req.GetJobId()
 	vchannel := req.GetVchannel()
+	if s.importMeta.GetJob(ctx, jobID) == nil {
+		forgotten, err := s.importJobForgotten(ctx, jobID)
+		if err != nil {
+			return merr.Status(err), nil
+		}
+		if forgotten {
+			return merr.Success(), nil
+		}
+	}
 
 	// Pre-fetch segment IDs for this job+vchannel BEFORE calling HandleCommitVchannel.
 	// The callback must not access importMeta because HandleCommitVchannel holds m.mu (write lock);
@@ -3077,7 +3380,7 @@ func (s *Server) HandleCommitVchannel(ctx context.Context, req *datapb.HandleCom
 // the given import job that are assigned to the given vchannel.
 // This must be called BEFORE acquiring importMeta's mutex (i.e., before HandleCommitVchannel).
 func (s *Server) getImportSegmentIDsByVchannel(ctx context.Context, jobID int64, vchannel string) []int64 {
-	tasks := s.importMeta.GetTaskBy(ctx, WithJob(jobID), WithType(ImportTaskType))
+	tasks := s.importMeta.GetTaskByJob(ctx, jobID, WithType(ImportTaskType))
 	var segIDs []int64
 	for _, task := range tasks {
 		it, ok := task.(*importTask)

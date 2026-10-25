@@ -26,6 +26,8 @@
 
 namespace milvus {
 
+enum class StrictGroupStrategy { Original, PerGroup };
+
 struct SearchIteratorV2Info {
     std::string token = "";
     uint32_t batch_size = 0;
@@ -46,6 +48,10 @@ struct SearchInfo {
     int64_t topk_{0};
     int64_t group_size_{1};
     bool strict_group_size_{false};
+    StrictGroupStrategy strict_group_strategy_{StrictGroupStrategy::PerGroup};
+    int64_t strict_group_phase1_candidate_weight_{0};
+    bool strict_group_skip_refine_{false};
+
     int64_t round_decimal_{0};
     FieldId field_id_;
     MetricType metric_type_;
@@ -65,6 +71,22 @@ struct SearchInfo {
     bool global_refine_enable_{false};
     float search_topk_ratio_{0.0f};
     float refine_topk_ratio_{0.0f};
+    // Number of rows visible to a growing-segment search, in logical row space.
+    // Growing plans decide it ONCE from get_active_count(timestamp) and carry
+    // it down so no kernel re-derives it. Sealed plans leave it unset: their
+    // indexes are immutable and retain the empty-bitset fast path.
+    //
+    // Re-deriving it is not safe on a growing segment: a concurrent insert
+    // publishes rows into the column storage (and into a nullable field's
+    // offset mapping) before ack_responder_ advances, so a later read sees
+    // rows this search must not touch. Reduce then validates offsets against
+    // the acknowledged count and rejects them ("invalid offset ... rows num
+    // ..."), or, if the ack catches up first, silently returns rows newer
+    // than the query's MVCC timestamp.
+    //
+    // -1 means "not supplied" (sealed searches and direct callers). Growing
+    // kernels fall back to computing it themselves for direct calls.
+    int64_t active_count_{-1};
 
     bool
     element_level() const {
@@ -76,7 +98,5 @@ struct SearchInfo {
         return !group_by_field_ids_.empty();
     }
 };
-
-using SearchInfoPtr = std::shared_ptr<SearchInfo>;
 
 }  // namespace milvus

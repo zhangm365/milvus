@@ -297,10 +297,10 @@ func (s *NullableScalarSuite) TestBasic() {
 		s.NoError(err)
 		s.Equal(entity.FieldTypeTimestamptz, column.Type())
 		s.Equal(name, column.Name())
-		// verify time values are converted to RFC3339Nano strings
+		// verify time values are converted to normalized RFC3339Nano strings
 		expectedStrings := []string{
-			compactData[0].Format(time.RFC3339Nano),
-			compactData[1].Format(time.RFC3339Nano),
+			formatTimestamptz(compactData[0]),
+			formatTimestamptz(compactData[1]),
 		}
 		s.Equal(expectedStrings, column.Data())
 		for i := 0; i < len(validData); i++ {
@@ -312,9 +312,9 @@ func (s *NullableScalarSuite) TestBasic() {
 		// sparse mode
 		sparseData := []time.Time{now, {}, now.Add(2 * time.Hour)}
 		sparseExpected := []string{
-			sparseData[0].Format(time.RFC3339Nano),
-			sparseData[1].Format(time.RFC3339Nano),
-			sparseData[2].Format(time.RFC3339Nano),
+			formatTimestamptz(sparseData[0]),
+			formatTimestamptz(sparseData[1]),
+			formatTimestamptz(sparseData[2]),
 		}
 		column, err = NewNullableColumnTimestamptz(name, sparseData, validData, WithSparseNullableMode[string](true))
 		s.NoError(err)
@@ -367,6 +367,38 @@ func (s *NullableScalarSuite) TestBasic() {
 		}
 
 		_, err = NewNullableColumnTimestamptzIsoString(name, compactData, []bool{false, false})
+		s.Error(err)
+	})
+
+	s.Run("nullable_text", func() {
+		name := fmt.Sprintf("field_%d", rand.Intn(1000))
+		compactData := []string{"short text", "长文本"}
+		sparseData := []string{"short text", "", "长文本"}
+		validData := []bool{true, false, true}
+
+		column, err := NewNullableColumnText(name, compactData, validData)
+		s.NoError(err)
+		s.Equal(entity.FieldTypeText, column.Type())
+		s.Equal(name, column.Name())
+		s.Equal(compactData, column.Data())
+
+		column, err = NewNullableColumnText(name, sparseData, validData, WithSparseNullableMode[string](true))
+		s.NoError(err)
+		fd := column.FieldData()
+		s.EqualValues(entity.FieldTypeText, fd.GetType())
+		s.Equal(validData, fd.GetValidData())
+		s.Equal(sparseData, fd.GetScalars().GetStringData().GetData())
+
+		result, err := FieldDataColumn(fd, 0, -1)
+		s.NoError(err)
+		parsed, ok := result.(*ColumnText)
+		if s.True(ok) {
+			s.Equal(name, parsed.Name())
+			s.Equal(sparseData, parsed.Data())
+			s.Equal(entity.FieldTypeText, parsed.Type())
+		}
+
+		_, err = NewNullableColumnText(name, compactData, []bool{false, false})
 		s.Error(err)
 	})
 }

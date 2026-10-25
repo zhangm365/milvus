@@ -38,7 +38,6 @@ ParseTokenizerParams(const TypeParams& params);
 
 class FieldMeta {
  public:
-    static const FieldMeta RowIdMeta;
     FieldMeta(const FieldMeta&) = default;
     FieldMeta(FieldMeta&&) = default;
     FieldMeta&
@@ -208,9 +207,6 @@ class FieldMeta {
     bool
     enable_analyzer() const;
 
-    bool
-    enable_growing_jsonStats() const;
-
     TokenizerParams
     get_analyzer_params() const;
 
@@ -276,7 +272,7 @@ class FieldMeta {
         return default_value_.has_value();
     }
 
-    std::optional<DefaultValueType>
+    const std::optional<DefaultValueType>&
     default_value() const {
         return default_value_;
     }

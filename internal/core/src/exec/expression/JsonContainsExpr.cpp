@@ -129,9 +129,8 @@ PhyJsonContainsFilterExpr::Eval(EvalCtx& context, VectorPtr& result) {
     WaitPrefetch();
     tracer::AutoSpan span(
         "PhyJsonContainsFilterExpr::Eval", tracer::GetRootSpan(), true);
-    span.GetSpan()->SetAttribute("data_type",
-                                 static_cast<int>(expr_->column_.data_type_));
-    span.GetSpan()->SetAttribute("json_filter_expr_type", "json_contains");
+    span.SetAttribute("data_type", static_cast<int>(expr_->column_.data_type_));
+    span.SetAttribute("json_filter_expr_type", "json_contains");
 
     auto input = context.get_offset_input();
     SetHasOffsetInput((input != nullptr));
@@ -385,7 +384,7 @@ PhyJsonContainsFilterExpr::ExecArrayContains(EvalCtx& context) {
         [&processed_cursor, &
          bitmap_input ]<FilterType filter_type = FilterType::sequential>(
             const milvus::ArrayView* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -413,7 +412,7 @@ PhyJsonContainsFilterExpr::ExecArrayContains(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -491,7 +490,7 @@ PhyJsonContainsFilterExpr::ExecJsonContains(EvalCtx& context) {
         [&processed_cursor, &
          bitmap_input ]<FilterType filter_type = FilterType::sequential>(
             const milvus::Json* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -538,7 +537,7 @@ PhyJsonContainsFilterExpr::ExecJsonContains(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -591,7 +590,6 @@ PhyJsonContainsFilterExpr::ExecJsonContainsByStats() {
     if (real_batch_size == 0) {
         return nullptr;
     }
-    std::unordered_set<GetType> elements;
     auto pointer = milvus::Json::pointer(expr_->column_.nested_path_);
     if (!arg_inited_) {
         arg_set_ = std::make_shared<SetElement<GetType>>(expr_->vals_);
@@ -746,7 +744,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsArray(EvalCtx& context) {
         [&processed_cursor, &
          bitmap_input ]<FilterType filter_type = FilterType::sequential>(
             const milvus::Json* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -791,7 +789,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsArray(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -983,7 +981,7 @@ PhyJsonContainsFilterExpr::ExecArrayContainsAll(EvalCtx& context) {
         [&processed_cursor, &bitmap_input, &matcher, &
          found_large ]<FilterType filter_type = FilterType::sequential>(
             const milvus::ArrayView* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -1029,7 +1027,7 @@ PhyJsonContainsFilterExpr::ExecArrayContainsAll(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -1115,7 +1113,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsAll(EvalCtx& context) {
         [&processed_cursor, &bitmap_input, &matcher, &
          found_large ]<FilterType filter_type = FilterType::sequential>(
             const milvus::Json* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -1195,7 +1193,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsAll(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -1439,7 +1437,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsAllWithDiffType(EvalCtx& context) {
         [&processed_cursor, &
          bitmap_input ]<FilterType filter_type = FilterType::sequential>(
             const milvus::Json* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -1542,7 +1540,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsAllWithDiffType(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -1797,7 +1795,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsAllArray(EvalCtx& context) {
         [&processed_cursor, &
          bitmap_input ]<FilterType filter_type = FilterType::sequential>(
             const milvus::Json* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -1847,7 +1845,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsAllArray(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -2040,7 +2038,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsWithDiffType(EvalCtx& context) {
         [&processed_cursor, &
          bitmap_input ]<FilterType filter_type = FilterType::sequential>(
             const milvus::Json* data,
-            const bool* valid_data,
+            ValidityView valid_data,
             const int32_t* offsets,
             const int size,
             TargetBitmapView res,
@@ -2134,7 +2132,7 @@ PhyJsonContainsFilterExpr::ExecJsonContainsWithDiffType(EvalCtx& context) {
             if constexpr (filter_type == FilterType::random) {
                 offset = (offsets) ? offsets[i] : i;
             }
-            if (valid_data != nullptr && !valid_data[offset]) {
+            if (valid_data && !valid_data[offset]) {
                 res[i] = valid_res[i] = false;
                 continue;
             }
@@ -2383,19 +2381,20 @@ PhyJsonContainsFilterExpr::ExecArrayContainsForIndexSegmentImpl() {
         return nullptr;
     }
 
-    std::unordered_set<GetType> elements;
-    for (auto const& element : expr_->vals_) {
-        elements.insert(GetValueWithCastNumber<GetType>(element));
-    }
-    boost::container::vector<GetType> elems(elements.begin(), elements.end());
-
     // Get array offsets for nested index (needed for element-to-row conversion)
     auto array_offsets = segment_->GetArrayOffsets(expr_->column_.field_id_);
 
+    // Convert terms only on an index-result cache miss. Later batches and
+    // ExprResCache hits reuse the bitmap without rebuilding the term list.
     auto execute_sub_batch =
-        [this, &array_offsets](
-            Index* index_ptr,
-            const boost::container::vector<GetType>& vals) -> TargetBitmap {
+        [this, &array_offsets](Index* index_ptr) -> TargetBitmap {
+        std::unordered_set<GetType> elements;
+        for (auto const& element : expr_->vals_) {
+            elements.insert(GetValueWithCastNumber<GetType>(element));
+        }
+        boost::container::vector<GetType> vals(elements.begin(),
+                                               elements.end());
+
         // Query helper: for nested index, convert element-level to row-level
         auto query_in = [&](size_t n, const GetType* data) -> TargetBitmap {
             auto element_bitset = index_ptr->In(n, data);
@@ -2443,8 +2442,8 @@ PhyJsonContainsFilterExpr::ExecArrayContainsForIndexSegmentImpl() {
     auto validity_mode = field_type_ == DataType::JSON
                              ? IndexValidityMode::JsonExactPath
                              : IndexValidityMode::Default;
-    auto res = ProcessIndexChunksWithRowLevel<GetType>(
-        execute_sub_batch, validity_mode, elems);
+    auto res = ProcessIndexChunksWithRowLevel<GetType>(execute_sub_batch,
+                                                       validity_mode);
     AssertInfo(res->size() == real_batch_size,
                "internal error: expr processed rows {} not equal "
                "expect batch size {}",

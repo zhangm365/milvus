@@ -536,6 +536,38 @@ func (s *Server) ListPolicy(ctx context.Context, request *internalpb.ListPolicyR
 	return s.mixCoord.ListPolicy(ctx, request)
 }
 
+func (s *Server) CreateRowPolicy(ctx context.Context, request *milvuspb.CreateRowPolicyRequest) (*commonpb.Status, error) {
+	return s.mixCoord.CreateRowPolicy(ctx, request)
+}
+
+func (s *Server) UpdateRowPolicy(ctx context.Context, request *milvuspb.UpdateRowPolicyRequest) (*commonpb.Status, error) {
+	return s.mixCoord.UpdateRowPolicy(ctx, request)
+}
+
+func (s *Server) DropRowPolicy(ctx context.Context, request *milvuspb.DropRowPolicyRequest) (*commonpb.Status, error) {
+	return s.mixCoord.DropRowPolicy(ctx, request)
+}
+
+func (s *Server) ListRowPolicies(ctx context.Context, request *milvuspb.ListRowPoliciesRequest) (*milvuspb.ListRowPoliciesResponse, error) {
+	return s.mixCoord.ListRowPolicies(ctx, request)
+}
+
+func (s *Server) SetRLSPrincipalTags(ctx context.Context, request *milvuspb.SetRLSPrincipalTagsRequest) (*commonpb.Status, error) {
+	return s.mixCoord.SetRLSPrincipalTags(ctx, request)
+}
+
+func (s *Server) GetRLSPrincipalTags(ctx context.Context, request *milvuspb.GetRLSPrincipalTagsRequest) (*milvuspb.GetRLSPrincipalTagsResponse, error) {
+	return s.mixCoord.GetRLSPrincipalTags(ctx, request)
+}
+
+func (s *Server) ListRLSPrincipals(ctx context.Context, request *milvuspb.ListRLSPrincipalsRequest) (*milvuspb.ListRLSPrincipalsResponse, error) {
+	return s.mixCoord.ListRLSPrincipals(ctx, request)
+}
+
+func (s *Server) DeleteRLSPrincipalTags(ctx context.Context, request *milvuspb.DeleteRLSPrincipalTagsRequest) (*commonpb.Status, error) {
+	return s.mixCoord.DeleteRLSPrincipalTags(ctx, request)
+}
+
 func (s *Server) AlterCollection(ctx context.Context, request *milvuspb.AlterCollectionRequest) (*commonpb.Status, error) {
 	return s.mixCoord.AlterCollection(ctx, request)
 }
@@ -1005,6 +1037,10 @@ func (s *Server) ListFileResources(ctx context.Context, req *milvuspb.ListFileRe
 	return s.mixCoord.ListFileResources(ctx, req)
 }
 
+func (s *Server) GetRLSMetadata(ctx context.Context, req *rootcoordpb.GetRLSMetadataRequest) (*rootcoordpb.GetRLSMetadataResponse, error) {
+	return s.mixCoord.GetRLSMetadata(ctx, req)
+}
+
 // TruncateCollection truncate a collection
 func (s *Server) TruncateCollection(ctx context.Context, in *milvuspb.TruncateCollectionRequest) (*milvuspb.TruncateCollectionResponse, error) {
 	return s.mixCoord.TruncateCollection(ctx, in)
@@ -1034,6 +1070,10 @@ func (s *Server) RestoreSnapshot(ctx context.Context, req *datapb.RestoreSnapsho
 
 func (s *Server) ExportSnapshot(ctx context.Context, req *datapb.ExportSnapshotRequest) (*datapb.ExportSnapshotResponse, error) {
 	return s.mixCoord.ExportSnapshot(ctx, req)
+}
+
+func (s *Server) GetExportSnapshotState(ctx context.Context, req *datapb.GetExportSnapshotStateRequest) (*datapb.GetExportSnapshotStateResponse, error) {
+	return s.mixCoord.GetExportSnapshotState(ctx, req)
 }
 
 func (s *Server) GetRestoreSnapshotState(ctx context.Context, req *datapb.GetRestoreSnapshotStateRequest) (*datapb.GetRestoreSnapshotStateResponse, error) {

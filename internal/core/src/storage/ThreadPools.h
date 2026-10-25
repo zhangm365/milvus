@@ -17,6 +17,8 @@
 #ifndef MILVUS_THREADPOOLS_H
 #define MILVUS_THREADPOOLS_H
 
+#include <atomic>
+
 #include "common/Common.h"
 #include "ThreadPool.h"
 namespace milvus {
@@ -27,6 +29,8 @@ enum ThreadPoolPriority {
     HIGH = 0,
     MIDDLE = 1,
     LOW = 2,
+    // Isolate search fanout from MIDDLE's field/index loading queue.
+    SEARCH_FANOUT = 3,
 };
 
 inline ThreadPoolPriority
@@ -49,14 +53,20 @@ class ThreadPools {
     static ThreadPool&
     GetThreadPool(ThreadPoolPriority priority);
 
+    // MIDDLE and SEARCH_FANOUT share sizing, including before first use.
     static void
     ResizeThreadPool(ThreadPoolPriority priority, float ratio);
+
+    static int64_t
+    GetLoadExecutorWorkers();
 
     ~ThreadPools() {
         ShutDown();
     }
 
  private:
+    friend struct ThreadPoolsTestAccess;
+
     ThreadPools() {
     }
     void
@@ -67,13 +77,16 @@ class ThreadPools {
         static std::map<ThreadPoolPriority, std::string> name_map = {
             {HIGH, "HIGH_SEGC_POOL"},
             {MIDDLE, "MIDD_SEGC_POOL"},
-            {LOW, "LOW_SEGC_POOL"}};
+            {LOW, "LOW_SEGC_POOL"},
+            {SEARCH_FANOUT, "SRCH_FAN_POOL"}};
         return name_map;
     }
 
     static std::map<ThreadPoolPriority, std::unique_ptr<ThreadPool>>
         thread_pool_map;
     static std::shared_mutex mutex_;
+    static std::mutex resize_mutex_;
+    static std::atomic<int64_t> load_executor_workers_;
 };
 
 }  // namespace milvus
@@ -92,6 +105,9 @@ struct fmt::formatter<milvus::ThreadPoolPriority> : formatter<std::string> {
                 break;
             case milvus::LOW:
                 name = "LOW";
+                break;
+            case milvus::SEARCH_FANOUT:
+                name = "SEARCH_FANOUT";
                 break;
             default:
                 name = "UNKNOWN";

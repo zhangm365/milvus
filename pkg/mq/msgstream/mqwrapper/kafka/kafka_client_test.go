@@ -47,6 +47,20 @@ func getKafkaBrokerList() string {
 	return brokerList
 }
 
+func TestConfigKeysStringOmitsValues(t *testing.T) {
+	config := kafka.ConfigMap{
+		"ssl.key.pem":      "inline-private-key",
+		"sasl.jaas.config": "username=user password=broker-secret",
+	}
+
+	got := ConfigKeysString(config)
+	assert.Contains(t, got, "ssl.key.pem")
+	assert.Contains(t, got, "sasl.jaas.config")
+	assert.NotContains(t, got, "inline-private-key")
+	assert.NotContains(t, got, "broker-secret")
+	assert.Equal(t, got, ConfigtoString(config), "deprecated wrapper must preserve compatibility")
+}
+
 func IntToBytes(n int) []byte {
 	tmp := int32(n)
 	bytesBuffer := bytes.NewBuffer([]byte{})
@@ -373,6 +387,18 @@ func createKafkaClient(t *testing.T) *kafkaClient {
 	kc := NewKafkaClientInstance(kafkaAddress)
 	assert.NotNil(t, kc)
 	return kc
+}
+
+func TestNewProducerConfigUsesConfiguredMessageMaxBytes(t *testing.T) {
+	config := &paramtable.Get().KafkaCfg
+	oldValue := config.ProducerMessageMaxBytes.SwapTempValue("4096")
+	defer config.ProducerMessageMaxBytes.SwapTempValue(oldValue)
+
+	kc := NewKafkaClientInstance(getKafkaBrokerList())
+	producerConfig := kc.newProducerConfig()
+	value, err := producerConfig.Get("message.max.bytes", nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 4096, value)
 }
 
 func createConsumer(t *testing.T,

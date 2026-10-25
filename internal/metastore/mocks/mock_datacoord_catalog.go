@@ -10,7 +10,6 @@ import (
 	model "github.com/milvus-io/milvus/internal/metastore/model"
 	datapb "github.com/milvus-io/milvus/pkg/v3/proto/datapb"
 	indexpb "github.com/milvus-io/milvus/pkg/v3/proto/indexpb"
-	internalpb "github.com/milvus-io/milvus/pkg/v3/proto/internalpb"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -702,6 +701,53 @@ func (_c *DataCoordCatalog_DropCurrentPartitionStatsVersion_Call) RunAndReturn(r
 	return _c
 }
 
+// DropExportSnapshotJob provides a mock function with given fields: ctx, jobID
+func (_m *DataCoordCatalog) DropExportSnapshotJob(ctx context.Context, jobID int64) error {
+	ret := _m.Called(ctx, jobID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DropExportSnapshotJob")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, jobID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DataCoordCatalog_DropExportSnapshotJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DropExportSnapshotJob'
+type DataCoordCatalog_DropExportSnapshotJob_Call struct {
+	*mock.Call
+}
+
+// DropExportSnapshotJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - jobID int64
+func (_e *DataCoordCatalog_Expecter) DropExportSnapshotJob(ctx interface{}, jobID interface{}) *DataCoordCatalog_DropExportSnapshotJob_Call {
+	return &DataCoordCatalog_DropExportSnapshotJob_Call{Call: _e.mock.On("DropExportSnapshotJob", ctx, jobID)}
+}
+
+func (_c *DataCoordCatalog_DropExportSnapshotJob_Call) Run(run func(ctx context.Context, jobID int64)) *DataCoordCatalog_DropExportSnapshotJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *DataCoordCatalog_DropExportSnapshotJob_Call) Return(_a0 error) *DataCoordCatalog_DropExportSnapshotJob_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *DataCoordCatalog_DropExportSnapshotJob_Call) RunAndReturn(run func(context.Context, int64) error) *DataCoordCatalog_DropExportSnapshotJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DropExternalCollectionRefreshJob provides a mock function with given fields: ctx, jobID
 func (_m *DataCoordCatalog) DropExternalCollectionRefreshJob(ctx context.Context, jobID int64) error {
 	ret := _m.Called(ctx, jobID)
@@ -1075,6 +1121,53 @@ func (_c *DataCoordCatalog_DropSegment_Call) Return(_a0 error) *DataCoordCatalog
 }
 
 func (_c *DataCoordCatalog_DropSegment_Call) RunAndReturn(run func(context.Context, *datapb.SegmentInfo) error) *DataCoordCatalog_DropSegment_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DropSegmentChangeGroups provides a mock function with given fields: ctx, collectionID
+func (_m *DataCoordCatalog) DropSegmentChangeGroups(ctx context.Context, collectionID int64) error {
+	ret := _m.Called(ctx, collectionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DropSegmentChangeGroups")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, collectionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DataCoordCatalog_DropSegmentChangeGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DropSegmentChangeGroups'
+type DataCoordCatalog_DropSegmentChangeGroups_Call struct {
+	*mock.Call
+}
+
+// DropSegmentChangeGroups is a helper method to define mock.On call
+//   - ctx context.Context
+//   - collectionID int64
+func (_e *DataCoordCatalog_Expecter) DropSegmentChangeGroups(ctx interface{}, collectionID interface{}) *DataCoordCatalog_DropSegmentChangeGroups_Call {
+	return &DataCoordCatalog_DropSegmentChangeGroups_Call{Call: _e.mock.On("DropSegmentChangeGroups", ctx, collectionID)}
+}
+
+func (_c *DataCoordCatalog_DropSegmentChangeGroups_Call) Run(run func(ctx context.Context, collectionID int64)) *DataCoordCatalog_DropSegmentChangeGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *DataCoordCatalog_DropSegmentChangeGroups_Call) Return(_a0 error) *DataCoordCatalog_DropSegmentChangeGroups_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *DataCoordCatalog_DropSegmentChangeGroups_Call) RunAndReturn(run func(context.Context, int64) error) *DataCoordCatalog_DropSegmentChangeGroups_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1621,6 +1714,64 @@ func (_c *DataCoordCatalog_ListCopySegmentTasks_Call) RunAndReturn(run func(cont
 	return _c
 }
 
+// ListExportSnapshotJobs provides a mock function with given fields: ctx
+func (_m *DataCoordCatalog) ListExportSnapshotJobs(ctx context.Context) ([]*datapb.ExportSnapshotJob, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListExportSnapshotJobs")
+	}
+
+	var r0 []*datapb.ExportSnapshotJob
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*datapb.ExportSnapshotJob, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*datapb.ExportSnapshotJob); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*datapb.ExportSnapshotJob)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DataCoordCatalog_ListExportSnapshotJobs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListExportSnapshotJobs'
+type DataCoordCatalog_ListExportSnapshotJobs_Call struct {
+	*mock.Call
+}
+
+// ListExportSnapshotJobs is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DataCoordCatalog_Expecter) ListExportSnapshotJobs(ctx interface{}) *DataCoordCatalog_ListExportSnapshotJobs_Call {
+	return &DataCoordCatalog_ListExportSnapshotJobs_Call{Call: _e.mock.On("ListExportSnapshotJobs", ctx)}
+}
+
+func (_c *DataCoordCatalog_ListExportSnapshotJobs_Call) Run(run func(ctx context.Context)) *DataCoordCatalog_ListExportSnapshotJobs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *DataCoordCatalog_ListExportSnapshotJobs_Call) Return(_a0 []*datapb.ExportSnapshotJob, _a1 error) *DataCoordCatalog_ListExportSnapshotJobs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *DataCoordCatalog_ListExportSnapshotJobs_Call) RunAndReturn(run func(context.Context) ([]*datapb.ExportSnapshotJob, error)) *DataCoordCatalog_ListExportSnapshotJobs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListExternalCollectionRefreshJobs provides a mock function with given fields: ctx
 func (_m *DataCoordCatalog) ListExternalCollectionRefreshJobs(ctx context.Context) ([]*datapb.ExternalCollectionRefreshJob, error) {
 	ret := _m.Called(ctx)
@@ -1733,71 +1884,6 @@ func (_c *DataCoordCatalog_ListExternalCollectionRefreshTasks_Call) Return(_a0 [
 }
 
 func (_c *DataCoordCatalog_ListExternalCollectionRefreshTasks_Call) RunAndReturn(run func(context.Context) ([]*datapb.ExternalCollectionRefreshTask, error)) *DataCoordCatalog_ListExternalCollectionRefreshTasks_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListFileResource provides a mock function with given fields: ctx
-func (_m *DataCoordCatalog) ListFileResource(ctx context.Context) ([]*internalpb.FileResourceInfo, uint64, error) {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListFileResource")
-	}
-
-	var r0 []*internalpb.FileResourceInfo
-	var r1 uint64
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]*internalpb.FileResourceInfo, uint64, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) []*internalpb.FileResourceInfo); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*internalpb.FileResourceInfo)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) uint64); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Get(1).(uint64)
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
-		r2 = rf(ctx)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// DataCoordCatalog_ListFileResource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListFileResource'
-type DataCoordCatalog_ListFileResource_Call struct {
-	*mock.Call
-}
-
-// ListFileResource is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *DataCoordCatalog_Expecter) ListFileResource(ctx interface{}) *DataCoordCatalog_ListFileResource_Call {
-	return &DataCoordCatalog_ListFileResource_Call{Call: _e.mock.On("ListFileResource", ctx)}
-}
-
-func (_c *DataCoordCatalog_ListFileResource_Call) Run(run func(ctx context.Context)) *DataCoordCatalog_ListFileResource_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
-	})
-	return _c
-}
-
-func (_c *DataCoordCatalog_ListFileResource_Call) Return(_a0 []*internalpb.FileResourceInfo, _a1 uint64, _a2 error) *DataCoordCatalog_ListFileResource_Call {
-	_c.Call.Return(_a0, _a1, _a2)
-	return _c
-}
-
-func (_c *DataCoordCatalog_ListFileResource_Call) RunAndReturn(run func(context.Context) ([]*internalpb.FileResourceInfo, uint64, error)) *DataCoordCatalog_ListFileResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2088,6 +2174,64 @@ func (_c *DataCoordCatalog_ListPreImportTasks_Call) Return(_a0 []*datapb.PreImpo
 }
 
 func (_c *DataCoordCatalog_ListPreImportTasks_Call) RunAndReturn(run func(context.Context) ([]*datapb.PreImportTask, error)) *DataCoordCatalog_ListPreImportTasks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListSegmentChangeGroups provides a mock function with given fields: ctx
+func (_m *DataCoordCatalog) ListSegmentChangeGroups(ctx context.Context) ([]*model.SegmentChangeGroup, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSegmentChangeGroups")
+	}
+
+	var r0 []*model.SegmentChangeGroup
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*model.SegmentChangeGroup, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*model.SegmentChangeGroup); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.SegmentChangeGroup)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DataCoordCatalog_ListSegmentChangeGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSegmentChangeGroups'
+type DataCoordCatalog_ListSegmentChangeGroups_Call struct {
+	*mock.Call
+}
+
+// ListSegmentChangeGroups is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DataCoordCatalog_Expecter) ListSegmentChangeGroups(ctx interface{}) *DataCoordCatalog_ListSegmentChangeGroups_Call {
+	return &DataCoordCatalog_ListSegmentChangeGroups_Call{Call: _e.mock.On("ListSegmentChangeGroups", ctx)}
+}
+
+func (_c *DataCoordCatalog_ListSegmentChangeGroups_Call) Run(run func(ctx context.Context)) *DataCoordCatalog_ListSegmentChangeGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *DataCoordCatalog_ListSegmentChangeGroups_Call) Return(_a0 []*model.SegmentChangeGroup, _a1 error) *DataCoordCatalog_ListSegmentChangeGroups_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *DataCoordCatalog_ListSegmentChangeGroups_Call) RunAndReturn(run func(context.Context) ([]*model.SegmentChangeGroup, error)) *DataCoordCatalog_ListSegmentChangeGroups_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2416,54 +2560,6 @@ func (_c *DataCoordCatalog_MarkChannelDeleted_Call) Return(_a0 error) *DataCoord
 }
 
 func (_c *DataCoordCatalog_MarkChannelDeleted_Call) RunAndReturn(run func(context.Context, string) error) *DataCoordCatalog_MarkChannelDeleted_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RemoveFileResource provides a mock function with given fields: ctx, resourceID, version
-func (_m *DataCoordCatalog) RemoveFileResource(ctx context.Context, resourceID int64, version uint64) error {
-	ret := _m.Called(ctx, resourceID, version)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RemoveFileResource")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, uint64) error); ok {
-		r0 = rf(ctx, resourceID, version)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// DataCoordCatalog_RemoveFileResource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveFileResource'
-type DataCoordCatalog_RemoveFileResource_Call struct {
-	*mock.Call
-}
-
-// RemoveFileResource is a helper method to define mock.On call
-//   - ctx context.Context
-//   - resourceID int64
-//   - version uint64
-func (_e *DataCoordCatalog_Expecter) RemoveFileResource(ctx interface{}, resourceID interface{}, version interface{}) *DataCoordCatalog_RemoveFileResource_Call {
-	return &DataCoordCatalog_RemoveFileResource_Call{Call: _e.mock.On("RemoveFileResource", ctx, resourceID, version)}
-}
-
-func (_c *DataCoordCatalog_RemoveFileResource_Call) Run(run func(ctx context.Context, resourceID int64, version uint64)) *DataCoordCatalog_RemoveFileResource_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(uint64))
-	})
-	return _c
-}
-
-func (_c *DataCoordCatalog_RemoveFileResource_Call) Return(_a0 error) *DataCoordCatalog_RemoveFileResource_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *DataCoordCatalog_RemoveFileResource_Call) RunAndReturn(run func(context.Context, int64, uint64) error) *DataCoordCatalog_RemoveFileResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2895,6 +2991,53 @@ func (_c *DataCoordCatalog_SaveDroppedSegmentsInBatch_Call) RunAndReturn(run fun
 	return _c
 }
 
+// SaveExportSnapshotJob provides a mock function with given fields: ctx, job
+func (_m *DataCoordCatalog) SaveExportSnapshotJob(ctx context.Context, job *datapb.ExportSnapshotJob) error {
+	ret := _m.Called(ctx, job)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveExportSnapshotJob")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *datapb.ExportSnapshotJob) error); ok {
+		r0 = rf(ctx, job)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DataCoordCatalog_SaveExportSnapshotJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveExportSnapshotJob'
+type DataCoordCatalog_SaveExportSnapshotJob_Call struct {
+	*mock.Call
+}
+
+// SaveExportSnapshotJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - job *datapb.ExportSnapshotJob
+func (_e *DataCoordCatalog_Expecter) SaveExportSnapshotJob(ctx interface{}, job interface{}) *DataCoordCatalog_SaveExportSnapshotJob_Call {
+	return &DataCoordCatalog_SaveExportSnapshotJob_Call{Call: _e.mock.On("SaveExportSnapshotJob", ctx, job)}
+}
+
+func (_c *DataCoordCatalog_SaveExportSnapshotJob_Call) Run(run func(ctx context.Context, job *datapb.ExportSnapshotJob)) *DataCoordCatalog_SaveExportSnapshotJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*datapb.ExportSnapshotJob))
+	})
+	return _c
+}
+
+func (_c *DataCoordCatalog_SaveExportSnapshotJob_Call) Return(_a0 error) *DataCoordCatalog_SaveExportSnapshotJob_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *DataCoordCatalog_SaveExportSnapshotJob_Call) RunAndReturn(run func(context.Context, *datapb.ExportSnapshotJob) error) *DataCoordCatalog_SaveExportSnapshotJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveExternalCollectionRefreshJob provides a mock function with given fields: ctx, job
 func (_m *DataCoordCatalog) SaveExternalCollectionRefreshJob(ctx context.Context, job *datapb.ExternalCollectionRefreshJob) error {
 	ret := _m.Called(ctx, job)
@@ -2985,54 +3128,6 @@ func (_c *DataCoordCatalog_SaveExternalCollectionRefreshTask_Call) Return(_a0 er
 }
 
 func (_c *DataCoordCatalog_SaveExternalCollectionRefreshTask_Call) RunAndReturn(run func(context.Context, *datapb.ExternalCollectionRefreshTask) error) *DataCoordCatalog_SaveExternalCollectionRefreshTask_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveFileResource provides a mock function with given fields: ctx, resource, version
-func (_m *DataCoordCatalog) SaveFileResource(ctx context.Context, resource *internalpb.FileResourceInfo, version uint64) error {
-	ret := _m.Called(ctx, resource, version)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveFileResource")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *internalpb.FileResourceInfo, uint64) error); ok {
-		r0 = rf(ctx, resource, version)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// DataCoordCatalog_SaveFileResource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveFileResource'
-type DataCoordCatalog_SaveFileResource_Call struct {
-	*mock.Call
-}
-
-// SaveFileResource is a helper method to define mock.On call
-//   - ctx context.Context
-//   - resource *internalpb.FileResourceInfo
-//   - version uint64
-func (_e *DataCoordCatalog_Expecter) SaveFileResource(ctx interface{}, resource interface{}, version interface{}) *DataCoordCatalog_SaveFileResource_Call {
-	return &DataCoordCatalog_SaveFileResource_Call{Call: _e.mock.On("SaveFileResource", ctx, resource, version)}
-}
-
-func (_c *DataCoordCatalog_SaveFileResource_Call) Run(run func(ctx context.Context, resource *internalpb.FileResourceInfo, version uint64)) *DataCoordCatalog_SaveFileResource_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*internalpb.FileResourceInfo), args[2].(uint64))
-	})
-	return _c
-}
-
-func (_c *DataCoordCatalog_SaveFileResource_Call) Return(_a0 error) *DataCoordCatalog_SaveFileResource_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *DataCoordCatalog_SaveFileResource_Call) RunAndReturn(run func(context.Context, *internalpb.FileResourceInfo, uint64) error) *DataCoordCatalog_SaveFileResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3362,6 +3457,67 @@ func (_c *DataCoordCatalog_ShouldDropChannel_Call) Return(_a0 bool) *DataCoordCa
 }
 
 func (_c *DataCoordCatalog_ShouldDropChannel_Call) RunAndReturn(run func(context.Context, string) bool) *DataCoordCatalog_ShouldDropChannel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function with given fields: ctx, actions
+func (_m *DataCoordCatalog) Update(ctx context.Context, actions ...metastore.UpdateAction) error {
+	_va := make([]interface{}, len(actions))
+	for _i := range actions {
+		_va[_i] = actions[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, ...metastore.UpdateAction) error); ok {
+		r0 = rf(ctx, actions...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DataCoordCatalog_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type DataCoordCatalog_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - actions ...metastore.UpdateAction
+func (_e *DataCoordCatalog_Expecter) Update(ctx interface{}, actions ...interface{}) *DataCoordCatalog_Update_Call {
+	return &DataCoordCatalog_Update_Call{Call: _e.mock.On("Update",
+		append([]interface{}{ctx}, actions...)...)}
+}
+
+func (_c *DataCoordCatalog_Update_Call) Run(run func(ctx context.Context, actions ...metastore.UpdateAction)) *DataCoordCatalog_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]metastore.UpdateAction, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(metastore.UpdateAction)
+			}
+		}
+		run(args[0].(context.Context), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *DataCoordCatalog_Update_Call) Return(_a0 error) *DataCoordCatalog_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *DataCoordCatalog_Update_Call) RunAndReturn(run func(context.Context, ...metastore.UpdateAction) error) *DataCoordCatalog_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

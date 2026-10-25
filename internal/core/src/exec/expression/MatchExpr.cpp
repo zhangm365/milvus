@@ -247,9 +247,9 @@ PhyMatchFilterExpr::Eval(EvalCtx& context, VectorPtr& result) {
     auto input = context.get_offset_input();
     SetHasOffsetInput(input != nullptr);
 
-    auto schema = segment_->get_schema();
-    auto field_meta =
-        schema.GetFirstArrayFieldInStruct(expr_->get_struct_name());
+    auto schema = segment_->get_schema_snapshot();
+    const auto& field_meta =
+        schema->GetFirstArrayFieldInStruct(expr_->get_struct_name());
 
     auto array_offsets = segment_->GetArrayOffsets(field_meta.get_id());
     AssertInfo(array_offsets != nullptr, "Array offsets not available");
@@ -320,6 +320,10 @@ PhyMatchFilterExpr::Eval(EvalCtx& context, VectorPtr& result) {
                "Match result should be ColumnVector");
     AssertInfo(match_result_col_vec->IsBitmap(),
                "Match result should be bitmap");
+    AssertInfo(match_result_col_vec->size() == elem_count,
+               "Match predicate result size {} should equal element count {}",
+               match_result_col_vec->size(),
+               elem_count);
     TargetBitmapView match_result_bitset_view(
         match_result_col_vec->GetRawData(), match_result_col_vec->size());
     TargetBitmapView match_result_valid_view(
@@ -430,28 +434,29 @@ PhyMatchFilterExpr::ApplyStructRowValidity(ColumnVector* col_vec,
         for (int64_t i = 0; i < batch_rows; ++i) {
             row_offsets[i] = static_cast<int64_t>((*input)[i]);
         }
-        segment_->ApplyFieldValidDataByOffsets(
+        segment_chunk_reader_.ApplyFieldValidDataByOffsets(
             op_ctx_, field_id, row_offsets.data(), batch_rows, valid_view);
     } else {
         int64_t processed = 0;
         int64_t row_offset = current_pos_;
         while (processed < batch_rows) {
             auto [chunk_id, offset_in_chunk] =
-                segment_->get_chunk_by_offset(field_id, row_offset);
-            auto count = std::min(
-                batch_rows - processed,
-                segment_->chunk_size(field_id, chunk_id) - offset_in_chunk);
+                segment_chunk_reader_.GetChunkByOffset(field_id, row_offset);
+            auto count =
+                std::min(batch_rows - processed,
+                         segment_chunk_reader_.ChunkSize(field_id, chunk_id) -
+                             offset_in_chunk);
             AssertInfo(count > 0,
                        "invalid field validity range at row offset {} for "
                        "field {}",
                        row_offset,
                        field_id.get());
-            segment_->ApplyFieldValidData(op_ctx_,
-                                          field_id,
-                                          chunk_id,
-                                          offset_in_chunk,
-                                          count,
-                                          valid_view + processed);
+            segment_chunk_reader_.ApplyFieldValidData(op_ctx_,
+                                                      field_id,
+                                                      chunk_id,
+                                                      offset_in_chunk,
+                                                      count,
+                                                      valid_view + processed);
             processed += count;
             row_offset += count;
         }

@@ -14,11 +14,23 @@ import (
 
 	"github.com/milvus-io/milvus-proto/go-api/v3/commonpb"
 	"github.com/milvus-io/milvus-proto/go-api/v3/schemapb"
+	clientroaring "github.com/milvus-io/milvus/client/v3/membership/roaringfilter"
 	"github.com/milvus-io/milvus/internal/util/function/rerank"
 	"github.com/milvus-io/milvus/pkg/v3/common"
 	"github.com/milvus-io/milvus/pkg/v3/proto/planpb"
 	"github.com/milvus-io/milvus/pkg/v3/util/merr"
 	"github.com/milvus-io/milvus/pkg/v3/util/typeutil"
+)
+
+const generatedFieldIDBase = 100
+
+const (
+	dynamicFieldID      = 1000
+	stringArrayFieldID  = 1001
+	structArrayFieldID  = 1002
+	structSubStrFieldID = 1003
+	structSubIntFieldID = 1004
+	legacyNullFieldID   = 1005
 )
 
 func newTestSchema(EnableDynamicField bool) *schemapb.CollectionSchema {
@@ -29,7 +41,7 @@ func newTestSchema(EnableDynamicField bool) *schemapb.CollectionSchema {
 	for name, value := range schemapb.DataType_value {
 		dataType := schemapb.DataType(value)
 		newField := &schemapb.FieldSchema{
-			FieldID: int64(100 + value), Name: name + "Field", IsPrimaryKey: false, Description: "", DataType: dataType,
+			FieldID: int64(generatedFieldIDBase + value), Name: name + "Field", IsPrimaryKey: false, Description: "", DataType: dataType,
 		}
 		if dataType == schemapb.DataType_Array {
 			newField.ElementType = schemapb.DataType_Int64
@@ -38,26 +50,26 @@ func newTestSchema(EnableDynamicField bool) *schemapb.CollectionSchema {
 	}
 	if EnableDynamicField {
 		fields = append(fields, &schemapb.FieldSchema{
-			FieldID: 130, Name: common.MetaFieldName, IsPrimaryKey: false, Description: "dynamic field", DataType: schemapb.DataType_JSON,
+			FieldID: dynamicFieldID, Name: common.MetaFieldName, IsPrimaryKey: false, Description: "dynamic field", DataType: schemapb.DataType_JSON,
 			IsDynamic: true,
 		})
 	}
 
 	fields = append(fields, &schemapb.FieldSchema{
-		FieldID: 131, Name: "StringArrayField", IsPrimaryKey: false, Description: "string array field",
+		FieldID: stringArrayFieldID, Name: "StringArrayField", IsPrimaryKey: false, Description: "string array field",
 		DataType:    schemapb.DataType_Array,
 		ElementType: schemapb.DataType_VarChar,
 	})
 
 	structArrayField := &schemapb.StructArrayFieldSchema{
-		FieldID: 132, Name: "struct_array", Fields: []*schemapb.FieldSchema{
+		FieldID: structArrayFieldID, Name: "struct_array", Fields: []*schemapb.FieldSchema{
 			{
-				FieldID: 133, Name: "struct_array[sub_str]", IsPrimaryKey: false, Description: "sub struct array field for string",
+				FieldID: structSubStrFieldID, Name: "struct_array[sub_str]", IsPrimaryKey: false, Description: "sub struct array field for string",
 				DataType:    schemapb.DataType_Array,
 				ElementType: schemapb.DataType_VarChar,
 			},
 			{
-				FieldID: 134, Name: "struct_array[sub_int]", IsPrimaryKey: false, Description: "sub struct array field for int",
+				FieldID: structSubIntFieldID, Name: "struct_array[sub_int]", IsPrimaryKey: false, Description: "sub struct array field for int",
 				DataType:    schemapb.DataType_Array,
 				ElementType: schemapb.DataType_Int32,
 			},
@@ -246,7 +258,7 @@ func TestExpr_NullLiteral_LegacyNullField(t *testing.T) {
 	withNullField := func(dataType schemapb.DataType) *typeutil.SchemaHelper {
 		schema := newTestSchema(true)
 		schema.Fields = append(schema.Fields, &schemapb.FieldSchema{
-			FieldID: 199, Name: "null", Description: "legacy field literally named null", DataType: dataType,
+			FieldID: legacyNullFieldID, Name: "null", Description: "legacy field literally named null", DataType: dataType,
 		})
 		helper, err := typeutil.CreateSchemaHelper(schema)
 		require.NoError(t, err)
@@ -1379,6 +1391,12 @@ func TestExpr_IsNull(t *testing.T) {
 		`VarCharField IS NULL`,
 		`ArrayField is null`,
 		`StringArrayField IS NULL`,
+		`FloatVectorField is null`,
+		`BinaryVectorField is null`,
+		`Float16VectorField is null`,
+		`BFloat16VectorField is null`,
+		`SparseFloatVectorField is null`,
+		`Int8VectorField is null`,
 	}
 	for _, exprStr := range exprStrs {
 		assertValidExpr(t, helper, exprStr)
@@ -1386,12 +1404,6 @@ func TestExpr_IsNull(t *testing.T) {
 
 	unsupported := []string{
 		`not_exist is null`,
-		`FloatVectorField is null`,
-		`BinaryVectorField is null`,
-		`Float16VectorField is null`,
-		`BFloat16VectorField is null`,
-		`SparseFloatVectorField is null`,
-		`Int8VectorField is null`,
 		// issue #48904: array element access with IS NULL should be
 		// rejected at parse time rather than raising an internal error
 		// at execution time.
@@ -1415,7 +1427,7 @@ func TestExpr_StructArrayParentIsNull(t *testing.T) {
 	nullExpr := expr.GetNullExpr()
 	require.NotNil(t, nullExpr)
 	assert.Equal(t, planpb.NullExpr_IsNull, nullExpr.GetOp())
-	assert.Equal(t, int64(133), nullExpr.GetColumnInfo().GetFieldId())
+	assert.Equal(t, int64(structSubStrFieldID), nullExpr.GetColumnInfo().GetFieldId())
 	assert.Equal(t, schemapb.DataType_Array, nullExpr.GetColumnInfo().GetDataType())
 	assert.Equal(t, schemapb.DataType_VarChar, nullExpr.GetColumnInfo().GetElementType())
 	assert.True(t, nullExpr.GetColumnInfo().GetNullable())
@@ -1425,7 +1437,7 @@ func TestExpr_StructArrayParentIsNull(t *testing.T) {
 	nullExpr = expr.GetNullExpr()
 	require.NotNil(t, nullExpr)
 	assert.Equal(t, planpb.NullExpr_IsNotNull, nullExpr.GetOp())
-	assert.Equal(t, int64(133), nullExpr.GetColumnInfo().GetFieldId())
+	assert.Equal(t, int64(structSubStrFieldID), nullExpr.GetColumnInfo().GetFieldId())
 	assert.Equal(t, schemapb.DataType_Array, nullExpr.GetColumnInfo().GetDataType())
 	assert.True(t, nullExpr.GetColumnInfo().GetNullable())
 }
@@ -1481,6 +1493,12 @@ func TestExpr_IsNotNull(t *testing.T) {
 		`VarCharField IS NOT NULL`,
 		`ArrayField is not null`,
 		`StringArrayField IS NOT NULL`,
+		`FloatVectorField is not null`,
+		`BinaryVectorField is not null`,
+		`Float16VectorField is not null`,
+		`BFloat16VectorField is not null`,
+		`SparseFloatVectorField is not null`,
+		`Int8VectorField is not null`,
 	}
 	for _, exprStr := range exprStrs {
 		assertValidExpr(t, helper, exprStr)
@@ -1488,12 +1506,6 @@ func TestExpr_IsNotNull(t *testing.T) {
 
 	unsupported := []string{
 		`not_exist is not null`,
-		`FloatVectorField is not null`,
-		`BinaryVectorField is not null`,
-		`Float16VectorField is not null`,
-		`BFloat16VectorField is not null`,
-		`SparseFloatVectorField is not null`,
-		`Int8VectorField is not null`,
 		// issue #48904: array element access with IS NOT NULL should be
 		// rejected at parse time rather than raising an internal error
 		// at execution time.
@@ -2638,7 +2650,7 @@ func Test_JSONContainsStructFieldUsesSubFieldNullable(t *testing.T) {
 			require.NotNil(t, jsonContainsExpr)
 			columnInfo := jsonContainsExpr.GetColumnInfo()
 			require.NotNil(t, columnInfo)
-			assert.Equal(t, int64(134), columnInfo.GetFieldId())
+			assert.Equal(t, int64(structSubIntFieldID), columnInfo.GetFieldId())
 			assert.Equal(t, schemapb.DataType_Array, columnInfo.GetDataType())
 			assert.Equal(t, schemapb.DataType_Int32, columnInfo.GetElementType())
 			assert.Equal(t, testcase.wantNullable, columnInfo.GetNullable())
@@ -2901,6 +2913,14 @@ func Test_ArrayLength(t *testing.T) {
 		}, nil, nil)
 		assert.Error(t, err, expr)
 	}
+
+	t.Run("struct sub-field shorthand is rejected by the 3.0 grammar", func(t *testing.T) {
+		expr := `array_length($[sub_int]) == 1`
+		_, err := ParseExpr(schema, expr, nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "line 1:")
+		require.NotContains(t, err.Error(), "unsupported expression")
+	})
 }
 
 // Test randome sample with all other predicate expressions.
@@ -2998,6 +3018,58 @@ func Test_SegmentScorers(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, plan)
 		assert.Equal(t, 2, len(plan.Scorers))
+	})
+
+	t.Run("ok - membership scorer filters", func(t *testing.T) {
+		roaringBlob, err := clientroaring.Build([]int64{1, 2, 3})
+		require.NoError(t, err)
+		bloomTemplate, _ := bloomBytesTemplate(t, 0.01, 1, 2, 3)
+
+		for _, tc := range []struct {
+			name   string
+			filter string
+			values map[string]*schemapb.TemplateValue
+			kind   string
+		}{
+			{
+				name:   "bloom",
+				filter: "membership_match(Int64Field, {bf}, type=bloom)",
+				values: map[string]*schemapb.TemplateValue{"bf": bloomTemplate},
+				kind:   "bloom",
+			},
+			{
+				name:   "roaring",
+				filter: "membership_match(Int64Field, {rb}, type=roaring)",
+				values: map[string]*schemapb.TemplateValue{
+					"rb": {Val: &schemapb.TemplateValue_BytesVal{BytesVal: roaringBlob}},
+				},
+				kind: "roaring",
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				fs := &schemapb.FunctionScore{
+					Functions: []*schemapb.FunctionSchema{
+						makeBoostRanker(tc.filter, "1.0"),
+					},
+				}
+				plan, err := CreateSearchPlan(
+					schema,
+					"",
+					"FloatVectorField",
+					&planpb.QueryInfo{GroupByFieldId: -1},
+					tc.values,
+					fs,
+				)
+				require.NoError(t, err)
+				require.Len(t, plan.GetScorers(), 1)
+				filter := plan.GetScorers()[0].GetFilter()
+				if tc.kind == "bloom" {
+					assert.NotNil(t, filter.GetBloomFilterExpr())
+				} else {
+					assert.NotNil(t, filter.GetRoaringFilterExpr())
+				}
+			})
+		}
 	})
 
 	t.Run("error - not segment scorer flag", func(t *testing.T) {
@@ -3764,6 +3836,26 @@ func TestExpr_Match(t *testing.T) {
 		`MATCH_ALL(struct_array, MATCH_ANY(struct_array, $[sub_int] > 1))`,
 		`MATCH_ANY(struct_array, $[sub_int] > 1 && MATCH_ALL(struct_array, $[sub_str] == "1"))`,
 
+		// MATCH predicates must be evaluated at element level
+		`MATCH_ALL(struct_array, Int64Field > 0)`,
+		`MATCH_ANY(struct_array, $[sub_int] > 1 && Int64Field > 0)`,
+		`MATCH_LEAST(struct_array, Int64Field > 0, threshold=1)`,
+		`MATCH_MOST(struct_array, Int64Field > 0, threshold=1)`,
+		`MATCH_EXACT(struct_array, Int64Field > 0, threshold=1)`,
+		`MATCH_ALL(struct_array, $[sub_int] > Int64Field)`,
+		`MATCH_ALL(struct_array, true)`,
+		`MATCH_ANY(struct_array, ($[sub_int] == 2) && (true || $[sub_int] == 1))`,
+		`MATCH_ANY(struct_array, $[sub_int] == $[sub_int])`,
+
+		// Raw element columns and function calls are not supported by C++ MATCH execution
+		`MATCH_ANY(struct_array, $[sub_int])`,
+		`MATCH_ANY(struct_array, empty($[sub_str]))`,
+
+		// Contains executors still produce row-level bitmaps
+		`MATCH_ANY(struct_array, array_contains($[sub_int], 1))`,
+		`MATCH_ANY(struct_array, array_contains_any($[sub_int], [1, 2]))`,
+		`MATCH_ANY(struct_array, array_contains_all($[sub_int], [1, 2]))`,
+
 		// $[field] syntax outside match context
 		`$[sub_int] > 1`,
 		`Int64Field > 0 && $[sub_int] > 1`,
@@ -3875,7 +3967,7 @@ func TestExpr_StructIndexField_PlanShape(t *testing.T) {
 
 	columnInfo := ure.GetColumnInfo()
 	require.NotNil(t, columnInfo)
-	assert.Equal(t, int64(134), columnInfo.GetFieldId())
+	assert.Equal(t, int64(structSubIntFieldID), columnInfo.GetFieldId())
 	assert.Equal(t, schemapb.DataType_Array, columnInfo.GetDataType())
 	assert.Equal(t, schemapb.DataType_Int32, columnInfo.GetElementType())
 	assert.Equal(t, []string{"0"}, columnInfo.GetNestedPath())
@@ -3892,7 +3984,7 @@ func TestExpr_StructIndexField_PlanShape(t *testing.T) {
 
 	columnInfo = te.GetColumnInfo()
 	require.NotNil(t, columnInfo)
-	assert.Equal(t, int64(133), columnInfo.GetFieldId())
+	assert.Equal(t, int64(structSubStrFieldID), columnInfo.GetFieldId())
 	assert.Equal(t, schemapb.DataType_Array, columnInfo.GetDataType())
 	assert.Equal(t, schemapb.DataType_VarChar, columnInfo.GetElementType())
 	assert.Equal(t, []string{"1"}, columnInfo.GetNestedPath())
@@ -3913,7 +4005,7 @@ func TestExpr_StructFieldArrayLength(t *testing.T) {
 
 	columnInfo := bae.GetLeft().GetColumnExpr().GetInfo()
 	require.NotNil(t, columnInfo)
-	assert.Equal(t, int64(133), columnInfo.GetFieldId())
+	assert.Equal(t, int64(structSubStrFieldID), columnInfo.GetFieldId())
 	assert.Equal(t, schemapb.DataType_Array, columnInfo.GetDataType())
 	assert.Equal(t, schemapb.DataType_VarChar, columnInfo.GetElementType())
 	assert.Empty(t, columnInfo.GetNestedPath())
@@ -3930,7 +4022,7 @@ func TestExpr_StructFieldArrayLength(t *testing.T) {
 
 	columnInfo = bae.GetLeft().GetColumnExpr().GetInfo()
 	require.NotNil(t, columnInfo)
-	assert.Equal(t, int64(134), columnInfo.GetFieldId())
+	assert.Equal(t, int64(structSubIntFieldID), columnInfo.GetFieldId())
 	assert.Equal(t, schemapb.DataType_Array, columnInfo.GetDataType())
 	assert.Equal(t, schemapb.DataType_Int32, columnInfo.GetElementType())
 	assert.Empty(t, columnInfo.GetNestedPath())
@@ -4064,7 +4156,7 @@ func TestExpr_StructIndexField_RangeForms(t *testing.T) {
 
 		columnInfo := bre.GetColumnInfo()
 		require.NotNil(t, columnInfo, tc.expr)
-		assert.Equal(t, int64(134), columnInfo.GetFieldId(), tc.expr)
+		assert.Equal(t, int64(structSubIntFieldID), columnInfo.GetFieldId(), tc.expr)
 		assert.Equal(t, schemapb.DataType_Array, columnInfo.GetDataType(), tc.expr)
 		assert.Equal(t, schemapb.DataType_Int32, columnInfo.GetElementType(), tc.expr)
 		assert.Equal(t, []string{"0"}, columnInfo.GetNestedPath(), tc.expr)

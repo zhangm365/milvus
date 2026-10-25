@@ -90,8 +90,8 @@ PhyElementFilterBitsNode::GetOutput() {
 
     // Step 1: Get array offsets
     auto segment = query_context_->get_segment();
-    auto& field_meta =
-        segment->get_schema().GetFirstArrayFieldInStruct(struct_name_);
+    auto schema = segment->get_schema_snapshot();
+    auto& field_meta = schema->GetFirstArrayFieldInStruct(struct_name_);
     auto field_id = field_meta.get_id();
     auto array_offsets = segment->GetArrayOffsets(field_id);
     if (array_offsets == nullptr) {
@@ -113,7 +113,7 @@ PhyElementFilterBitsNode::GetOutput() {
         std::vector<VectorPtr> col_res;
         col_res.push_back(std::make_shared<ColumnVector>(
             std::move(bitset), std::move(valid_bitset)));
-        return std::make_shared<RowVector>(col_res);
+        return std::make_shared<RowVector>(std::move(col_res));
     }
 
     // Step 2: Prepare doc bitset
@@ -154,7 +154,7 @@ PhyElementFilterBitsNode::GetOutput() {
     std::vector<VectorPtr> col_res;
     col_res.push_back(std::make_shared<ColumnVector>(
         std::move(expr_result), std::move(valid_expr_result)));
-    return std::make_shared<RowVector>(col_res);
+    return std::make_shared<RowVector>(std::move(col_res));
 }
 
 std::pair<TargetBitmap, TargetBitmap>

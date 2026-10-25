@@ -42,6 +42,7 @@
 #include "common/EasyAssert.h"
 #include "common/FieldData.h"
 #include "common/FieldDataInterface.h"
+#include "common/GeometryCache.h"
 #include "common/IndexMeta.h"
 #include "common/LoadInfo.h"
 #include "common/PrometheusClient.h"
@@ -111,6 +112,23 @@ GetFieldBit(const BitsetType& bitset, FieldId field_id) {
 constexpr int64_t kWarmupPkFieldId = START_USER_FIELDID;
 constexpr int64_t kWarmupVectorFieldId = START_USER_FIELDID + 1;
 
+class LazyColumnGroupConfigGuard {
+ public:
+    explicit LazyColumnGroupConfigGuard(bool enabled)
+        : previous_(
+              SegcoreConfig::default_config().get_lazy_column_group_enabled()) {
+        SegcoreConfig::default_config().set_lazy_column_group_enabled(enabled);
+    }
+
+    ~LazyColumnGroupConfigGuard() {
+        SegcoreConfig::default_config().set_lazy_column_group_enabled(
+            previous_);
+    }
+
+ private:
+    bool previous_;
+};
+
 void
 AddWarmupProperty(milvus::proto::schema::CollectionSchema& schema_proto,
                   const std::string& key,
@@ -158,6 +176,12 @@ MakeWarmupTestColumnGroups() {
 
 class WarmupTestChunkReader : public milvus_storage::api::ChunkReader {
  public:
+    WarmupTestChunkReader(size_t column_count,
+                          std::shared_ptr<std::atomic<int>> estimate_calls)
+        : column_count_(column_count),
+          estimate_calls_(std::move(estimate_calls)) {
+    }
+
     size_t
     total_number_of_chunks() const override {
         return 1;
@@ -185,20 +209,35 @@ class WarmupTestChunkReader : public milvus_storage::api::ChunkReader {
 
     arrow::Result<std::vector<std::vector<uint64_t>>>
     get_chunk_column_estimated_size() override {
-        return std::vector<std::vector<uint64_t>>{{1}};
+        estimate_calls_->fetch_add(1, std::memory_order_relaxed);
+        std::vector<std::vector<uint64_t>> sizes;
+        for (size_t i = 0; i < column_count_; ++i) {
+            sizes.push_back({i + 1});
+        }
+        return sizes;
     }
 
     arrow::Result<std::vector<uint64_t>>
     get_chunk_rows() override {
         return std::vector<uint64_t>{1};
     }
+
+ private:
+    size_t column_count_;
+    std::shared_ptr<std::atomic<int>> estimate_calls_;
 };
 
 class WarmupTestReader : public milvus_storage::api::Reader {
  public:
     explicit WarmupTestReader(
-        std::shared_ptr<milvus_storage::api::ColumnGroups> column_groups)
-        : column_groups_(std::move(column_groups)) {
+        std::shared_ptr<milvus_storage::api::ColumnGroups> column_groups,
+        std::shared_ptr<std::atomic<int>> chunk_reader_calls =
+            std::make_shared<std::atomic<int>>(0),
+        std::shared_ptr<std::atomic<int>> estimate_calls =
+            std::make_shared<std::atomic<int>>(0))
+        : column_groups_(std::move(column_groups)),
+          chunk_reader_calls_(std::move(chunk_reader_calls)),
+          estimate_calls_(std::move(estimate_calls)) {
     }
 
     std::shared_ptr<milvus_storage::api::ColumnGroups>
@@ -212,9 +251,12 @@ class WarmupTestReader : public milvus_storage::api::Reader {
     }
 
     arrow::Result<std::unique_ptr<milvus_storage::api::ChunkReader>>
-    get_chunk_reader(int64_t, const std::shared_ptr<std::vector<std::string>>&)
-        const override {
-        return std::make_unique<WarmupTestChunkReader>();
+    get_chunk_reader(
+        int64_t index,
+        const std::shared_ptr<std::vector<std::string>>&) const override {
+        chunk_reader_calls_->fetch_add(1, std::memory_order_relaxed);
+        return std::make_unique<WarmupTestChunkReader>(
+            column_groups_->at(index)->columns.size(), estimate_calls_);
     }
 
     arrow::Result<std::shared_ptr<arrow::Table>>
@@ -231,6 +273,8 @@ class WarmupTestReader : public milvus_storage::api::Reader {
 
  private:
     std::shared_ptr<milvus_storage::api::ColumnGroups> column_groups_;
+    std::shared_ptr<std::atomic<int>> chunk_reader_calls_;
+    std::shared_ptr<std::atomic<int>> estimate_calls_;
 };
 
 class CancellationObservingIndexTranslator
@@ -1005,51 +1049,42 @@ TEST(Sealed, LoadFieldData) {
     auto valid7 = dataset.get_col_valid(int64_nullable_id);
     auto valid8 = dataset.get_col_valid(double_nullable_id);
     auto valid9 = dataset.get_col_valid(str_nullable_id);
-    ASSERT_EQ(chunk_span1.get().valid_data(), nullptr);
-    ASSERT_EQ(chunk_span2.get().valid_data(), nullptr);
-    ASSERT_EQ(chunk_span3.get().second.size(), 0);
+    ASSERT_FALSE(chunk_span1.get().validity());
+    ASSERT_FALSE(chunk_span2.get().validity());
+    ASSERT_FALSE(chunk_span3.get().second);
     for (int i = 0; i < N; ++i) {
-        if (chunk_span1.get().valid_data() == nullptr ||
-            chunk_span1.get().valid_data()[i]) {
+        if (chunk_span1.get().is_valid(i)) {
             ASSERT_EQ(chunk_span1.get().data()[i], ref1[i]);
         }
-        if (chunk_span2.get().valid_data() == nullptr ||
-            chunk_span2.get().valid_data()[i]) {
+        if (chunk_span2.get().is_valid(i)) {
             ASSERT_EQ(chunk_span2.get().data()[i], ref2[i]);
         }
-        if (chunk_span3.get().second.size() == 0 ||
-            chunk_span3.get().second[i]) {
+        if (!chunk_span3.get().second || chunk_span3.get().second[i]) {
             ASSERT_EQ(chunk_span3.get().first[i], ref3[i]);
         }
-        if (chunk_span4.get().valid_data() == nullptr ||
-            chunk_span4.get().valid_data()[i]) {
+        if (chunk_span4.get().is_valid(i)) {
             ASSERT_EQ(chunk_span4.get().data()[i], ref4[i]);
         }
-        if (chunk_span5.get().valid_data() == nullptr ||
-            chunk_span5.get().valid_data()[i]) {
+        if (chunk_span5.get().is_valid(i)) {
             ASSERT_EQ(chunk_span5.get().data()[i], ref5[i]);
         }
-        if (chunk_span6.get().valid_data() == nullptr ||
-            chunk_span6.get().valid_data()[i]) {
+        if (chunk_span6.get().is_valid(i)) {
             ASSERT_EQ(chunk_span6.get().data()[i], ref6[i]);
         }
-        if (chunk_span7.get().valid_data() == nullptr ||
-            chunk_span7.get().valid_data()[i]) {
+        if (chunk_span7.get().is_valid(i)) {
             ASSERT_EQ(chunk_span7.get().data()[i], ref7[i]);
         }
-        if (chunk_span8.get().valid_data() == nullptr ||
-            chunk_span8.get().valid_data()[i]) {
+        if (chunk_span8.get().is_valid(i)) {
             ASSERT_EQ(chunk_span8.get().data()[i], ref8[i]);
         }
-        if (chunk_span9.get().second.size() == 0 ||
-            chunk_span9.get().second[i]) {
+        if (!chunk_span9.get().second || chunk_span9.get().second[i]) {
             ASSERT_EQ(chunk_span9.get().first[i], ref9[i]);
         }
-        ASSERT_EQ(chunk_span4.get().valid_data()[i], valid4[i]);
-        ASSERT_EQ(chunk_span5.get().valid_data()[i], valid5[i]);
-        ASSERT_EQ(chunk_span6.get().valid_data()[i], valid6[i]);
-        ASSERT_EQ(chunk_span7.get().valid_data()[i], valid7[i]);
-        ASSERT_EQ(chunk_span8.get().valid_data()[i], valid8[i]);
+        ASSERT_EQ(chunk_span4.get().is_valid(i), valid4[i]);
+        ASSERT_EQ(chunk_span5.get().is_valid(i), valid5[i]);
+        ASSERT_EQ(chunk_span6.get().is_valid(i), valid6[i]);
+        ASSERT_EQ(chunk_span7.get().is_valid(i), valid7[i]);
+        ASSERT_EQ(chunk_span8.get().is_valid(i), valid8[i]);
         ASSERT_EQ(chunk_span9.get().second[i], valid9[i]);
     }
 
@@ -1129,7 +1164,7 @@ TEST(Sealed, ClearData) {
     auto ref1 = dataset.get_col<int64_t>(counter_id);
     auto ref2 = dataset.get_col<double>(double_id);
     auto ref3 = dataset.get_col(str_id)->scalars().string_data().data();
-    ASSERT_EQ(chunk_span3.get().second.size(), 0);
+    ASSERT_FALSE(chunk_span3.get().second);
     for (int i = 0; i < N; ++i) {
         ASSERT_EQ(chunk_span1.get()[i], ref1[i]);
         ASSERT_EQ(chunk_span2.get()[i], ref2[i]);
@@ -1215,7 +1250,7 @@ TEST(Sealed, LoadFieldDataMmap) {
     auto ref1 = dataset.get_col<int64_t>(counter_id);
     auto ref2 = dataset.get_col<double>(double_id);
     auto ref3 = dataset.get_col(str_id)->scalars().string_data().data();
-    ASSERT_EQ(chunk_span3.get().second.size(), 0);
+    ASSERT_FALSE(chunk_span3.get().second);
     for (int i = 0; i < N; ++i) {
         ASSERT_EQ(chunk_span1.get()[i], ref1[i]);
         ASSERT_EQ(chunk_span2.get()[i], ref2[i]);
@@ -1335,6 +1370,56 @@ TEST(Sealed, LoadScalarIndex) {
                               100000);
     auto json = SearchResultToJson(*sr);
     std::cout << json.dump(1);
+}
+
+TEST(Sealed, BulkSubscriptSkipsPinIndexWhenIndexHasNoRawData) {
+    size_t N = ROW_COUNT;
+    auto schema = std::make_shared<Schema>();
+    auto counter_id = schema->AddDebugField("counter", DataType::INT64);
+    auto double_id = schema->AddDebugField("double", DataType::DOUBLE);
+    schema->set_primary_field_id(counter_id);
+
+    auto dataset = DataGen(schema, N);
+    auto double_col = dataset.get_col<double>(double_id);
+
+    auto segment = CreateSealedWithFieldDataLoaded(schema, dataset);
+
+    // Load a scalar index whose metadata reports no raw data (as INVERTED
+    // does). TestIndexTranslator records the OpContext when the index is
+    // actually materialized, so we can assert bulk_subscript never pins it.
+    auto index = GenScalarIndexing<double>(N, double_col.data());
+    milvus::OpContext* observed_ctx = nullptr;
+    LoadIndexInfo load_info;
+    load_info.field_id = double_id.get();
+    load_info.field_type = DataType::DOUBLE;
+    load_info.index_params = GenIndexParams(index.get());
+    load_info.load_resource_request.emplace();
+    load_info.load_resource_request->has_raw_data = false;
+    load_info.cache_index =
+        CreateTestCacheIndex("test", std::move(index), &observed_ctx);
+    segment->LoadIndex(load_info);
+    ASSERT_TRUE(segment->HasIndex(double_id));
+
+    std::vector<int64_t> seg_offsets(N);
+    for (int64_t i = 0; i < static_cast<int64_t>(N); i++) {
+        seg_offsets[i] = i;
+    }
+
+    milvus::OpContext op_ctx;
+    auto field_data =
+        segment->bulk_subscript(&op_ctx, double_id, seg_offsets.data(), N);
+
+    // Values must be read from the raw column, unchanged.
+    ASSERT_TRUE(field_data->has_scalars());
+    ASSERT_TRUE(field_data->scalars().has_double_data());
+    ASSERT_EQ(field_data->scalars().double_data().data_size(),
+              static_cast<int>(N));
+    for (size_t i = 0; i < N; i++) {
+        ASSERT_EQ(field_data->scalars().double_data().data(i), double_col[i]);
+    }
+    // The index carries no raw data: bulk_subscript must fall back to the raw
+    // column without pinning (and thus materializing) the index.
+    ASSERT_EQ(observed_ctx, nullptr);
 }
 
 TEST(Sealed, Delete) {
@@ -2950,6 +3035,8 @@ TEST_P(SealedVectorArrayTest, SearchVectorArray) {
     query_vec_offsets.push_back(10);
     query_dataset->Set(knowhere::meta::EMB_LIST_OFFSET,
                        const_cast<const size_t*>(query_vec_offsets.data()));
+    query_dataset->Set(knowhere::meta::EMB_LIST_COUNT,
+                       static_cast<int64_t>(query_vec_offsets.size() - 1));
 
     auto search_conf = knowhere::Json{{knowhere::indexparam::NPROBE, 10}};
     milvus::SearchInfo searchInfo;
@@ -4835,6 +4922,147 @@ TEST(SealedSegmentCowState,
               CacheWarmupPolicy::CacheWarmupPolicy_Disable);
 }
 
+TEST(SealedSegmentCowState,
+     StagedLazyManifestDefersChunkReaderAndSizeEstimate) {
+    LazyColumnGroupConfigGuard lazy_group_guard(true);
+    auto schema = CreateWarmupPolicySchema(/*include_vector=*/true);
+    const FieldId vec(kWarmupVectorFieldId);
+
+    // The vector belongs to the staged schema, not the published generation.
+    auto segment =
+        CreateSealedSegment(CreateWarmupPolicySchema(/*include_vector=*/false),
+                            nullptr,
+                            1007,
+                            SegcoreConfig::default_config());
+    auto* sealed = dynamic_cast<ChunkedSegmentSealedImpl*>(segment.get());
+    ASSERT_NE(sealed, nullptr);
+
+    proto::segcore::SegmentLoadInfo load_proto;
+    load_proto.set_segmentid(1007);
+    load_proto.set_num_of_rows(1);
+    load_proto.set_storageversion(STORAGE_V3);
+    load_proto.set_manifest_path("test-manifest");
+    SegmentLoadInfo segment_load_info(load_proto, schema);
+
+    auto chunk_reader_calls = std::make_shared<std::atomic<int>>(0);
+    auto estimate_calls = std::make_shared<std::atomic<int>>(0);
+    auto column_groups = MakeWarmupTestColumnGroups();
+    auto reader = std::make_shared<WarmupTestReader>(
+        column_groups, chunk_reader_calls, estimate_calls);
+    std::vector<std::pair<int, std::vector<FieldId>>> tasks = {
+        {0, {vec}},
+    };
+    auto columns = sealed->TestStageLoadColumnGroupsWithReader(
+        column_groups,
+        std::make_shared<milvus_storage::api::Properties>(),
+        std::move(tasks),
+        segment_load_info,
+        schema,
+        std::move(reader),
+        /*eager_load=*/true);
+    ASSERT_EQ(columns.size(), 1);
+
+    EXPECT_EQ(chunk_reader_calls->load(std::memory_order_relaxed), 0);
+    EXPECT_EQ(estimate_calls->load(std::memory_order_relaxed), 0);
+
+    EXPECT_EQ(columns.front()->num_chunks(), 1);
+    EXPECT_EQ(chunk_reader_calls->load(std::memory_order_relaxed), 1);
+    EXPECT_EQ(estimate_calls->load(std::memory_order_relaxed), 1);
+}
+
+TEST(SealedSegmentCowState, StagedManifestTasksShareColumnGroupSizeEstimate) {
+    LazyColumnGroupConfigGuard lazy_group_guard(false);
+    auto schema = std::make_shared<Schema>();
+    auto first = schema->AddDebugField("first", DataType::INT64);
+    auto second = schema->AddDebugField("second", DataType::INT64);
+
+    auto segment = CreateSealedSegment(
+        schema, nullptr, 1008, SegcoreConfig::default_config());
+    auto* sealed = dynamic_cast<ChunkedSegmentSealedImpl*>(segment.get());
+    ASSERT_NE(sealed, nullptr);
+
+    proto::segcore::SegmentLoadInfo load_proto;
+    load_proto.set_segmentid(1008);
+    load_proto.set_num_of_rows(1);
+    load_proto.set_storageversion(STORAGE_V3);
+    load_proto.set_manifest_path("test-manifest");
+    SegmentLoadInfo segment_load_info(load_proto, schema);
+
+    auto column_groups = std::make_shared<milvus_storage::api::ColumnGroups>();
+    auto column_group = std::make_shared<milvus_storage::api::ColumnGroup>();
+    column_group->columns = {std::to_string(first.get()),
+                             std::to_string(second.get())};
+    column_groups->push_back(std::move(column_group));
+
+    auto chunk_reader_calls = std::make_shared<std::atomic<int>>(0);
+    auto estimate_calls = std::make_shared<std::atomic<int>>(0);
+    auto reader = std::make_shared<WarmupTestReader>(
+        column_groups, chunk_reader_calls, estimate_calls);
+    std::vector<std::pair<int, std::vector<FieldId>>> tasks = {
+        {0, {first}},
+        {0, {second}},
+    };
+    auto columns = sealed->TestStageLoadColumnGroupsWithReader(
+        column_groups,
+        std::make_shared<milvus_storage::api::Properties>(),
+        std::move(tasks),
+        segment_load_info,
+        schema,
+        std::move(reader),
+        /*eager_load=*/false);
+
+    ASSERT_EQ(columns.size(), 2);
+    EXPECT_EQ(chunk_reader_calls->load(std::memory_order_relaxed), 2);
+    EXPECT_EQ(estimate_calls->load(std::memory_order_relaxed), 1);
+
+    SegcoreConfig::default_config().set_lazy_column_group_enabled(true);
+    for (bool concurrent : {false, true}) {
+        SCOPED_TRACE(concurrent);
+        chunk_reader_calls->store(0, std::memory_order_relaxed);
+        estimate_calls->store(0, std::memory_order_relaxed);
+        auto lazy_reader = std::make_shared<WarmupTestReader>(
+            column_groups, chunk_reader_calls, estimate_calls);
+        std::weak_ptr<WarmupTestReader> captured_reader = lazy_reader;
+        columns = sealed->TestStageLoadColumnGroupsWithReader(
+            column_groups,
+            std::make_shared<milvus_storage::api::Properties>(),
+            {{0, {first}}, {0, {second}}},
+            segment_load_info,
+            schema,
+            std::move(lazy_reader),
+            /*eager_load=*/false);
+        ASSERT_EQ(columns.size(), 2);
+        EXPECT_EQ(chunk_reader_calls->load(), 0);
+        EXPECT_EQ(estimate_calls->load(), 0);
+
+        if (concurrent) {
+            std::promise<void> start;
+            auto ready = start.get_future().share();
+            auto first_read = std::async(std::launch::async, [&] {
+                ready.wait();
+                return columns[0]->DataByteSize();
+            });
+            auto second_read = std::async(std::launch::async, [&] {
+                ready.wait();
+                return columns[1]->DataByteSize();
+            });
+            start.set_value();
+            EXPECT_EQ(first_read.get(), 1);
+            EXPECT_EQ(second_read.get(), 2);
+        } else {
+            EXPECT_EQ(columns[0]->DataByteSize(), 1);
+            EXPECT_EQ(chunk_reader_calls->load(), 1);
+            EXPECT_EQ(estimate_calls->load(), 1);
+            // The unmaterialized sibling still owns the shared inputs.
+            EXPECT_FALSE(captured_reader.expired());
+            EXPECT_EQ(columns[1]->DataByteSize(), 2);
+        }
+        EXPECT_EQ(chunk_reader_calls->load(), 2);
+        EXPECT_EQ(estimate_calls->load(), 1);
+        EXPECT_TRUE(captured_reader.expired());
+    }
+}
+
 TEST(SealedSegmentCowState, StagedVectorIndexSkipsInterimIndexGeneration) {
     auto schema = std::make_shared<Schema>();
     auto pk = schema->AddDebugField("pk", DataType::INT64);
@@ -5767,6 +5995,37 @@ TEST(SealedSegmentCowState, ExternalSynthesizeRequiresRuntime) {
     SegmentLoadInfo staged_load_info(published_proto, schema);
     EXPECT_ANY_THROW(sealed->TestSynthesizeExternalSystemFields(
         staged_load_info, schema, nullptr));
+}
+
+// FreezeRuntimeResourceState copies the runtime state field by field, so every
+// member added to the struct has to be added to that copy by hand. Nothing in
+// the type system catches an omission, and the consequence is silent: every
+// geometry predicate on a segment published through the freeze path would fall
+// back to bulk_subscript + WKB re-parse forever, because the caches are built
+// once at column load and never rebuilt. Pin the copy for the one member whose
+// loss is invisible.
+TEST(SealedSegmentCowState, FreezePreservesGeometryCaches) {
+    auto schema = std::make_shared<Schema>();
+    auto pk = schema->AddDebugField("pk", DataType::INT64);
+    schema->set_primary_field_id(pk);
+
+    auto segment = CreateSealedSegment(schema);
+    auto* sealed = dynamic_cast<ChunkedSegmentSealedImpl*>(segment.get());
+    ASSERT_NE(sealed, nullptr);
+
+    auto runtime = sealed->TestCloneMutableRuntimeResourceState();
+    auto cache = std::make_shared<milvus::exec::SimpleGeometryCache>();
+    const auto geo_field = FieldId(101);
+    runtime->geometry_caches[geo_field] = cache;
+
+    auto frozen =
+        ChunkedSegmentSealedImpl::TestFreezeRuntimeResourceStateCopy(*runtime);
+    ASSERT_NE(frozen, nullptr);
+    auto it = frozen->geometry_caches.find(geo_field);
+    ASSERT_TRUE(it != frozen->geometry_caches.end());
+    // Same cache, not a fresh empty one: the frozen state must keep the
+    // populated instance the caller already filled.
+    EXPECT_EQ(it->second, cache);
 }
 
 TEST(SealedSegmentCowState, ExternalWrapperSynthesizeRequiresRuntime) {

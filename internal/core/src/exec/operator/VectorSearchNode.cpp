@@ -34,6 +34,7 @@
 #include "exec/expression/Utils.h"
 #include "exec/operator/Utils.h"
 #include "monitor/Monitor.h"
+#include "query/Utils.h"
 #include "opentelemetry/trace/span.h"
 #include "plan/PlanNode.h"
 #include "prometheus/histogram.h"
@@ -69,6 +70,14 @@ PhyVectorSearchNode::PhyVectorSearchNode(
     active_count_ = query_context_->get_active_count();
     placeholder_group_ = query_context_->get_placeholder_group();
     search_info_ = query_context_->get_search_info();
+    // Freeze the growing segment's visible-row bound at plan time and carry it
+    // into the search kernels. They must not re-read it from the segment: a
+    // concurrent insert can publish rows between this point and the kernel's
+    // read, and those rows are neither acknowledged nor visible to this query.
+    // Sealed indexes are immutable and keep their empty-bitset fast path.
+    if (segment_->type() == SegmentType::Growing) {
+        search_info_.active_count_ = active_count_;
+    }
 }
 
 void
@@ -93,8 +102,8 @@ PhyVectorSearchNode::GetOutput() {
     }
 
     WaitPrefetch();
-    span.GetSpan()->SetAttribute("search_type", search_info_.metric_type_);
-    span.GetSpan()->SetAttribute("topk", search_info_.topk_);
+    span.SetAttribute("search_type", search_info_.metric_type_);
+    span.SetAttribute("topk", search_info_.topk_);
 
     std::chrono::high_resolution_clock::time_point vector_start =
         std::chrono::high_resolution_clock::now();
@@ -155,7 +164,7 @@ PhyVectorSearchNode::GetOutput() {
             std::vector<VectorPtr> col_res;
             col_res.push_back(std::make_shared<ColumnVector>(
                 std::move(element_bitset), std::move(valid_element_bitset)));
-            input_ = std::make_shared<RowVector>(col_res);
+            input_ = std::make_shared<RowVector>(std::move(col_res));
             query_context_->set_bitset_is_element_level(true);
         }
 
@@ -178,6 +187,10 @@ PhyVectorSearchNode::GetOutput() {
 
     // Single search + metrics path
     milvus::SearchResult search_result;
+    if (query::CanUseStrictGroupSearch(search_info_, num_queries) &&
+        !search_view.empty()) {
+        search_result.vector_search_filter_owner_ = GetColumnVector(input_);
+    }
     auto op_context = query_context_->get_op_context();
     segment_->vector_search(search_info_,
                             src_data,
@@ -191,8 +204,8 @@ PhyVectorSearchNode::GetOutput() {
     search_result.total_data_cnt_ = data_cnt;
     search_result.element_level_ = ph.element_level_;
 
-    span.GetSpan()->SetAttribute(
-        "result_count", static_cast<int>(search_result.seg_offsets_.size()));
+    span.SetAttribute("result_count",
+                      static_cast<int>(search_result.seg_offsets_.size()));
     query_context_->set_search_result(std::move(search_result));
 
     std::chrono::high_resolution_clock::time_point vector_end =

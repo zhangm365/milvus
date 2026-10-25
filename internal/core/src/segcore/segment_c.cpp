@@ -23,6 +23,7 @@
 #include <exception>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -552,18 +553,13 @@ CRetrieveResult*
 CreateLeakedCRetrieveResultFromProto(
     std::unique_ptr<milvus::proto::segcore::RetrieveResults> retrieve_result) {
     auto size = retrieve_result->ByteSizeLong();
-    auto buffer = new uint8_t[size];
-    try {
-        retrieve_result->SerializePartialToArray(buffer, size);
-    } catch (std::exception& e) {
-        delete[] buffer;
-        throw;
-    }
+    std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
+    retrieve_result->SerializePartialToArray(buffer.get(), size);
 
-    auto result = new CRetrieveResult();
-    result->proto_blob = buffer;
+    auto result = std::make_unique<CRetrieveResult>();
+    result->proto_blob = buffer.release();
     result->proto_size = size;
-    return result;
+    return result.release();
 }
 
 CFuture*  // Future<CRetrieveResult>
@@ -1407,21 +1403,30 @@ BuildVectorArrayForChunk(const FieldInfo& field_info,
     arrow::ListBuilder builder(arrow::default_memory_pool(), value_builder);
     ARROW_RETURN_NOT_OK(builder.Reserve(num_rows));
 
+    // One batch conversion for the contiguous range instead of a validity
+    // lock plus a logical->physical search per row: flush walks the whole
+    // segment through here, and per-row lookups made that O(rows * log
+    // valid). Validity and physical offsets come from one mapping snapshot;
+    // for a non-mapping column this is the identity.
+    std::vector<int64_t> logical_offsets(num_rows);
+    std::iota(logical_offsets.begin(), logical_offsets.end(), start_offset);
+    auto row_valid = std::make_unique<bool[]>(num_rows);
+    std::vector<int64_t> physical_offsets;
+    field_info.vec_base->get_offset_mapping().FilterValidLogicalOffsets(
+        logical_offsets.data(), num_rows, row_valid.get(), physical_offsets);
+
+    size_t next_physical = 0;
     for (int64_t i = 0; i < num_rows; i++) {
-        auto logical_offset = start_offset + i;
-        if (field_info.valid_data &&
-            !field_info.valid_data->is_valid(logical_offset)) {
+        if (!row_valid[i]) {
+            if (field_info.valid_data == nullptr) {
+                return arrow::Status::Invalid(
+                    "valid nullable vector array row missing physical data");
+            }
             ARROW_RETURN_NOT_OK(builder.AppendNull());
             continue;
         }
 
-        auto physical_offset =
-            field_info.vec_base->get_physical_offset(logical_offset);
-        if (physical_offset < 0) {
-            return arrow::Status::Invalid(
-                "valid nullable vector array row missing physical data");
-        }
-
+        const auto physical_offset = physical_offsets[next_physical++];
         const auto& vector_array = (*vector_array_vec)[physical_offset];
         if (vector_array.get_element_type() != field_info.element_type) {
             return arrow::Status::Invalid("VECTOR_ARRAY element type mismatch");
@@ -1694,13 +1699,13 @@ GetGrowingSegmentMaterializedFieldIDs(CSegmentInterface c_segment,
         }
         auto ids = growing_segment->get_insert_record().get_data_field_ids();
         std::unordered_set<int64_t> seen(ids.begin(), ids.end());
-        const auto& schema = growing_segment->get_schema();
-        for (const auto& field_id : schema.get_field_ids()) {
+        auto schema = growing_segment->get_schema_snapshot();
+        for (const auto& field_id : schema->get_field_ids()) {
             auto raw_field_id = field_id.get();
             if (seen.find(raw_field_id) != seen.end()) {
                 continue;
             }
-            const auto& field_meta = schema[field_id];
+            const auto& field_meta = (*schema)[field_id];
             if (milvus::IsVectorDataType(field_meta.get_data_type()) &&
                 growing_segment->CanReadRawVectorFromIndex(field_id)) {
                 ids.push_back(raw_field_id);
@@ -1990,6 +1995,7 @@ FlushGrowingSegmentData(CSegmentInterface c_segment,
         auto flush_schema =
             ParseFlushSchema(config->schema_blob, config->schema_length);
         const auto& schema = *flush_schema;
+        auto runtime_schema = growing_segment->get_schema_snapshot();
         auto& insert_record = growing_segment->get_insert_record();
 
         int64_t total_rows = end_offset - start_offset;
@@ -2048,7 +2054,7 @@ FlushGrowingSegmentData(CSegmentInterface c_segment,
                     // compaction). The Go layer normally trims such columns
                     // from the layout already — this is the defense for
                     // stale layouts.
-                    if (!growing_segment->get_schema().has_field(field_id)) {
+                    if (!runtime_schema->has_field(field_id)) {
                         LOG_INFO(
                             "skip dropped field {} when flushing growing "
                             "segment {}",
@@ -2611,27 +2617,46 @@ FlushGrowingSegmentData(CSegmentInterface c_segment,
         auto manifest_path = milvus_storage::get_manifest_filepath(
             writer_config.segment_path, committed_version);
         result->manifest_path = strdup(manifest_path.c_str());
+        if (!result->manifest_path) {
+            return milvus::FailureCStatus(milvus::MemAllocateFailed,
+                                          "failed to allocate manifest path");
+        }
         result->committed_version = committed_version;
         result->num_rows = output.rows_written;
         if (!bm25_stats.empty()) {
-            result->num_bm25_stats = bm25_stats.size();
-            result->bm25_field_ids = static_cast<int64_t*>(
-                malloc(sizeof(int64_t) * result->num_bm25_stats));
-            result->bm25_stats = static_cast<uint8_t**>(
-                malloc(sizeof(uint8_t*) * result->num_bm25_stats));
-            result->bm25_stats_sizes = static_cast<size_t*>(
-                malloc(sizeof(size_t) * result->num_bm25_stats));
-            size_t idx = 0;
+            const auto num_stats = bm25_stats.size();
+            result->bm25_field_ids =
+                static_cast<int64_t*>(malloc(sizeof(int64_t) * num_stats));
+            result->bm25_stats =
+                static_cast<uint8_t**>(calloc(num_stats, sizeof(uint8_t*)));
+            result->bm25_stats_sizes =
+                static_cast<size_t*>(malloc(sizeof(size_t) * num_stats));
+            if (!result->bm25_field_ids || !result->bm25_stats ||
+                !result->bm25_stats_sizes) {
+                return milvus::FailureCStatus(
+                    milvus::MemAllocateFailed,
+                    "failed to allocate growing flush BM25 stats arrays");
+            }
             for (const auto& [field_id, stats] : bm25_stats) {
                 auto serialized = SerializeBM25Stats(stats);
+                const auto idx = result->num_bm25_stats;
                 result->bm25_field_ids[idx] = field_id;
                 result->bm25_stats_sizes[idx] = serialized.size();
                 result->bm25_stats[idx] =
                     static_cast<uint8_t*>(malloc(serialized.size()));
-                std::memcpy(result->bm25_stats[idx],
-                            serialized.data(),
-                            serialized.size());
-                idx++;
+                if (!serialized.empty()) {
+                    if (!result->bm25_stats[idx]) {
+                        return milvus::FailureCStatus(
+                            milvus::MemAllocateFailed,
+                            "failed to allocate growing flush BM25 stats");
+                    }
+                    std::memcpy(result->bm25_stats[idx],
+                                serialized.data(),
+                                serialized.size());
+                }
+                // FreeFlushResult must only visit entries whose ownership
+                // has been transferred, including on serialization failure.
+                ++result->num_bm25_stats;
             }
         }
         return milvus::SuccessCStatus();

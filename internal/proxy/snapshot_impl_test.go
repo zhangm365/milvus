@@ -23,10 +23,13 @@ import (
 	"github.com/bytedance/mockey"
 	"github.com/cockroachdb/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
 	"github.com/milvus-io/milvus-proto/go-api/v3/commonpb"
 	"github.com/milvus-io/milvus-proto/go-api/v3/milvuspb"
+	"github.com/milvus-io/milvus/internal/proxy/scheduler"
+	"github.com/milvus-io/milvus/internal/proxy/taskmodel"
 	"github.com/milvus-io/milvus/pkg/v3/proto/datapb"
 	"github.com/milvus-io/milvus/pkg/v3/util/funcutil"
 	"github.com/milvus-io/milvus/pkg/v3/util/merr"
@@ -34,8 +37,8 @@ import (
 
 func TestProxy_CreateSnapshot_Success(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -46,10 +49,10 @@ func TestProxy_CreateSnapshot_Success(t *testing.T) {
 	}
 
 	// Mock successful enqueue
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		// Set task result to simulate successful execution
 		if cst, ok := t.(*createSnapshotTask); ok {
-			cst.result = merr.Success()
+			cst.SetResult(merr.Success())
 		}
 		return nil
 	}).Build()
@@ -68,8 +71,8 @@ func TestProxy_CreateSnapshot_Success(t *testing.T) {
 
 func TestProxy_CreateSnapshot_EnqueueFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -82,7 +85,7 @@ func TestProxy_CreateSnapshot_EnqueueFailure(t *testing.T) {
 	expectedError := errors.New("enqueue failed")
 
 	// Mock enqueue failure
-	mock := mockey.Mock((*ddTaskQueue).Enqueue).Return(expectedError).Build()
+	mock := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(expectedError).Build()
 	defer mock.UnPatch()
 
 	result, err := proxy.CreateSnapshot(context.Background(), req)
@@ -95,8 +98,8 @@ func TestProxy_CreateSnapshot_EnqueueFailure(t *testing.T) {
 
 func TestProxy_CreateSnapshot_WaitToFinishFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -109,7 +112,7 @@ func TestProxy_CreateSnapshot_WaitToFinishFailure(t *testing.T) {
 	expectedError := errors.New("task execution failed")
 
 	// Mock successful enqueue but failed task execution
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).Return(nil).Build()
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(nil).Build()
 	defer mock1.UnPatch()
 	mock2 := mockey.Mock((*TaskCondition).WaitToFinish).Return(expectedError).Build()
 	defer mock2.UnPatch()
@@ -124,8 +127,8 @@ func TestProxy_CreateSnapshot_WaitToFinishFailure(t *testing.T) {
 
 func TestProxy_DropSnapshot_Success(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -134,9 +137,9 @@ func TestProxy_DropSnapshot_Success(t *testing.T) {
 	}
 
 	// Mock successful enqueue and task completion
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if dst, ok := t.(*dropSnapshotTask); ok {
-			dst.result = merr.Success()
+			dst.SetResult(merr.Success())
 		}
 		return nil
 	}).Build()
@@ -154,8 +157,8 @@ func TestProxy_DropSnapshot_Success(t *testing.T) {
 
 func TestProxy_DropSnapshot_EnqueueFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -165,7 +168,7 @@ func TestProxy_DropSnapshot_EnqueueFailure(t *testing.T) {
 
 	expectedError := errors.New("enqueue failed")
 
-	mock := mockey.Mock((*ddTaskQueue).Enqueue).Return(expectedError).Build()
+	mock := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(expectedError).Build()
 	defer mock.UnPatch()
 
 	result, err := proxy.DropSnapshot(context.Background(), req)
@@ -178,8 +181,8 @@ func TestProxy_DropSnapshot_EnqueueFailure(t *testing.T) {
 
 func TestProxy_DropSnapshot_WaitToFinishFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -189,7 +192,7 @@ func TestProxy_DropSnapshot_WaitToFinishFailure(t *testing.T) {
 
 	expectedError := errors.New("task execution failed")
 
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).Return(nil).Build()
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(nil).Build()
 	defer mock1.UnPatch()
 	mock2 := mockey.Mock((*TaskCondition).WaitToFinish).Return(expectedError).Build()
 	defer mock2.UnPatch()
@@ -204,8 +207,8 @@ func TestProxy_DropSnapshot_WaitToFinishFailure(t *testing.T) {
 
 func TestProxy_DescribeSnapshot_Success(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -214,13 +217,13 @@ func TestProxy_DescribeSnapshot_Success(t *testing.T) {
 	}
 
 	// Mock successful enqueue and task completion
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if dst, ok := t.(*describeSnapshotTask); ok {
-			dst.result = &milvuspb.DescribeSnapshotResponse{
+			dst.SetResult(&milvuspb.DescribeSnapshotResponse{
 				Status:         merr.Success(),
 				Name:           "test_snapshot",
 				CollectionName: "test_collection",
-			}
+			})
 		}
 		return nil
 	}).Build()
@@ -240,8 +243,8 @@ func TestProxy_DescribeSnapshot_Success(t *testing.T) {
 
 func TestProxy_DescribeSnapshot_EnqueueFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -251,7 +254,7 @@ func TestProxy_DescribeSnapshot_EnqueueFailure(t *testing.T) {
 
 	expectedError := errors.New("enqueue failed")
 
-	mock := mockey.Mock((*ddTaskQueue).Enqueue).Return(expectedError).Build()
+	mock := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(expectedError).Build()
 	defer mock.UnPatch()
 
 	result, err := proxy.DescribeSnapshot(context.Background(), req)
@@ -264,8 +267,8 @@ func TestProxy_DescribeSnapshot_EnqueueFailure(t *testing.T) {
 
 func TestProxy_DescribeSnapshot_WaitToFinishFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -275,7 +278,7 @@ func TestProxy_DescribeSnapshot_WaitToFinishFailure(t *testing.T) {
 
 	expectedError := errors.New("task execution failed")
 
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).Return(nil).Build()
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(nil).Build()
 	defer mock1.UnPatch()
 	mock2 := mockey.Mock((*TaskCondition).WaitToFinish).Return(expectedError).Build()
 	defer mock2.UnPatch()
@@ -290,8 +293,8 @@ func TestProxy_DescribeSnapshot_WaitToFinishFailure(t *testing.T) {
 
 func TestProxy_ListSnapshots_Success(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -300,15 +303,15 @@ func TestProxy_ListSnapshots_Success(t *testing.T) {
 	}
 
 	// Mock successful enqueue and task completion
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if lst, ok := t.(*listSnapshotsTask); ok {
-			lst.result = &milvuspb.ListSnapshotsResponse{
+			lst.SetResult(&milvuspb.ListSnapshotsResponse{
 				Status: merr.Success(),
 				Snapshots: []string{
 					"snapshot1",
 					"snapshot2",
 				},
-			}
+			})
 		}
 		return nil
 	}).Build()
@@ -329,8 +332,8 @@ func TestProxy_ListSnapshots_Success(t *testing.T) {
 
 func TestProxy_ListSnapshots_EnqueueFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -340,7 +343,7 @@ func TestProxy_ListSnapshots_EnqueueFailure(t *testing.T) {
 
 	expectedError := errors.New("enqueue failed")
 
-	mock := mockey.Mock((*ddTaskQueue).Enqueue).Return(expectedError).Build()
+	mock := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(expectedError).Build()
 	defer mock.UnPatch()
 
 	result, err := proxy.ListSnapshots(context.Background(), req)
@@ -353,8 +356,8 @@ func TestProxy_ListSnapshots_EnqueueFailure(t *testing.T) {
 
 func TestProxy_ListSnapshots_WaitToFinishFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -364,7 +367,7 @@ func TestProxy_ListSnapshots_WaitToFinishFailure(t *testing.T) {
 
 	expectedError := errors.New("task execution failed")
 
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).Return(nil).Build()
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(nil).Build()
 	defer mock1.UnPatch()
 	mock2 := mockey.Mock((*TaskCondition).WaitToFinish).Return(expectedError).Build()
 	defer mock2.UnPatch()
@@ -379,8 +382,8 @@ func TestProxy_ListSnapshots_WaitToFinishFailure(t *testing.T) {
 
 func TestProxy_RestoreSnapshot_Success(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -391,11 +394,11 @@ func TestProxy_RestoreSnapshot_Success(t *testing.T) {
 	}
 
 	// Mock successful enqueue and task completion
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if rst, ok := t.(*restoreSnapshotTask); ok {
-			rst.result = &milvuspb.RestoreSnapshotResponse{
+			rst.SetResult(&milvuspb.RestoreSnapshotResponse{
 				Status: merr.Success(),
-			}
+			})
 		}
 		return nil
 	}).Build()
@@ -413,8 +416,8 @@ func TestProxy_RestoreSnapshot_Success(t *testing.T) {
 
 func TestProxy_RestoreSnapshot_EnqueueFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -425,7 +428,7 @@ func TestProxy_RestoreSnapshot_EnqueueFailure(t *testing.T) {
 
 	expectedError := errors.New("enqueue failed")
 
-	mock := mockey.Mock((*ddTaskQueue).Enqueue).Return(expectedError).Build()
+	mock := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(expectedError).Build()
 	defer mock.UnPatch()
 
 	result, err := proxy.RestoreSnapshot(context.Background(), req)
@@ -438,8 +441,8 @@ func TestProxy_RestoreSnapshot_EnqueueFailure(t *testing.T) {
 
 func TestProxy_RestoreSnapshot_WaitToFinishFailure(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -450,7 +453,7 @@ func TestProxy_RestoreSnapshot_WaitToFinishFailure(t *testing.T) {
 
 	expectedError := errors.New("task execution failed")
 
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).Return(nil).Build()
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).Return(nil).Build()
 	defer mock1.UnPatch()
 	mock2 := mockey.Mock((*TaskCondition).WaitToFinish).Return(expectedError).Build()
 	defer mock2.UnPatch()
@@ -468,8 +471,10 @@ func TestExportSnapshotTask_Execute_ForwardsForeignStorageFields(t *testing.T) {
 		externalSpec = `{"extfs":{"cloud_provider":"aws","region":"us-west-2","use_iam":"true"}}`
 	)
 
+	metaCache := &MetaCache{}
 	proxy := &Proxy{
-		mixCoord: NewMixCoordMock(),
+		mixCoord:  NewMixCoordMock(),
+		metaCache: metaCache,
 	}
 	req := &milvuspb.ExportSnapshotRequest{
 		Name:           "test_snapshot",
@@ -479,10 +484,6 @@ func TestExportSnapshotTask_Execute_ForwardsForeignStorageFields(t *testing.T) {
 		ExternalSpec:   externalSpec,
 	}
 
-	oldMetaCache := globalMetaCache
-	globalMetaCache = &MetaCache{}
-	defer func() { globalMetaCache = oldMetaCache }()
-
 	mockGetCollectionID := mockey.Mock((*MetaCache).GetCollectionID).Return(int64(100), nil).Build()
 	defer mockGetCollectionID.UnPatch()
 
@@ -491,8 +492,8 @@ func TestExportSnapshotTask_Execute_ForwardsForeignStorageFields(t *testing.T) {
 		func(ctx context.Context, req *datapb.ExportSnapshotRequest, opts ...grpc.CallOption) (*datapb.ExportSnapshotResponse, error) {
 			gotReq = req
 			return &datapb.ExportSnapshotResponse{
-				Status:              merr.Success(),
-				SnapshotMetadataUri: req.GetTargetS3Path() + "/snapshots/100/metadata/1.json",
+				Status: merr.Success(),
+				JobId:  9001,
 			}, nil
 		},
 	).Build()
@@ -502,9 +503,84 @@ func TestExportSnapshotTask_Execute_ForwardsForeignStorageFields(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.True(t, merr.Ok(resp.GetStatus()))
+	assert.Equal(t, int64(9001), resp.GetJobId())
 	if assert.NotNil(t, gotReq) {
 		assert.Equal(t, externalSpec, gotReq.GetExternalSpec())
 	}
+}
+
+func TestProxy_GetExportSnapshotState(t *testing.T) {
+	proxy := &Proxy{mixCoord: NewMixCoordMock()}
+	mockGetState := mockey.Mock((*MixCoordMock).GetExportSnapshotState).To(
+		func(context.Context, *datapb.GetExportSnapshotStateRequest, ...grpc.CallOption) (*datapb.GetExportSnapshotStateResponse, error) {
+			return &datapb.GetExportSnapshotStateResponse{
+				Status: merr.Success(),
+				Info: &datapb.ExportSnapshotJobInfo{
+					JobId:               9001,
+					SnapshotName:        "snapshot-1",
+					DbName:              "default",
+					CollectionName:      "collection-1",
+					State:               datapb.ExportSnapshotJobState_ExportSnapshotJobCompleted,
+					Progress:            100,
+					TotalFiles:          10,
+					CopiedFiles:         10,
+					TotalBytes:          4096,
+					SnapshotMetadataUri: "s3://bucket/export-root/snapshots/100/metadata/1.json",
+				},
+			}, nil
+		}).Build()
+	defer mockGetState.UnPatch()
+
+	resp, err := proxy.GetExportSnapshotState(context.Background(), &milvuspb.GetExportSnapshotStateRequest{JobId: 9001})
+
+	require.NoError(t, err)
+	require.NoError(t, merr.Error(resp.GetStatus()))
+	require.NotNil(t, resp.GetInfo())
+	assert.Equal(t, int64(9001), resp.GetInfo().GetJobId())
+	assert.Equal(t, milvuspb.ExportSnapshotState_ExportSnapshotCompleted, resp.GetInfo().GetState())
+	assert.Equal(t, int32(100), resp.GetInfo().GetProgress())
+	assert.Equal(t, int64(4096), resp.GetInfo().GetTotalBytes())
+	assert.Equal(t, "s3://bucket/export-root/snapshots/100/metadata/1.json", resp.GetInfo().GetSnapshotMetadataUri())
+
+	invalid, err := proxy.GetExportSnapshotState(context.Background(), &milvuspb.GetExportSnapshotStateRequest{})
+	require.NoError(t, err)
+	assert.Error(t, merr.Error(invalid.GetStatus()))
+}
+
+func TestExportSnapshotJobInfoToPublic(t *testing.T) {
+	assert.Nil(t, exportSnapshotJobInfoToPublic(nil))
+	assert.Equal(t,
+		milvuspb.ExportSnapshotState_ExportSnapshotNone,
+		exportSnapshotJobStateToPublic(datapb.ExportSnapshotJobState(100)),
+	)
+
+	info := exportSnapshotJobInfoToPublic(&datapb.ExportSnapshotJobInfo{
+		JobId:               9001,
+		State:               datapb.ExportSnapshotJobState_ExportSnapshotJobPublishing,
+		Progress:            99,
+		SnapshotMetadataUri: "s3://bucket/export-root/snapshots/100/metadata/1.json",
+	})
+	require.NotNil(t, info)
+	assert.Equal(t, milvuspb.ExportSnapshotState_ExportSnapshotExecuting, info.GetState())
+	assert.Equal(t, int32(99), info.GetProgress())
+	assert.Empty(t, info.GetSnapshotMetadataUri())
+
+	assert.Equal(t,
+		milvuspb.ExportSnapshotState_ExportSnapshotPending,
+		exportSnapshotJobStateToPublic(datapb.ExportSnapshotJobState_ExportSnapshotJobPending),
+	)
+	assert.Equal(t,
+		milvuspb.ExportSnapshotState_ExportSnapshotExecuting,
+		exportSnapshotJobStateToPublic(datapb.ExportSnapshotJobState_ExportSnapshotJobExecuting),
+	)
+	assert.Equal(t,
+		milvuspb.ExportSnapshotState_ExportSnapshotCompleted,
+		exportSnapshotJobStateToPublic(datapb.ExportSnapshotJobState_ExportSnapshotJobCompleted),
+	)
+	assert.Equal(t,
+		milvuspb.ExportSnapshotState_ExportSnapshotFailed,
+		exportSnapshotJobStateToPublic(datapb.ExportSnapshotJobState_ExportSnapshotJobFailed),
+	)
 }
 
 func TestRestoreExternalSnapshotTask_Execute_ForwardsForeignStorageFields(t *testing.T) {
@@ -568,6 +644,12 @@ func TestSnapshotRequestOption_RBACGuardrails(t *testing.T) {
 	assert.Equal(t, "PrivilegeExportSnapshot", exportOpt.GetObjectPrivilege().String())
 	assert.Equal(t, int32(-1), exportOpt.GetObjectNameIndex())
 
+	exportStateOpt, err := funcutil.GetPrivilegeExtObj(&milvuspb.GetExportSnapshotStateRequest{})
+	assert.NoError(t, err)
+	assert.Equal(t, commonpb.ObjectType_Global, exportStateOpt.GetObjectType())
+	assert.Equal(t, "PrivilegeExportSnapshot", exportStateOpt.GetObjectPrivilege().String())
+	assert.Equal(t, int32(-1), exportStateOpt.GetObjectNameIndex())
+
 	restoreOpt, err := funcutil.GetPrivilegeExtObj(&milvuspb.RestoreExternalSnapshotRequest{})
 	assert.NoError(t, err)
 	assert.Equal(t, commonpb.ObjectType_Global, restoreOpt.GetObjectType())
@@ -578,8 +660,8 @@ func TestSnapshotRequestOption_RBACGuardrails(t *testing.T) {
 // Test task creation and basic properties
 func TestProxy_CreateSnapshot_TaskCreation(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -592,10 +674,10 @@ func TestProxy_CreateSnapshot_TaskCreation(t *testing.T) {
 	var enqueuedTask *createSnapshotTask
 
 	// Capture the task that gets enqueued
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if cst, ok := t.(*createSnapshotTask); ok {
 			enqueuedTask = cst
-			cst.result = merr.Success()
+			cst.SetResult(merr.Success())
 		}
 		return nil
 	}).Build()
@@ -608,17 +690,17 @@ func TestProxy_CreateSnapshot_TaskCreation(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, enqueuedTask)
-	assert.Equal(t, "test_snapshot", enqueuedTask.req.GetName())
-	assert.Equal(t, "test_collection", enqueuedTask.req.GetCollectionName())
-	assert.Equal(t, "default", enqueuedTask.req.GetDbName())
+	assert.Equal(t, "test_snapshot", enqueuedTask.Request().GetName())
+	assert.Equal(t, "test_collection", enqueuedTask.Request().GetCollectionName())
+	assert.Equal(t, "default", enqueuedTask.Request().GetDbName())
 	assert.Equal(t, CreateSnapshotTaskName, enqueuedTask.Name())
 }
 
 // Test edge cases
 func TestProxy_CreateSnapshot_NilRequest(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -630,8 +712,8 @@ func TestProxy_CreateSnapshot_NilRequest(t *testing.T) {
 
 func TestProxy_DropSnapshot_EmptySnapshotName(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -639,9 +721,9 @@ func TestProxy_DropSnapshot_EmptySnapshotName(t *testing.T) {
 		Name: "", // Empty snapshot name
 	}
 
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if dst, ok := t.(*dropSnapshotTask); ok {
-			dst.result = merr.Success()
+			dst.SetResult(merr.Success())
 		}
 		return nil
 	}).Build()
@@ -661,8 +743,8 @@ func TestProxy_DropSnapshot_EmptySnapshotName(t *testing.T) {
 // Test metrics and observability
 func TestProxy_CreateSnapshot_MetricsRecording(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -673,9 +755,9 @@ func TestProxy_CreateSnapshot_MetricsRecording(t *testing.T) {
 	}
 
 	// Mock successful execution
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if cst, ok := t.(*createSnapshotTask); ok {
-			cst.result = merr.Success()
+			cst.SetResult(merr.Success())
 		}
 		return nil
 	}).Build()
@@ -696,8 +778,8 @@ func TestProxy_CreateSnapshot_MetricsRecording(t *testing.T) {
 // Test context handling
 func TestProxy_CreateSnapshot_ContextCancellation(t *testing.T) {
 	proxy := &Proxy{
-		sched: &taskScheduler{
-			ddQueue: &ddTaskQueue{},
+		sched: &scheduler.TaskScheduler{
+			DdQueue: &scheduler.DdTaskQueue{},
 		},
 	}
 
@@ -712,9 +794,9 @@ func TestProxy_CreateSnapshot_ContextCancellation(t *testing.T) {
 	cancel()
 
 	// Mock successful enqueue
-	mock1 := mockey.Mock((*ddTaskQueue).Enqueue).To(func(t task) error {
+	mock1 := mockey.Mock((*scheduler.DdTaskQueue).Enqueue).To(func(t taskmodel.Task) error {
 		if cst, ok := t.(*createSnapshotTask); ok {
-			cst.result = merr.Success()
+			cst.SetResult(merr.Success())
 		}
 		return nil
 	}).Build()
