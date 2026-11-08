@@ -174,6 +174,21 @@ func validateFieldDataColumns(columns []*schemapb.FieldData, schema *schemaInfo)
 	return nil
 }
 
+// validateAndNormalizeFieldDataValidData validates compatibility fields once
+// when a user payload enters the proxy, then writes matching row validity
+// to both locations for internal processing.
+func validateAndNormalizeFieldDataValidData(fields []*schemapb.FieldData) error {
+	for _, field := range fields {
+		if !typeutil.ValidateAndNormalizeFieldDataValidData(field) {
+			return merr.WrapErrParameterInvalidMsg(
+				"field %s has different legacy and field-specific valid_data",
+				field.GetFieldName(),
+			)
+		}
+	}
+	return nil
+}
+
 // fillFieldPropertiesOnly fills field properties (FieldId, Type, ElementType) from schema.
 // It assumes that columns have been validated and does not perform validation.
 // Use validateFieldDataColumns before calling this function if validation is needed.
@@ -274,7 +289,7 @@ func checkFieldsDataBySchema(ctx context.Context, allFields []*schemapb.FieldSch
 			if err != nil {
 				return err
 			}
-			dataToAppend.ValidData = make([]bool, insertMsg.GetNumRows())
+			typeutil.SetFieldDataValidData(dataToAppend, make([]bool, insertMsg.GetNumRows()))
 			insertMsg.FieldsData = append(insertMsg.FieldsData, dataToAppend)
 		}
 	}
@@ -299,6 +314,9 @@ func checkFieldsDataBySchema(ctx context.Context, allFields []*schemapb.FieldSch
 // not just a protobuf-initialized empty wrapper (e.g. some SDKs may initialize the
 // Vectors oneof by accessing .vectors.dim, making Field non-nil without real data).
 func subFieldHasData(subField *schemapb.FieldData) bool {
+	if subField == nil {
+		return false
+	}
 	switch fd := subField.Field.(type) {
 	case *schemapb.FieldData_Scalars:
 		return fd.Scalars.GetData() != nil
@@ -361,17 +379,26 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 			return merr.WrapErrParameterInvalidMsg("field convert FieldData_StructArrays fail in fieldData, fieldName: %s,"+
 				" collectionName:%s", structName, schema.Name)
 		}
+		if structArrays.StructArrays == nil {
+			return merr.WrapErrParameterInvalidMsg("struct field %q has nil data", structName)
+		}
 
-		if len(structArrays.StructArrays.Fields) != len(structSchema.GetFields()) {
-			return merr.WrapErrParameterInvalidMsg("length of fields of struct field mismatch length of the fields in schema, fieldName: %s,"+
-				" collectionName:%s, fieldData fields length:%d, schema fields length:%d",
-				structName, schema.Name, len(structArrays.StructArrays.Fields), len(structSchema.GetFields()))
+		subFieldSchemaByName, err := structSubFieldSchemasByName(structSchema)
+		if err != nil {
+			return err
+		}
+		if _, err := validateStructSubFieldNames(structSchema, structArrays.StructArrays, subFieldSchemaByName); err != nil {
+			return err
 		}
 
 		// Check sub-field data consistency: within the same struct, all sub-fields must
 		// either have data or all be empty. Partial presence is invalid.
 		hasDataCount := 0
 		for _, subField := range structArrays.StructArrays.Fields {
+			if !typeutil.ValidateAndNormalizeFieldDataValidData(subField) {
+				return merr.WrapErrParameterInvalidMsg("sub-field '%s' in struct '%s' has different legacy and field-specific valid_data",
+					subField.GetFieldName(), structName)
+			}
 			if subFieldHasData(subField) {
 				hasDataCount++
 			}
@@ -382,7 +409,7 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 			// omitted entirely. Reject illegal ValidData first: when no payload is
 			// provided, any ValidData[i]==true contradicts itself.
 			for _, subField := range structArrays.StructArrays.Fields {
-				for j, v := range subField.ValidData {
+				for j, v := range typeutil.GetFieldDataValidData(subField) {
 					if v {
 						return merr.WrapErrParameterInvalidMsg("sub-field '%s' in struct '%s' claims row %d is valid but no payload is provided",
 							subField.FieldName, structName, j)
@@ -406,49 +433,30 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 			var refFieldName string
 			refInitialized := false
 			for _, subField := range structArrays.StructArrays.Fields {
+				validData := typeutil.GetFieldDataValidData(subField)
 				if !refInitialized {
-					refValidData = subField.ValidData
+					refValidData = validData
 					refFieldName = subField.FieldName
 					refInitialized = true
 					continue
 				}
-				if len(subField.ValidData) != len(refValidData) {
+				if len(validData) != len(refValidData) {
 					return merr.WrapErrParameterInvalidMsg("sub-field ValidData length mismatch in struct '%s': '%s' has %d, '%s' has %d",
-						structName, refFieldName, len(refValidData), subField.FieldName, len(subField.ValidData))
+						structName, refFieldName, len(refValidData), subField.FieldName, len(validData))
 				}
 				for j := range refValidData {
-					if subField.ValidData[j] != refValidData[j] {
+					if validData[j] != refValidData[j] {
 						return merr.WrapErrParameterInvalidMsg("sub-field ValidData mismatch in struct '%s' at row %d: '%s'=%v, '%s'=%v",
-							structName, j, refFieldName, refValidData[j], subField.FieldName, subField.ValidData[j])
+							structName, j, refFieldName, refValidData[j], subField.FieldName, validData[j])
 					}
 				}
 			}
 		}
 
-		subFieldSchemaByName := make(map[string]*schemapb.FieldSchema, len(structSchema.GetFields())*2)
-		for _, subFieldSchema := range structSchema.GetFields() {
-			subFieldSchemaByName[subFieldSchema.GetName()] = subFieldSchema
-			subFieldSchemaByName[storedStructSubFieldName(structName, subFieldSchema.GetName())] = subFieldSchema
-			if typeutil.IsStructSubField(subFieldSchema.GetName()) {
-				rawName, err := typeutil.ExtractStructFieldName(subFieldSchema.GetName())
-				if err != nil {
-					return err
-				}
-				subFieldSchemaByName[rawName] = subFieldSchema
-			}
+		if err := fillOmittedStructSubFields(structSchema, structArrays.StructArrays, int(insertMsg.GetNumRows())); err != nil {
+			return err
 		}
-
-		vectorElementWidth := func(subField *schemapb.FieldData, subFieldSchema *schemapb.FieldSchema) (int, error) {
-			dim, err := typeutil.GetDim(subFieldSchema)
-			if err != nil {
-				return 0, merr.WrapErrParameterInvalidErr(err, "sub-field '%s' in struct '%s'", subField.GetFieldName(), structName)
-			}
-			width, err := vectorArrayElementWidth(subFieldSchema.GetElementType(), dim)
-			if err != nil {
-				return 0, merr.Wrapf(err, "sub-field '%s' in struct '%s'", subField.GetFieldName(), structName)
-			}
-			return width, nil
-		}
+		totalSubFields = len(structArrays.StructArrays.GetFields())
 
 		// Check the payload row count and, while those rows are in hand, verify the
 		// per-row struct element count. The outer row count only proves that every
@@ -456,107 +464,19 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 		// every sub-field must also describe the same number of struct elements.
 		expectedArrayLen := -1
 		var firstValidData []bool
-		type rowElementCounter struct {
-			name  string
-			count func(physicalRow int) (int, error)
-		}
-		rowElementCounters := make([]rowElementCounter, 0, totalSubFields)
+		rowElementCounters := make([]structSubFieldRowCounter, 0, totalSubFields)
 		for _, subField := range structArrays.StructArrays.Fields {
-			subFieldSchema := subFieldSchemaByName[subField.GetFieldName()]
-			if subFieldSchema == nil {
-				return merr.WrapErrParameterInvalidMsg("sub-field '%s' not found in struct schema '%s'", subField.GetFieldName(), structName)
+			counter, err := newStructSubFieldRowCounter(subField, subFieldSchemaByName[subField.GetFieldName()], structName)
+			if err != nil {
+				return err
 			}
-
-			var currentArrayLen int
-
-			switch subFieldData := subField.Field.(type) {
-			case *schemapb.FieldData_Scalars:
-				if scalarArray := subFieldData.Scalars.GetArrayData(); scalarArray != nil {
-					currentArrayLen = len(scalarArray.Data)
-					if totalSubFields > 1 {
-						rowElementCounters = append(rowElementCounters, rowElementCounter{
-							name: subField.GetFieldName(),
-							count: func(physicalRow int) (int, error) {
-								row := scalarArray.GetData()[physicalRow]
-								if row.GetData() == nil {
-									return 0, merr.WrapErrParameterInvalidMsg("nil array data")
-								}
-								switch subFieldSchema.GetElementType() {
-								case schemapb.DataType_Bool:
-									return len(row.GetBoolData().GetData()), nil
-								case schemapb.DataType_Int8, schemapb.DataType_Int16, schemapb.DataType_Int32:
-									return len(row.GetIntData().GetData()), nil
-								case schemapb.DataType_Int64:
-									return len(row.GetLongData().GetData()), nil
-								case schemapb.DataType_Float:
-									return len(row.GetFloatData().GetData()), nil
-								case schemapb.DataType_Double:
-									return len(row.GetDoubleData().GetData()), nil
-								case schemapb.DataType_VarChar, schemapb.DataType_String:
-									return len(row.GetStringData().GetData()), nil
-								default:
-									return 0, merr.WrapErrParameterInvalidMsg("unsupported array element type %s", subFieldSchema.GetElementType().String())
-								}
-							},
-						})
-					}
-				} else {
-					return merr.WrapErrParameterInvalidMsg("scalar array data is nil in struct field '%s', sub-field '%s'",
-						structName, subField.FieldName)
-				}
-			case *schemapb.FieldData_Vectors:
-				if vectorArray := subFieldData.Vectors.GetVectorArray(); vectorArray != nil {
-					currentArrayLen = len(vectorArray.Data)
-					if totalSubFields > 1 {
-						var vectorWidth int
-						rowElementCounters = append(rowElementCounters, rowElementCounter{
-							name: subField.GetFieldName(),
-							count: func(physicalRow int) (int, error) {
-								if vectorWidth == 0 {
-									var err error
-									vectorWidth, err = vectorElementWidth(subField, subFieldSchema)
-									if err != nil {
-										return 0, err
-									}
-								}
-								row := vectorArray.GetData()[physicalRow]
-								if row.GetData() == nil {
-									return 0, merr.WrapErrParameterInvalidMsg("nil vector array data")
-								}
-								var payloadLen int
-								switch subFieldSchema.GetElementType() {
-								case schemapb.DataType_FloatVector:
-									payloadLen = len(row.GetFloatVector().GetData())
-								case schemapb.DataType_BinaryVector:
-									payloadLen = len(row.GetBinaryVector())
-								case schemapb.DataType_Float16Vector:
-									payloadLen = len(row.GetFloat16Vector())
-								case schemapb.DataType_BFloat16Vector:
-									payloadLen = len(row.GetBfloat16Vector())
-								case schemapb.DataType_Int8Vector:
-									payloadLen = len(row.GetInt8Vector())
-								}
-								if payloadLen%vectorWidth != 0 {
-									return 0, merr.WrapErrParameterInvalidMsg("payload length %d is not divisible by vector width %d", payloadLen, vectorWidth)
-								}
-								return payloadLen / vectorWidth, nil
-							},
-						})
-					}
-				} else {
-					return merr.WrapErrParameterInvalidMsg("vector array data is nil in struct field '%s', sub-field '%s'",
-						structName, subField.FieldName)
-				}
-			default:
-				return merr.WrapErrParameterInvalidMsg("unexpected field data type in struct array field, fieldName: %s", structName)
-			}
-
+			rowElementCounters = append(rowElementCounters, counter)
 			if expectedArrayLen == -1 {
-				expectedArrayLen = currentArrayLen
-				firstValidData = subField.GetValidData()
-			} else if currentArrayLen != expectedArrayLen {
+				expectedArrayLen = counter.rows
+				firstValidData = typeutil.GetFieldDataValidData(subField)
+			} else if counter.rows != expectedArrayLen {
 				return merr.WrapErrParameterInvalidMsg("inconsistent array length in struct field '%s': expected %d, got %d for sub-field '%s'",
-					structName, expectedArrayLen, currentArrayLen, subField.FieldName)
+					structName, expectedArrayLen, counter.rows, subField.GetFieldName())
 			}
 		}
 
@@ -586,7 +506,7 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 			for physicalRow := 0; physicalRow < expectedArrayLen; physicalRow++ {
 				count, err := refCounter.count(physicalRow)
 				if err != nil {
-					return merr.WrapErrParameterInvalidErr(err, "struct '%s' row %d sub-field '%s'",
+					return merr.Wrapf(err, "struct '%s' row %d sub-field '%s'",
 						structName, logicalRow(physicalRow), refCounter.name)
 				}
 				refElementCounts[physicalRow] = count
@@ -595,7 +515,7 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 				for physicalRow := 0; physicalRow < expectedArrayLen; physicalRow++ {
 					count, err := counter.count(physicalRow)
 					if err != nil {
-						return merr.WrapErrParameterInvalidErr(err, "struct '%s' row %d sub-field '%s'",
+						return merr.Wrapf(err, "struct '%s' row %d sub-field '%s'",
 							structName, logicalRow(physicalRow), counter.name)
 					}
 					if count != refElementCounts[physicalRow] {
@@ -608,14 +528,19 @@ func checkAndFlattenStructFieldData(schema *schemapb.CollectionSchema, insertMsg
 
 		for _, subField := range structArrays.StructArrays.Fields {
 			transformedFieldName := storedStructSubFieldName(structName, subField.FieldName)
+			validData := typeutil.GetFieldDataValidData(subField)
+			// Field is shared by the flattened copy. Normalize validity before
+			// sharing it so the source and flattened field cannot conflict.
+			typeutil.SetFieldDataValidData(subField, validData)
 			subFieldCopy := &schemapb.FieldData{
 				FieldName: transformedFieldName,
 				FieldId:   subField.FieldId,
 				Type:      subField.Type,
 				Field:     subField.Field,
 				IsDynamic: subField.IsDynamic,
-				ValidData: subField.ValidData,
 			}
+
+			typeutil.SetFieldDataValidData(subFieldCopy, validData)
 
 			flattenedFields = append(flattenedFields, subFieldCopy)
 		}
@@ -1113,7 +1038,7 @@ func autoGenDynamicFieldData(schema *schemapb.CollectionSchema, data [][]byte) *
 			for i := range validData {
 				validData[i] = true
 			}
-			fd.ValidData = validData
+			typeutil.SetFieldDataValidData(fd, validData)
 			break
 		}
 	}

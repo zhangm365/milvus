@@ -812,7 +812,7 @@ func Test_createCollectionTask_validateSchema(t *testing.T) {
 		assert.Contains(t, err.Error(), "fields in StructArrayField can only be array or array of vector")
 	})
 
-	t.Run("struct array field - nested array", func(t *testing.T) {
+	t.Run("struct array field - old-style nested element_type", func(t *testing.T) {
 		collectionName := funcutil.GenRandomStr()
 		task := createCollectionTask{
 			Req: &milvuspb.CreateCollectionRequest{
@@ -838,7 +838,42 @@ func Test_createCollectionTask_validateSchema(t *testing.T) {
 		}
 		err := task.validateSchema(context.TODO(), schema)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "nested array is not supported")
+		assert.Contains(t, err.Error(), "nested array field nested_array must specify type_schema")
+	})
+
+	t.Run("struct array field - non-nested type schema rejected", func(t *testing.T) {
+		collectionName := funcutil.GenRandomStr()
+		task := createCollectionTask{
+			Req: &milvuspb.CreateCollectionRequest{
+				Base:           &commonpb.MsgBase{MsgType: commonpb.MsgType_CreateCollection},
+				CollectionName: collectionName,
+			},
+		}
+		schema := &schemapb.CollectionSchema{
+			Name: collectionName,
+			StructArrayFields: []*schemapb.StructArrayFieldSchema{
+				{
+					Name: "struct_field",
+					Fields: []*schemapb.FieldSchema{
+						{
+							Name:       "array_of_vector",
+							TypeParams: []*commonpb.KeyValuePair{{Key: common.MaxCapacityKey, Value: "100"}},
+							TypeSchema: &schemapb.TypeSchema{
+								TypeParams: []*commonpb.KeyValuePair{{Key: common.MaxCapacityKey, Value: "100"}},
+								Kind: &schemapb.TypeSchema_ArrayElement{
+									ArrayElement: &schemapb.TypeSchema{
+										Kind: &schemapb.TypeSchema_LeafType{LeafType: schemapb.DataType_Int32},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		err := task.validateSchema(context.TODO(), schema)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "type_schema is only supported for nested array")
 	})
 
 	t.Run("struct array field - invalid element type", func(t *testing.T) {
@@ -3030,4 +3065,57 @@ func Test_appendConsistecyLevel(t *testing.T) {
 	consistencyLevel, properties := mustConsumeConsistencyLevel(task.Req.Properties)
 	assert.Equal(t, commonpb.ConsistencyLevel_Session, consistencyLevel)
 	assert.Len(t, properties, 0)
+}
+
+// A stored struct sub-field may carry enable_match or enable_analyzer: earlier
+// versions accepted them. Restoring such a collection from a snapshot
+// (preserveFieldID) must succeed; a new collection is still rejected.
+func Test_createCollectionTask_prepareSchema_structSubFieldTextMatch(t *testing.T) {
+	buildTask := func(key string, preserveFieldID bool) createCollectionTask {
+		collectionName := funcutil.GenRandomStr()
+		schema := &schemapb.CollectionSchema{
+			Name: collectionName,
+			Fields: []*schemapb.FieldSchema{
+				{FieldID: 100, Name: "pk", DataType: schemapb.DataType_Int64, IsPrimaryKey: true},
+				{FieldID: 101, Name: "vec", DataType: schemapb.DataType_FloatVector, TypeParams: []*commonpb.KeyValuePair{
+					{Key: common.DimKey, Value: "4"},
+				}},
+			},
+			StructArrayFields: []*schemapb.StructArrayFieldSchema{{
+				FieldID: 102, Name: "s",
+				Fields: []*schemapb.FieldSchema{{
+					FieldID: 103, Name: "s[tag]", DataType: schemapb.DataType_Array, ElementType: schemapb.DataType_VarChar,
+					TypeParams: []*commonpb.KeyValuePair{
+						{Key: common.MaxCapacityKey, Value: "4"},
+						{Key: common.MaxLengthKey, Value: "16"},
+						{Key: key, Value: "true"},
+					},
+				}},
+			}},
+		}
+		return createCollectionTask{
+			Req: &milvuspb.CreateCollectionRequest{
+				Base:           &commonpb.MsgBase{MsgType: commonpb.MsgType_CreateCollection},
+				CollectionName: collectionName,
+			},
+			body: &message.CreateCollectionRequest{
+				CollectionName:   collectionName,
+				CollectionSchema: schema,
+			},
+			preserveFieldID: preserveFieldID,
+		}
+	}
+
+	for _, key := range []string{common.EnableMatchKey, common.EnableAnalyzerKey} {
+		t.Run(key+" restored from snapshot", func(t *testing.T) {
+			task := buildTask(key, true)
+			require.NoError(t, task.prepareSchema(context.TODO()))
+		})
+		t.Run(key+" new collection", func(t *testing.T) {
+			task := buildTask(key, false)
+			err := task.prepareSchema(context.TODO())
+			require.ErrorIs(t, err, merr.ErrParameterInvalid)
+			require.ErrorContains(t, err, key+" is not supported on struct sub-field s[tag]")
+		})
+	}
 }

@@ -101,6 +101,7 @@ USE_ASAN="OFF"
 USE_DYNAMIC_SIMD="ON"
 USE_SVS="OFF"
 TANTIVY_FEATURES=""
+: "${TANTIVY_ANALYZER_REMOTE_TLS:=ON}"
 INDEX_ENGINE="KNOWHERE"
 ENABLE_AZURE_FS="ON"
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -181,6 +182,10 @@ parameter:
 -f: build milvus with tantivy features(default: '')
 -h: help
 
+environment:
+TANTIVY_ANALYZER_REMOTE_TLS: ON/OFF (default: ON). Set OFF for FIPS builds that must not link rustls/ring
+  (disables Lindera online dictionary download and gRPC tokenizer TLS).
+
 usage:
 ./core_build.sh -p \${INSTALL_PREFIX} -t \${BUILD_TYPE} -s \${CUDA_ARCH} -f \${TANTIVY_FEATURES} [-u] [-l] [-c] [-z] [-g] [-m] [-e] [-h] [-b] [-o]
                 "
@@ -211,6 +216,36 @@ if command -v ninja &> /dev/null; then
     fi
 else
     CMAKE_GENERATOR="Unix Makefiles"
+fi
+
+if [[ -n "${MILVUS_CARGO_TARGET_ROOT:-}" ]]; then
+  if [[ "${MILVUS_CARGO_TARGET_ROOT}" != /* ]]; then
+    echo "ERROR: MILVUS_CARGO_TARGET_ROOT must be an absolute path" >&2
+    exit 1
+  fi
+
+  mkdir -p "${MILVUS_CARGO_TARGET_ROOT}/tantivy" "${MILVUS_CARGO_TARGET_ROOT}/milvus-storage"
+
+  # Corrosion passes --target-dir=${BUILD_OUTPUT_DIR}/cargo/build explicitly,
+  # so CARGO_TARGET_DIR cannot relocate milvus-storage's Rust artifacts.
+  # Keep Corrosion's generated command unchanged and redirect its parent
+  # directory to the persistent cache instead.
+  CORROSION_CARGO_DIR="${BUILD_OUTPUT_DIR}/cargo"
+  MILVUS_STORAGE_CARGO_DIR="${MILVUS_CARGO_TARGET_ROOT}/milvus-storage"
+  if [[ -L "${CORROSION_CARGO_DIR}" ]]; then
+    ln -sfn "${MILVUS_STORAGE_CARGO_DIR}" "${CORROSION_CARGO_DIR}"
+  elif [[ -d "${CORROSION_CARGO_DIR}" ]]; then
+    # Migrate a generated target directory left by builds that predate the
+    # persistent Cargo root. Cargo can safely recreate all of its contents.
+    echo "Migrating ${CORROSION_CARGO_DIR} to persistent Cargo target storage"
+    rm -rf -- "${CORROSION_CARGO_DIR}"
+    ln -s "${MILVUS_STORAGE_CARGO_DIR}" "${CORROSION_CARGO_DIR}"
+  elif [[ -e "${CORROSION_CARGO_DIR}" ]]; then
+    echo "ERROR: ${CORROSION_CARGO_DIR} already exists and is not a symbolic link" >&2
+    exit 1
+  else
+    ln -s "${MILVUS_STORAGE_CARGO_DIR}" "${CORROSION_CARGO_DIR}"
+  fi
 fi
 
 # build with diskann index if OS is ubuntu or rocky or amzn
@@ -254,11 +289,13 @@ ${CMAKE_EXTRA_ARGS} \
 -DWITH_SVS=${USE_SVS} \
 -DINDEX_ENGINE=${INDEX_ENGINE} \
 -DTANTIVY_FEATURES_LIST=${TANTIVY_FEATURES} \
+-DTANTIVY_ANALYZER_REMOTE_TLS=${TANTIVY_ANALYZER_REMOTE_TLS} \
 -DENABLE_GCP_NATIVE=${ENABLE_GCP_NATIVE} \
 -DENABLE_AZURE_FS=${ENABLE_AZURE_FS} \
 -DMILVUS_USE_PCH=${USE_PCH} \
 -DMILVUS_UNITY_BUILD=${USE_UNITY_BUILD} \
--DMILVUS_USE_SPLIT_DWARF=${USE_SPLIT_DWARF} "
+-DMILVUS_USE_SPLIT_DWARF=${USE_SPLIT_DWARF} \
+-DMILVUS_CARGO_TARGET_ROOT=${MILVUS_CARGO_TARGET_ROOT:-} "
 # Azure build variables removed as we now use Arrow with Azure support directly
 CMAKE_CMD=${CMAKE_CMD}"${CPP_SRC_DIR}"
 

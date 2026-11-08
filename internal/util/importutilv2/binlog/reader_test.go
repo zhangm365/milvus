@@ -80,7 +80,7 @@ func TestSnapshotBitmapTextAndLocalDeletes(t *testing.T) {
 			FieldID:         101,
 			LobBasePath:     path.Join(storage.SegmentPartitionBasePath(root, 1, 2), "lobs", "101"),
 			InlineThreshold: 1, MaxLobFileBytes: 1 << 20, FlushThresholdBytes: 1,
-		}}, "parquet", []string{"parquet", "parquet"})
+		}}, nil, "parquet", []string{"parquet", "parquet"})
 	require.NoError(t, err)
 	var values []*storage.Value
 	for i := int64(0); i < 130; i++ {
@@ -1400,7 +1400,7 @@ func (suite *ReaderSuite) run(dataType schemapb.DataType, elemType schemapb.Data
 	cm, originalInsertData := suite.createMockChunk(schema, insertBinlogs, true)
 	cm.EXPECT().Size(mock.Anything, mock.Anything).Return(128, nil)
 
-	reader, err := NewReader(context.Background(), cm, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix}, suite.tsStart, suite.tsEnd, 64*1024*1024, "")
+	reader, err := NewReader(context.Background(), cm, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix}, suite.tsStart, suite.tsEnd, 64*1024*1024, "", nil)
 	suite.NoError(err)
 	insertData, err := reader.Read()
 	suite.NoError(err)
@@ -1612,18 +1612,18 @@ func (suite *ReaderSuite) TestVerify() {
 
 	checkFunc := func() {
 		cm, _ := suite.createMockChunk(schema, insertBinlogs, false)
-		reader, err := NewReader(context.Background(), cm, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix}, suite.tsStart, suite.tsEnd, 64*1024*1024, "")
+		reader, err := NewReader(context.Background(), cm, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix}, suite.tsStart, suite.tsEnd, 64*1024*1024, "", nil)
 		suite.Error(err)
 		suite.Nil(reader)
 	}
 
 	// no insert binlogs to import
-	reader, err := NewReader(context.Background(), nil, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{}, suite.tsStart, suite.tsEnd, 64*1024*1024, "")
+	reader, err := NewReader(context.Background(), nil, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{}, suite.tsStart, suite.tsEnd, 64*1024*1024, "", nil)
 	suite.Error(err)
 	suite.Nil(reader)
 
 	// too many input paths
-	reader, err = NewReader(context.Background(), nil, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix, "dummy"}, suite.tsStart, suite.tsEnd, 64*1024*1024, "")
+	reader, err = NewReader(context.Background(), nil, schema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix, "dummy"}, suite.tsStart, suite.tsEnd, 64*1024*1024, "", nil)
 	suite.Error(err)
 	suite.Nil(reader)
 
@@ -1776,7 +1776,7 @@ func (suite *ReaderSuite) TestZeroDeltaRead() {
 
 	checkFunc := func(targetSchema *schemapb.CollectionSchema, expectReadBinlogs map[int64][]string) {
 		cm := mockChunkFunc(sourceSchema, expectReadBinlogs)
-		reader, err := NewReader(context.Background(), cm, targetSchema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix}, suite.tsStart, suite.tsEnd, 64*1024*1024, "")
+		reader, err := NewReader(context.Background(), cm, targetSchema, &indexpb.StorageConfig{}, storage.StorageV1, []string{insertPrefix, deltaPrefix}, suite.tsStart, suite.tsEnd, 64*1024*1024, "", nil)
 		suite.NoError(err)
 		suite.NotNil(reader)
 
@@ -2658,22 +2658,24 @@ func TestStorageV3Reader_ReadFailurePaths(t *testing.T) {
 			}).Build()
 			defer nextPatch.UnPatch()
 
-			data, err := storage.NewInsertDataWithFunctionOutputField(r.schema)
+			data, err := storage.NewInsertDataWithMemoryTracking(r.schema)
 			require.NoError(t, err)
 			if name == "missing_field" || name == "allocate_field" {
 				delete(data.Data, 100)
 			}
-			allocations := 0
-			batchPatch := mockey.Mock(storage.NewInsertDataWithFunctionOutputField).To(func(_ *schemapb.CollectionSchema) (*storage.InsertData, error) {
-				allocations++
-				if name == "allocate_batch" || (name == "filter_batch" && allocations == 2) {
+			batchPatch := mockey.Mock(storage.NewInsertDataWithMemoryTracking).To(func(_ *schemapb.CollectionSchema) (*storage.InsertData, error) {
+				if name == "allocate_batch" {
 					return nil, cause
 				}
 				return data, nil
 			}).Build()
 			defer batchPatch.UnPatch()
+			if name == "filter_batch" {
+				filterPatch := mockey.Mock(storage.NewInsertDataWithFunctionOutputField).Return(nil, cause).Build()
+				defer filterPatch.UnPatch()
+			}
 			if name == "allocate_field" {
-				fieldPatch := mockey.Mock(storage.NewFieldData).Return(nil, cause).Build()
+				fieldPatch := mockey.Mock(storage.NewFieldDataWithMemoryTracking).Return(nil, cause).Build()
 				defer fieldPatch.UnPatch()
 			}
 			if name == "filter_batch" {
@@ -2917,4 +2919,80 @@ func TestMultiReadWithRetry_RetryableError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, [][]byte{[]byte("data")}, result)
 	assert.Equal(t, 3, callCount, "retryable error should be retried until success")
+}
+
+func TestStorageV2ReaderTrackedBufferBoundary(t *testing.T) {
+	type valueReader struct {
+		storage.DeserializeReader[*storage.Value]
+	}
+	schema := &schemapb.CollectionSchema{Fields: []*schemapb.FieldSchema{
+		{FieldID: 100, Name: "pk", DataType: schemapb.DataType_Int64, IsPrimaryKey: true},
+		{FieldID: 101, Name: "text", DataType: schemapb.DataType_VarChar, Nullable: true},
+		{FieldID: 102, Name: "sparse", DataType: schemapb.DataType_SparseFloatVector, Nullable: true},
+	}}
+	rows := make([]map[int64]any, 135)
+	baseline, err := storage.NewInsertDataWithFunctionOutputField(schema)
+	require.NoError(t, err)
+	for i := range rows {
+		var text, sparse any
+		if i%3 != 0 {
+			text = strings.Repeat("中", i%7+1)
+		}
+		if i%5 != 0 {
+			sparse = typeutil.CreateSparseFloatRow([]uint32{uint32(126 + i)}, []float32{1})
+		}
+		rows[i] = map[int64]any{100: int64(i), 101: text, 102: sparse}
+		if i < 100 {
+			require.NoError(t, baseline.Append(rows[i]))
+		}
+	}
+	// With three fields per row, the first buffer check is after 100 complete rows.
+	// Compute the limit from untracked field sizes.
+	threshold := baseline.GetMemorySize()
+	for _, tc := range []struct {
+		name      string
+		limit     int
+		batchRows []int
+	}{
+		{"exact threshold", threshold, []int{100, 35}},
+		{"below threshold at check", threshold + 1, []int{135}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			consumed := 0
+			owner := &valueReader{}
+			next := mockey.Mock((*valueReader).NextValue).To(func(*valueReader) (**storage.Value, error) {
+				if consumed == len(rows) {
+					return nil, io.EOF
+				}
+				value := &storage.Value{Value: rows[consumed]}
+				consumed++
+				return &value, nil
+			}).Build()
+			defer next.UnPatch()
+			r := &reader{ctx: context.Background(), schema: schema, storageVersion: storage.StorageV2, bufferSize: tc.limit, dr: owner}
+			offset := 0
+			for _, count := range tc.batchRows {
+				actual, err := r.Read()
+				require.NoError(t, err)
+				require.Equal(t, count, actual.GetRowNum())
+				require.Equal(t, offset+count, consumed)
+				expected, err := storage.NewInsertDataWithFunctionOutputField(schema)
+				require.NoError(t, err)
+				for _, row := range rows[offset : offset+count] {
+					require.NoError(t, expected.Append(row))
+				}
+				require.Equal(t, expected.GetMemorySize(), actual.GetMemorySize())
+				for id, field := range actual.Data {
+					require.Equal(t, expected.Data[id].GetMemorySize(), field.GetMemorySize())
+				}
+				for i := 0; i < count; i++ {
+					require.Equal(t, rows[offset+i], actual.GetRow(i))
+				}
+				offset += count
+			}
+			actual, err := r.Read()
+			require.ErrorIs(t, err, io.EOF)
+			require.Nil(t, actual)
+		})
+	}
 }

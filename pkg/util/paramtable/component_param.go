@@ -2416,11 +2416,15 @@ type proxyConfig struct {
 	// Alias  string
 	SoPath ParamItem `refreshable:"false"`
 
+	ExprParseCacheEnabled    ParamItem `refreshable:"false"`
+	ExprParseCacheMaxEntries ParamItem `refreshable:"false"`
+
 	TimeTickInterval               ParamItem `refreshable:"false"`
 	HealthCheckTimeout             ParamItem `refreshable:"true"`
 	MsgStreamTimeTickBufSize       ParamItem `refreshable:"true"`
 	MaxNameLength                  ParamItem `refreshable:"true"`
 	MaxCollectionDescriptionLength ParamItem `refreshable:"true"`
+	MaxSnapshotDescriptionLength   ParamItem `refreshable:"true"`
 	MaxUsernameLength              ParamItem `refreshable:"true"`
 	MaxUserDescriptionLength       ParamItem `refreshable:"true"`
 	MinPasswordLength              ParamItem `refreshable:"true"`
@@ -2467,6 +2471,7 @@ type proxyConfig struct {
 	MaxIndexParamsSize                ParamItem `refreshable:"true"`
 	MaxResultEntries                  ParamItem `refreshable:"true"`
 	EnableCachedServiceProvider       ParamItem `refreshable:"true"`
+	EnableLocalCollectionVisibility   ParamItem `refreshable:"true"`
 	MaxSearchAggregationResultEntries ParamItem `refreshable:"true"`
 
 	AccessLog AccessLogConfig
@@ -2481,7 +2486,9 @@ type proxyConfig struct {
 	SlowQuerySpanInSeconds ParamItem `refreshable:"true"`
 	QueryNodePoolingSize   ParamItem `refreshable:"false"`
 
-	HybridSearchRequeryPolicy ParamItem `refreshable:"true"`
+	HybridSearchRequeryPolicy     ParamItem `refreshable:"true"`
+	SearchPlaceholderLogRateLimit ParamItem `refreshable:"true"`
+	SearchPlaceholderLogMaxBytes  ParamItem `refreshable:"true"`
 }
 
 func positiveProxyLimitFormatter(defaultValue string) func(string) string {
@@ -2494,6 +2501,25 @@ func positiveProxyLimitFormatter(defaultValue string) func(string) string {
 }
 
 func (p *proxyConfig) init(base *BaseTable) {
+	p.ExprParseCacheEnabled = ParamItem{
+		Key:          "proxy.exprParseCache.enabled",
+		Version:      "3.0.6",
+		DefaultValue: "true",
+		Doc:          "Enable caching expression parse trees and parsing errors. These settings apply to all components using the expression parser, not only Proxy; each process maintains its own cache. Captured on first expression parse; initialize paramtable with the intended configuration before parsing. Restart required; disabling the cache does not reject expressions.",
+		Export:       true,
+	}
+	p.ExprParseCacheEnabled.Init(base.mgr)
+
+	p.ExprParseCacheMaxEntries = ParamItem{
+		Key:          "proxy.exprParseCache.maxEntries",
+		Version:      "3.0.6",
+		DefaultValue: "1024",
+		Formatter:    positiveProxyLimitFormatter("1024"),
+		Doc:          "Maximum number of cached expression parse trees and parsing errors per process. Non-positive or invalid values use 1024. Entries retain the existing 10-minute TTL. Captured on first expression parse; initialize paramtable with the intended configuration before parsing. Restart required.",
+		Export:       true,
+	}
+	p.ExprParseCacheMaxEntries.Init(base.mgr)
+
 	p.TimeTickInterval = ParamItem{
 		Key:          "proxy.timeTickInterval",
 		Version:      "2.2.0",
@@ -2544,6 +2570,16 @@ func (p *proxyConfig) init(base *BaseTable) {
 		Export:       true,
 	}
 	p.MaxCollectionDescriptionLength.Init(base.mgr)
+
+	p.MaxSnapshotDescriptionLength = ParamItem{
+		Key:          "proxy.maxSnapshotDescriptionLength",
+		DefaultValue: "1024",
+		Version:      "3.0.5",
+		PanicIfEmpty: true,
+		Doc:          "The maximum byte length of a snapshot description accepted by CreateSnapshot. Enforced by Proxy. Existing snapshot descriptions are not revalidated or truncated.",
+		Export:       false,
+	}
+	p.MaxSnapshotDescriptionLength.Init(base.mgr)
 
 	p.MinPasswordLength = ParamItem{
 		Key:          "proxy.minPasswordLength",
@@ -3084,6 +3120,14 @@ Disabled if the value is less or equal to 0.`,
 		Doc:          "enable cached service provider",
 	}
 	p.EnableCachedServiceProvider.Init(base.mgr)
+	p.EnableLocalCollectionVisibility = ParamItem{
+		Key:          "proxy.enableLocalCollectionVisibility",
+		Version:      "3.0.4",
+		DefaultValue: "false",
+		Doc:          "Experimental: enable RBAC collection visibility projection on RootCoord and local checks on Proxy. Keep disabled until snapshot consistency rollout is complete; enabling requires a full policy refresh.",
+		Export:       false,
+	}
+	p.EnableLocalCollectionVisibility.Init(base.mgr)
 	p.GracefulStopTimeout = ParamItem{
 		Key:          "proxy.gracefulStopTimeout",
 		Version:      "2.3.7",
@@ -3137,6 +3181,39 @@ Disabled if the value is less or equal to 0.`,
 		Export:       true,
 	}
 	p.QueryNodePoolingSize.Init(base.mgr)
+
+	p.SearchPlaceholderLogRateLimit = ParamItem{
+		Key:          "proxy.searchPlaceholderLogRateLimit",
+		Version:      "3.0.6",
+		Doc:          "The maximum number of search placeholder preview info log entries per second per Proxy process, shared by Search and HybridSearch. One entry covers one request. Non-positive, invalid or non-finite values disable logging.",
+		DefaultValue: "0",
+		Export:       false,
+		Formatter: func(value string) string {
+			limit, err := strconv.ParseFloat(value, 64)
+			if err != nil || math.IsNaN(limit) || math.IsInf(limit, 0) {
+				return "0"
+			}
+			return value
+		},
+	}
+	p.SearchPlaceholderLogRateLimit.Init(base.mgr)
+
+	const defaultSearchPlaceholderLogMaxBytes = "16384"
+	p.SearchPlaceholderLogMaxBytes = ParamItem{
+		Key:          "proxy.searchPlaceholderLogMaxBytes",
+		Version:      "3.0.6",
+		Doc:          "Maximum bytes in the combined search placeholder preview per log entry, including summaries, quoted text and truncation markers, before the log encoder escapes the field. Each placeholder shows only the first query. Invalid or non-positive values use the default of 16384 bytes.",
+		DefaultValue: defaultSearchPlaceholderLogMaxBytes,
+		Export:       false,
+		Formatter: func(value string) string {
+			size, err := strconv.Atoi(value)
+			if err != nil || size <= 0 {
+				return defaultSearchPlaceholderLogMaxBytes
+			}
+			return value
+		},
+	}
+	p.SearchPlaceholderLogMaxBytes.Init(base.mgr)
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -4105,16 +4182,16 @@ type queryNodeConfig struct {
 	ReadAheadPolicy     ParamItem `refreshable:"false"`
 	ChunkCacheWarmingUp ParamItem `refreshable:"true"`
 
-	MaxUnsolvedQueueSize         ParamItem `refreshable:"true"`
-	MaxReadConcurrency           ParamItem `refreshable:"true"`
-	MaxGpuReadConcurrency        ParamItem `refreshable:"false"`
-	MaxGroupNQ                   ParamItem `refreshable:"true"`
-	NQMergeRatio                 ParamItem `refreshable:"true"`
-	MaxDeadlineMergeGap          ParamItem `refreshable:"true"`
-	TopKMergeRatio               ParamItem `refreshable:"true"`
-	CPURatio                     ParamItem `refreshable:"true"`
-	GracefulStopTimeout          ParamItem `refreshable:"false"`
-	StandaloneMigrateDataTimeout ParamItem `refreshable:"false"`
+	MaxUnsolvedQueueSize  ParamItem `refreshable:"true"`
+	MaxReadConcurrency    ParamItem `refreshable:"true"`
+	MaxGpuReadConcurrency ParamItem `refreshable:"false"`
+	MaxGroupNQ            ParamItem `refreshable:"true"`
+	NQMergeRatio          ParamItem `refreshable:"true"`
+	MaxDeadlineMergeGap   ParamItem `refreshable:"true"`
+	TopKMergeRatio        ParamItem `refreshable:"true"`
+	CPURatio              ParamItem `refreshable:"true"`
+	GracefulStopTimeout   ParamItem `refreshable:"false"`
+	MigrateDataTimeout    ParamItem `refreshable:"false"`
 
 	EnableResultZeroCopy ParamItem `refreshable:"true"`
 
@@ -5281,14 +5358,15 @@ Max read concurrency must greater than or equal to 1, and less than or equal to 
 	}
 	p.GracefulStopTimeout.Init(base.mgr)
 
-	p.StandaloneMigrateDataTimeout = ParamItem{
-		Key:          "queryNode.standaloneMigrateDataTimeout",
-		Version:      "2.6.16",
+	p.MigrateDataTimeout = ParamItem{
+		Key:          "queryNode.migrateDataTimeout",
+		Version:      "3.0.5",
+		FallbackKeys: []string{"queryNode.standaloneMigrateDataTimeout"},
 		DefaultValue: "10s",
-		Doc:          "Duration string (e.g. 10s, 3m). In standalone mode, after this duration, the node stops waiting for data migration if no other active query node is available.",
+		Doc:          "Duration string (e.g. 10s, 3m). After this duration, a stopping query node stops waiting for data migration if no other active query node is available.",
 		Export:       true,
 	}
-	p.StandaloneMigrateDataTimeout.Init(base.mgr)
+	p.MigrateDataTimeout.Init(base.mgr)
 
 	p.MaxSegmentDeleteBuffer = ParamItem{
 		Key:          "queryNode.maxSegmentDeleteBuffer",
@@ -5841,6 +5919,9 @@ type dataCoordConfig struct {
 	StorageVersionCompactionRateLimitInterval         ParamItem `refreshable:"true"`
 	StorageVersionCompactionSessionVersionRequirement ParamItem `refreshable:"true"`
 
+	MaxFragmentsPerGroup ParamItem `refreshable:"true"`
+	TwoTierCompaction    ParamItem `refreshable:"true"`
+
 	ChannelCheckpointMaxLag ParamItem `refreshable:"true"`
 	SyncSegmentsInterval    ParamItem `refreshable:"false"`
 
@@ -5911,6 +5992,10 @@ type dataCoordConfig struct {
 	MinSegmentNumRowsToEnableIndex ParamItem `refreshable:"true"`
 	BrokerTimeout                  ParamItem `refreshable:"false"`
 
+	// segment change staging
+	SegmentChangeStagingTimeout  ParamItem `refreshable:"true"`
+	SegmentChangeGroupMaxMembers ParamItem `refreshable:"true"`
+
 	// auto balance channel on datanode
 	AutoBalance                    ParamItem `refreshable:"true"`
 	CheckAutoBalanceConfigInterval ParamItem `refreshable:"false"`
@@ -5926,11 +6011,18 @@ type dataCoordConfig struct {
 	MaxImportJobNum                 ParamItem `refreshable:"true"`
 	WaitForIndex                    ParamItem `refreshable:"true"`
 	ImportInReplicatingCluster      ParamItem `refreshable:"true"`
+	EnableImportV3                  ParamItem `refreshable:"true"`
 	EnableL0Import                  ParamItem `refreshable:"true"`
 	ImportPreAllocIDExpansionFactor ParamItem `refreshable:"true"`
 	ImportEnableIDRangeMsg          ParamItem `refreshable:"true"`
+	ImportParquetFooterMaxSize      ParamItem `refreshable:"true"`
 	ImportFileNumPerSlot            ParamItem `refreshable:"true"`
 	ImportMemoryLimitPerSlot        ParamItem `refreshable:"true"`
+	ImportFragmentSizeInMB          ParamItem `refreshable:"true"`
+	FragmentMergeFanIn              ParamItem `refreshable:"true"`
+	ReshardResidentBucketCap        ParamItem `refreshable:"true"`
+	ReshardFlushConcurrency         ParamItem `refreshable:"true"`
+	ReshardMemoryExpansionFactor    ParamItem `refreshable:"true"`
 	MaxSegmentsPerCopyTask          ParamItem `refreshable:"true"`
 	CopySegmentCheckInterval        ParamItem `refreshable:"true"`
 	CopySegmentTaskRetention        ParamItem `refreshable:"true"`
@@ -6250,6 +6342,7 @@ mix is prioritized by level: mix compactions first, then L0 compactions, then cl
 		Key:          "dataCoord.compaction.min.segment",
 		Version:      "2.0.0",
 		DefaultValue: "3",
+		Doc:          "Deprecated: unused since two-tier compaction. Replaced by fill-rate gate.",
 	}
 	p.MinSegmentToMerge.Init(base.mgr)
 
@@ -6257,7 +6350,7 @@ mix is prioritized by level: mix compactions first, then L0 compactions, then cl
 		Key:          "dataCoord.segment.smallProportion",
 		Version:      "2.0.0",
 		DefaultValue: "0.5",
-		Doc:          "The segment is considered as \"small segment\" when its # of rows is smaller than",
+		Doc:          "Deprecated: unused since two-tier compaction. Replaced by middleSize (idealSize/4) × fillRate.",
 		Export:       true,
 	}
 	p.SegmentSmallProportion.Init(base.mgr)
@@ -6266,9 +6359,8 @@ mix is prioritized by level: mix compactions first, then L0 compactions, then cl
 		Key:          "dataCoord.segment.compactableProportion",
 		Version:      "2.2.1",
 		DefaultValue: "0.85",
-		Doc: `(smallProportion * segment max # of rows).
-A compaction will happen on small segments if the segment after compaction will have`,
-		Export: true,
+		Doc:          "Deprecated: fill rate is now a hardcoded constant (0.85) in the two-tier compaction algorithm.",
+		Export:       true,
 	}
 	p.SegmentCompactableProportion.Init(base.mgr)
 
@@ -6276,10 +6368,8 @@ A compaction will happen on small segments if the segment after compaction will 
 		Key:          "dataCoord.segment.expansionRate",
 		Version:      "2.2.1",
 		DefaultValue: "1.25",
-		Doc: `over (compactableProportion * segment max # of rows) rows.
-MUST BE GREATER THAN OR EQUAL TO <smallProportion>!!!
-During compaction, the size of segment # of rows is able to exceed segment max # of rows by (expansionRate-1) * 100%. `,
-		Export: true,
+		Doc:          "Deprecated: no longer used by the mix compaction planner. Still read by v2 trigger and import paths.",
+		Export:       true,
 	}
 	p.SegmentExpansionRate.Init(base.mgr)
 
@@ -6340,35 +6430,35 @@ During compaction, the size of segment # of rows is able to exceed segment max #
 	}
 	p.CompactionMaxFullSegmentThreshold.Init(base.mgr)
 
+	const defaultForceMergeMemoryFactor = "4.0"
+	forceMergeMemoryFactorFormatter := func(value string) string {
+		factor, err := strconv.ParseFloat(value, 64)
+		if err != nil || math.IsNaN(factor) || math.IsInf(factor, 0) {
+			return defaultForceMergeMemoryFactor
+		}
+		if factor < 1.0 {
+			factor = 1.0
+		}
+		return strconv.FormatFloat(factor, 'f', -1, 64)
+	}
+
 	p.CompactionForceMergeDataNodeMemoryFactor = ParamItem{
 		Key:          "dataCoord.compaction.forceMerge.dataNodeMemoryFactor",
 		Version:      "2.6.8",
-		DefaultValue: "4.0",
+		DefaultValue: defaultForceMergeMemoryFactor,
 		Doc:          "Memory safety factor for DataNode during force merge compaction. Max segment size = DataNode memory / factor. Default 4.0 means segments can use up to 1/4 of DataNode memory. Must be >= 1.0.",
 		Export:       false,
-		Formatter: func(value string) string {
-			factor, err := strconv.ParseFloat(value, 64)
-			if err != nil || factor < 1.0 {
-				factor = 1.0
-			}
-			return strconv.FormatFloat(factor, 'f', -1, 64)
-		},
+		Formatter:    forceMergeMemoryFactorFormatter,
 	}
 	p.CompactionForceMergeDataNodeMemoryFactor.Init(base.mgr)
 
 	p.CompactionForceMergeQueryNodeMemoryFactor = ParamItem{
 		Key:          "dataCoord.compaction.forceMerge.queryNodeMemoryFactor",
 		Version:      "2.6.8",
-		DefaultValue: "4.0",
+		DefaultValue: defaultForceMergeMemoryFactor,
 		Doc:          "Memory safety factor for QueryNode when loading segments after force merge. Max segment size = QueryNode memory / factor. Default 4.0 means segments can use up to 1/4 of QueryNode memory. Must be >= 1.0.",
 		Export:       false,
-		Formatter: func(value string) string {
-			factor, err := strconv.ParseFloat(value, 64)
-			if err != nil || factor < 1.0 {
-				factor = 1.0
-			}
-			return strconv.FormatFloat(factor, 'f', -1, 64)
-		},
+		Formatter:    forceMergeMemoryFactorFormatter,
 	}
 	p.CompactionForceMergeQueryNodeMemoryFactor.Init(base.mgr)
 
@@ -6453,6 +6543,24 @@ During compaction, the size of segment # of rows is able to exceed segment max #
 		Export:       false,
 	}
 	p.StorageVersionCompactionSessionVersionRequirement.Init(base.mgr)
+
+	p.MaxFragmentsPerGroup = ParamItem{
+		Key:          "dataCoord.compaction.maxFragmentsPerGroup",
+		Version:      "2.6.0",
+		DefaultValue: "8",
+		Doc:          "maximum number of fragment segments allowed per channel-partition group before fragment-tier compaction triggers",
+		Export:       true,
+	}
+	p.MaxFragmentsPerGroup.Init(base.mgr)
+
+	p.TwoTierCompaction = ParamItem{
+		Key:          "dataCoord.compaction.twoTierCompaction",
+		Version:      "2.6.0",
+		DefaultValue: "false",
+		Doc:          "whether to use the two-tier (full + fragment) compaction algorithm instead of the legacy algorithm",
+		Export:       false,
+	}
+	p.TwoTierCompaction.Init(base.mgr)
 
 	p.GlobalCompactionInterval = ParamItem{
 		Key:          "dataCoord.compaction.global.interval",
@@ -6994,6 +7102,24 @@ Layout 1 is additionally gated on no QueryNode still reporting an older release 
 	}
 	p.MinSegmentNumRowsToEnableIndex.Init(base.mgr)
 
+	p.SegmentChangeStagingTimeout = ParamItem{
+		Key:          "dataCoord.segmentChange.stagingTimeout",
+		Version:      "3.0.4",
+		DefaultValue: "3600",
+		Doc:          "The maximum duration in seconds a segment change group may stay staged before the batch is aborted (STAGED -> ABORTED), bounding unconvergeable or externally-dropped batches.",
+		Export:       true,
+	}
+	p.SegmentChangeStagingTimeout.Init(base.mgr)
+
+	p.SegmentChangeGroupMaxMembers = ParamItem{
+		Key:          "dataCoord.segmentChange.maxMembersPerGroup",
+		Version:      "3.0.4",
+		DefaultValue: "512",
+		Doc:          "The maximum number of output segments one segment change group may carry before oversized task outputs are split into sequentially published subgroups.",
+		Export:       true,
+	}
+	p.SegmentChangeGroupMaxMembers.Init(base.mgr)
+
 	p.BindIndexNodeMode = ParamItem{
 		Key:          "indexCoord.bindIndexNodeMode.enable",
 		Version:      "2.0.0",
@@ -7194,7 +7320,7 @@ and can lower this freely; 10800 was the default before idempotency keys existed
 		Version: "2.4.0",
 		Doc: "To prevent generating of small segments, we will re-group imported files. " +
 			"This parameter represents the sum of file sizes in each group (each ImportTask).",
-		DefaultValue: "16384",
+		DefaultValue: "8192",
 		PanicIfEmpty: false,
 		Export:       true,
 	}
@@ -7270,6 +7396,19 @@ and can lower this freely; 10800 was the default before idempotency keys existed
 	}
 	p.ImportInReplicatingCluster.Init(base.mgr)
 
+	p.EnableImportV3 = ParamItem{
+		Key:     "dataCoord.import.enableImportV3",
+		Version: "3.0.0",
+		Doc: "One-way rollout gate for creating ImportTaskV3 jobs from new ordinary or backup import requests. " +
+			"Keep disabled until all DataNodes and all DataCoords that may become active support Import V3. " +
+			"The gate only selects the version for new requests; persisted WAL messages and jobs always resume " +
+			"with their stored version. Disabling the gate again after activation is unsupported.",
+		DefaultValue: "false",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.EnableImportV3.Init(base.mgr)
+
 	p.EnableL0Import = ParamItem{
 		Key:     "dataCoord.import.enableL0Import",
 		Version: "2.7.0",
@@ -7322,6 +7461,22 @@ and can lower this freely; 10800 was the default before idempotency keys existed
 	}
 	p.ImportEnableIDRangeMsg.Init(base.mgr)
 
+	// ImportParquetFooterMaxSize bounds the parquet footer read that Import V3's
+	// count-only preimport does to obtain an exact row count. A file declaring a
+	// longer footer is rejected. Footer size tracks row_groups * columns, so raise
+	// this for files written with small row groups, many columns, or untruncated
+	// string statistics.
+	p.ImportParquetFooterMaxSize = ParamItem{
+		Key:          "dataCoord.import.parquetFooterMaxSize",
+		Version:      "3.0.0",
+		DefaultValue: "67108864",
+		Doc: `Largest parquet footer, in bytes, that import sizing will read to obtain an exact row count.
+A file declaring a longer footer is rejected at submit. Footer size tracks row_groups * columns, so
+raise this for files written with small row groups, many columns, or untruncated string statistics.`,
+		Export: true,
+	}
+	p.ImportParquetFooterMaxSize.Init(base.mgr)
+
 	p.ImportFileNumPerSlot = ParamItem{
 		Key:          "dataCoord.import.fileNumPerSlot",
 		Version:      "2.5.15",
@@ -7345,6 +7500,79 @@ and can lower this freely; 10800 was the default before idempotency keys existed
 		},
 	}
 	p.ImportMemoryLimitPerSlot.Init(base.mgr)
+
+	p.ImportFragmentSizeInMB = ParamItem{
+		Key:          "dataCoord.import.fragmentSizeInMB",
+		Version:      "3.0.0",
+		Doc:          "Target logical size in MiB for one sorted ImportTaskV3 fragment.",
+		DefaultValue: "128",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.ImportFragmentSizeInMB.Init(base.mgr)
+	if p.ImportFragmentSizeInMB.GetAsInt64() <= 0 {
+		panic("dataCoord.import.fragmentSizeInMB must be positive")
+	}
+
+	p.FragmentMergeFanIn = ParamItem{
+		Key:          "dataCoord.import.fragmentMergeFanIn",
+		Version:      "3.0.0",
+		Doc:          "Maximum direct merge fan-in used by ImportTaskV3. Values must be in [2,1024].",
+		DefaultValue: "128",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.FragmentMergeFanIn.Init(base.mgr)
+	if fanIn := p.FragmentMergeFanIn.GetAsInt(); fanIn < 2 || fanIn > 1024 {
+		panic("dataCoord.import.fragmentMergeFanIn must be in [2, 1024]")
+	}
+
+	p.ReshardResidentBucketCap = ParamItem{
+		Key:          "dataCoord.import.reshardResidentBucketCap",
+		Version:      "3.0.0",
+		Doc:          "Number of (vchannel, partition) buckets whose full in-flight working set (cap x fragmentSizeInMB) the ImportTaskV3 reshard slot estimate keeps memory-resident as a ceiling, so a job with at most this many buckets can reshard without local spill on an idle node. Beyond the cap the task keeps the SAME whole-task resident budget (cap x fragmentSizeInMB) and, when the total in-memory bytes exceed it, spills the largest bucket first into the DataNode's shared spill log, so a skewed partition hash spends the spill on the hot buckets while cold buckets stay resident. The DataNode's dynamic memory probe may still spill below this ceiling when the real process memory is tight. The cap also bounds per-task slot demand so the task stays schedulable on small nodes.",
+		DefaultValue: "16",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.ReshardResidentBucketCap.Init(base.mgr)
+	if cap := p.ReshardResidentBucketCap.GetAsInt64(); cap < 1 {
+		panic("dataCoord.import.reshardResidentBucketCap must be at least 1")
+	}
+
+	p.ReshardFlushConcurrency = ParamItem{
+		Key:     "dataCoord.import.reshardFlushConcurrency",
+		Version: "3.0.0",
+		Doc: "Number of fragment writes one ImportTaskV3 reshard task keeps detached and in flight. " +
+			"A full bucket's sort/encode/upload runs on its own goroutine so it overlaps reading and hashing " +
+			"the next batches instead of stalling them. Every detached write holds its fragment input plus one " +
+			"sort copy, so the reshard slot estimate charges this many of them: raising it trades node task " +
+			"concurrency for per-task latency.",
+		DefaultValue: "2",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.ReshardFlushConcurrency.Init(base.mgr)
+	if concurrency := p.ReshardFlushConcurrency.GetAsInt64(); concurrency < 1 {
+		panic("dataCoord.import.reshardFlushConcurrency must be at least 1")
+	}
+
+	p.ReshardMemoryExpansionFactor = ParamItem{
+		Key:     "dataCoord.import.reshardMemoryExpansionFactor",
+		Version: "3.0.0",
+		Doc: "Expansion factor applied to an ImportTaskV3 reshard task's whole per-task heap " +
+			"footprint when estimating its memory charge: WorkingSet charges factor x (fixed IO + " +
+			"pipeline + resident buckets + detached fragment inputs + their structural overhead + one " +
+			"sort copy per detached write). It covers the Go runtime headroom and the other growth " +
+			"between the source/flush boundaries the run returns memory at. Must be at least 1.",
+		DefaultValue: "1.65",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.ReshardMemoryExpansionFactor.Init(base.mgr)
+	if factor := p.ReshardMemoryExpansionFactor.GetAsFloat(); factor < 1 {
+		panic("dataCoord.import.reshardMemoryExpansionFactor must be at least 1")
+	}
 
 	p.MaxSegmentsPerCopyTask = ParamItem{
 		Key:          "dataCoord.import.maxSegmentsPerCopyTask",
@@ -7754,6 +7982,7 @@ type dataNodeConfig struct {
 	MaxImportFileSizeInGB           ParamItem `refreshable:"true"`
 	ImportBaseBufferSize            ParamItem `refreshable:"true"`
 	ImportDeleteBufferSize          ParamItem `refreshable:"true"`
+	ReshardSpillMaxStreams          ParamItem `refreshable:"false"`
 	ImportMemoryLimitPercentage     ParamItem `refreshable:"true"`
 	ImportMaxWriteRetryAttempts     ParamItem `refreshable:"true"`
 	ImportCopyObjectTimeout         ParamItem `refreshable:"true"`
@@ -8107,6 +8336,19 @@ if this parameter <= 0, will set it as 10`,
 		Export:       true,
 	}
 	p.ImportDeleteBufferSize.Init(base.mgr)
+
+	p.ReshardSpillMaxStreams = ParamItem{
+		Key:          "dataNode.import.reshardSpillMaxStreams",
+		Version:      "3.0.0",
+		Doc:          "Maximum number of spill files (Arrow IPC streams) one ImportTaskV3 reshard run keeps open. Buckets are mapped to streams by a fixed hash, so every range of one bucket lives in exactly one file and a run with more buckets than streams never opens more files than this cap. A stream file is removed as soon as all of its ranges are consumed; the actual stream count is min(buckets, this value). Must be at least 1.",
+		DefaultValue: "128",
+		PanicIfEmpty: false,
+		Export:       true,
+	}
+	p.ReshardSpillMaxStreams.Init(base.mgr)
+	if streams := p.ReshardSpillMaxStreams.GetAsInt(); streams < 1 {
+		panic("dataNode.import.reshardSpillMaxStreams must be at least 1")
+	}
 
 	p.ImportMemoryLimitPercentage = ParamItem{
 		Key:          "dataNode.import.memoryLimitPercentage",

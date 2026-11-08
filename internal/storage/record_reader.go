@@ -8,6 +8,7 @@ import (
 
 	"github.com/apache/arrow/go/v17/arrow"
 	"github.com/apache/arrow/go/v17/arrow/array"
+	"github.com/apache/arrow/go/v17/arrow/memory"
 	"github.com/cockroachdb/errors"
 
 	"github.com/milvus-io/milvus-proto/go-api/v3/schemapb"
@@ -19,11 +20,121 @@ import (
 	"github.com/milvus-io/milvus/pkg/v3/util/typeutil"
 )
 
+const ImportFragmentFormatParquet = "parquet"
+
+// ImportFragmentReaderSpec is the storage-layer description of one immutable
+// Import V3 fragment.  The Import proto is deliberately not referenced here:
+// DataNode validates the wire FragmentRef and then passes only the fields the
+// packed reader needs.
+type ImportFragmentReaderSpec struct {
+	Path string
+	Rows int64
+}
+
+// importFragmentRecordReader adds the Import contract that the packed FFI
+// reader itself cannot check: cancellation and an exact logical row count.
+// Sort-order validation remains in storage.MergeSort, at the point where the
+// keys are already decoded and compared.
+type importFragmentRecordReader struct {
+	ctx          context.Context
+	reader       RecordReader
+	expectedRows int64
+	readRows     int64
+	finished     bool
+}
+
+var _ RecordReader = (*importFragmentRecordReader)(nil)
+
+func (r *importFragmentRecordReader) Next() (Record, error) {
+	if err := r.ctx.Err(); err != nil {
+		return nil, err
+	}
+	if r.finished {
+		return nil, io.EOF
+	}
+	rec, err := r.reader.Next()
+	if err == io.EOF {
+		r.finished = true
+		if r.readRows != r.expectedRows {
+			return nil, merr.WrapErrDataIntegrityMsg(
+				"import fragment row count mismatch: expected=%d actual=%d", r.expectedRows, r.readRows)
+		}
+		return nil, io.EOF
+	}
+	if err != nil {
+		return nil, err
+	}
+	if rec == nil {
+		return nil, merr.WrapErrDataIntegrityMsg("import fragment reader returned a nil record without EOF")
+	}
+	r.readRows += int64(rec.Len())
+	if r.readRows > r.expectedRows {
+		return nil, merr.WrapErrDataIntegrityMsg(
+			"import fragment row count exceeds manifest: expected=%d actual=%d", r.expectedRows, r.readRows)
+	}
+	return rec, nil
+}
+
+func (r *importFragmentRecordReader) Close() error {
+	if r == nil || r.reader == nil {
+		return nil
+	}
+	return r.reader.Close()
+}
+
 type RecordReader interface {
 	// Next returns a record borrowed from the reader and valid until the next
 	// Next or Close. Callers retaining it longer must Retain and Release it.
 	Next() (Record, error)
 	Close() error
+}
+
+// NewInsertDataRecordReader materializes one normalized InsertData batch as a
+// RecordReader. It is used by Import V3 to feed the existing storage.Sort
+// implementation without introducing a second sorting path.
+func NewInsertDataRecordReader(data *InsertData, schema *schemapb.CollectionSchema) (RecordReader, error) {
+	if data == nil || schema == nil {
+		return nil, merr.WrapErrServiceInternalMsg("insert data or schema is nil")
+	}
+	if data.GetRowNum() == 0 {
+		return &IterativeRecordReader{iterate: func() (RecordReader, error) { return nil, io.EOF }}, nil
+	}
+	arrowSchema, err := ConvertToArrowSchema(schema, false)
+	if err != nil {
+		return nil, err
+	}
+	builder := array.NewRecordBuilder(memory.DefaultAllocator, arrowSchema)
+	defer builder.Release()
+	if err := BuildRecord(builder, data, schema); err != nil {
+		return nil, err
+	}
+	record := builder.NewRecord()
+	field2Col := make(map[FieldID]int)
+	for i, field := range typeutil.GetAllFieldSchemas(schema) {
+		field2Col[field.GetFieldID()] = i
+	}
+	return &singleRecordReader{record: NewSimpleArrowRecord(record, field2Col)}, nil
+}
+
+type singleRecordReader struct {
+	record Record
+	read   bool
+}
+
+func (r *singleRecordReader) Next() (Record, error) {
+	if r.read || r.record == nil {
+		return nil, io.EOF
+	}
+	r.read = true
+	return r.record, nil
+}
+
+func (r *singleRecordReader) Close() error {
+	if r.record != nil {
+		r.record.Release()
+		r.record = nil
+	}
+	return nil
 }
 
 type packedRecordReader struct {
@@ -135,6 +246,62 @@ func newFFIPackedRecordReaderFromFragments(
 	return &ffiPackedRecordReader{
 		reader:    reader,
 		field2Col: field2Col,
+	}, nil
+}
+
+// NewImportFragmentRecordReader opens exactly one immutable packed fragment.
+// It performs only cheap descriptor validation before opening the object.
+func NewImportFragmentRecordReader(
+	ctx context.Context,
+	spec ImportFragmentReaderSpec,
+	schema *schemapb.CollectionSchema,
+	option ...RwOption,
+) (RecordReader, error) {
+	if ctx == nil {
+		return nil, merr.WrapErrImportSysFailedMsg("import fragment reader context is nil")
+	}
+	if spec.Path == "" {
+		return nil, merr.WrapErrImportSysFailedMsg("import fragment path is empty")
+	}
+	if spec.Rows <= 0 {
+		return nil, merr.WrapErrImportSysFailedMsg("invalid import fragment rows=%d", spec.Rows)
+	}
+	if schema == nil {
+		return nil, merr.WrapErrImportSysFailedMsg("import fragment schema is nil")
+	}
+
+	rwOptions := DefaultReaderOptions()
+	for _, opt := range option {
+		opt(rwOptions)
+	}
+	// Import V3 fragments are always produced by the packed writer.  The
+	// storage version controls the final segment writer, not this temporary
+	// object reader, so validate only the fields needed by the FFI reader.
+	if rwOptions.storageConfig == nil {
+		return nil, merr.WrapErrImportSysFailedMsg("storage config is nil for import fragment reader")
+	}
+
+	reader, err := newFFIPackedRecordReaderFromFragments(
+		[]packed.Fragment{{
+			FilePath: spec.Path,
+			StartRow: 0,
+			EndRow:   spec.Rows,
+			RowCount: spec.Rows,
+		}},
+		ImportFragmentFormatParquet,
+		schema,
+		rwOptions.bufferSize,
+		rwOptions.storageConfig,
+		rwOptions.pluginContext,
+		rwOptions.externalReader,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &importFragmentRecordReader{
+		ctx:          ctx,
+		reader:       reader,
+		expectedRows: spec.Rows,
 	}, nil
 }
 
@@ -521,6 +688,10 @@ type ChunkedBlobsReader func() ([]*Blob, error)
 
 type CompositeBinlogRecordReader struct {
 	fields  map[FieldID]*schemapb.FieldSchema
+	structs map[FieldID]*schemapb.StructArrayFieldSchema
+	// stored is the set of field IDs the segment physically stores, including
+	// fields that are no longer in the schema.
+	stored  map[FieldID]struct{}
 	index   map[FieldID]int16
 	brs     []*BinlogReader
 	rrs     []array.RecordReader
@@ -579,8 +750,23 @@ func (crr *CompositeBinlogRecordReader) Next() (Record, error) {
 		return nil, io.EOF
 	}
 	for _, f := range nonExistingFields {
-		// If the field is not in the current batch, fill with null array
-		arr, err := GenerateEmptyArrayFromSchema(f, nRows)
+		var arr arrow.Array
+		var err error
+		if st := crr.structs[f.GetFieldID()]; st != nil {
+			sibling := pickStructSibling(st, func(id int64) bool {
+				idx, ok := crr.index[id]
+				return ok && recs[idx] != nil
+			})
+			switch {
+			case sibling != nil && f.GetElementNullable():
+				arr, err = GenerateNullElementsArrayFromSibling(f, recs[crr.index[sibling.GetFieldID()]], sibling, nRows)
+			case sibling == nil:
+				err = checkStructProviderNotDropped(st, f, crr.stored)
+			}
+		}
+		if arr == nil && err == nil {
+			arr, err = GenerateEmptyArrayFromSchema(f, nRows)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -623,9 +809,10 @@ func (crr *CompositeBinlogRecordReader) releaseCurrent() {
 
 // NewAbsentFieldFillRecordReader completes a partial record to full read-schema
 // width the way V1's CompositeBinlogRecordReader does: every read-schema field NOT
-// physically present (FieldID not in presentFields) is filled via
-// GenerateEmptyArrayFromSchema -- its declared default when it has one, else null,
-// erroring on a non-nullable absent field. Present columns pass through from inner.
+// physically present (FieldID not in presentFields) is filled from its schema
+// default or with nulls. An element-nullable struct child inherits a present
+// sibling's row validity and element counts. Other absent fields retain the
+// GenerateEmptyArrayFromSchema behavior. Present columns pass through from inner.
 // This gives the packed StorageV3 manifest reader the same default-for-absent
 // semantic the V1 binlog reader already applies, so it stops presenting declared
 // defaults as NULL (issue #52771). presentFields is the physically-present field
@@ -634,6 +821,12 @@ func (crr *CompositeBinlogRecordReader) releaseCurrent() {
 // nothing is absent.
 func NewAbsentFieldFillRecordReader(inner RecordReader, neededSchema *schemapb.CollectionSchema, presentFields map[FieldID]struct{}) RecordReader {
 	fill := make([]*schemapb.FieldSchema, 0)
+	structs := make(map[FieldID]*schemapb.StructArrayFieldSchema)
+	for _, st := range neededSchema.GetStructArrayFields() {
+		for _, child := range st.GetFields() {
+			structs[child.GetFieldID()] = st
+		}
+	}
 	for _, f := range typeutil.GetAllFieldSchemas(neededSchema) {
 		if _, present := presentFields[f.GetFieldID()]; present {
 			continue
@@ -643,13 +836,15 @@ func NewAbsentFieldFillRecordReader(inner RecordReader, neededSchema *schemapb.C
 	if len(fill) == 0 {
 		return inner
 	}
-	return &absentFieldFillRecordReader{inner: inner, fill: fill}
+	return &absentFieldFillRecordReader{inner: inner, fill: fill, structs: structs, present: presentFields}
 }
 
 type absentFieldFillRecordReader struct {
-	inner RecordReader
-	fill  []*schemapb.FieldSchema
-	cur   *absentFilledRecord
+	inner   RecordReader
+	fill    []*schemapb.FieldSchema
+	structs map[FieldID]*schemapb.StructArrayFieldSchema
+	present map[FieldID]struct{}
+	cur     *absentFilledRecord
 }
 
 var _ RecordReader = (*absentFieldFillRecordReader)(nil)
@@ -662,7 +857,23 @@ func (r *absentFieldFillRecordReader) Next() (Record, error) {
 	}
 	computed := make(map[FieldID]arrow.Array, len(r.fill))
 	for _, f := range r.fill {
-		arr, genErr := GenerateEmptyArrayFromSchema(f, base.Len())
+		var arr arrow.Array
+		var genErr error
+		if st := r.structs[f.GetFieldID()]; st != nil {
+			sibling := pickStructSibling(st, func(id int64) bool {
+				_, ok := r.present[id]
+				return ok
+			})
+			switch {
+			case sibling != nil && f.GetElementNullable():
+				arr, genErr = GenerateNullElementsArrayFromSibling(f, base.Column(sibling.GetFieldID()), sibling, base.Len())
+			case sibling == nil:
+				genErr = checkStructProviderNotDropped(st, f, r.present)
+			}
+		}
+		if arr == nil && genErr == nil {
+			arr, genErr = GenerateEmptyArrayFromSchema(f, base.Len())
+		}
 		if genErr != nil {
 			for _, a := range computed {
 				a.Release()

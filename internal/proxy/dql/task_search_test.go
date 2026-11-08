@@ -1036,6 +1036,59 @@ func TestSearchTask_PreExecute(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("group by field IDs", func(t *testing.T) {
+		collName := "search_group_by_metadata" + funcutil.GenRandomStr()
+		schema, fieldIDs := createCollWithFields(t, collName, nil)
+		registerColl(collName, schema)
+		for _, tc := range []struct {
+			name, key, value string
+			want             []int64
+		}{
+			{"none", "", "", nil},
+			{"legacy", GroupByFieldKey, testInt32Field, []int64{fieldIDs[testInt32Field]}},
+			{"composite", GroupByFieldsKey, testInt32Field + "," + testBoolField, []int64{fieldIDs[testInt32Field], fieldIDs[testBoolField]}},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				task := getSearchTask(t, collName)
+				task.request.SearchParams = getValidSearchParams()
+				task.request.DslType = commonpb.DslType_BoolExprV1
+				if tc.key != "" {
+					task.request.SearchParams = append(task.request.SearchParams, &commonpb.KeyValuePair{Key: tc.key, Value: tc.value})
+				}
+				require.NoError(t, task.PreExecute(ctx))
+				plan := &planpb.PlanNode{}
+				require.NoError(t, proto.Unmarshal(task.GetSerializedExprPlan(), plan))
+				assert.Equal(t, tc.want, plan.GetVectorAnns().GetQueryInfo().GetGroupByFieldIds())
+				assert.Equal(t, tc.want, task.GetGroupByFieldIds())
+				assert.Equal(t, plan.GetVectorAnns().GetQueryInfo().GetGroupByFieldId(), task.GetGroupByFieldId())
+
+				t.Run("hybrid", func(t *testing.T) {
+					hybrid := getSearchTask(t, collName)
+					hybrid.request.SearchParams = []*commonpb.KeyValuePair{{Key: LimitKey, Value: "10"}}
+					if tc.key != "" {
+						hybrid.request.SearchParams = append(hybrid.request.SearchParams, &commonpb.KeyValuePair{Key: tc.key, Value: tc.value})
+					}
+					for range 2 {
+						hybrid.request.SubReqs = append(hybrid.request.SubReqs, &milvuspb.SubSearchRequest{
+							DslType:      commonpb.DslType_BoolExprV1,
+							Nq:           1,
+							SearchParams: getValidSearchParams(),
+						})
+					}
+					require.NoError(t, hybrid.PreExecute(ctx))
+					require.Len(t, hybrid.GetSubReqs(), 2)
+					assert.Equal(t, tc.want, hybrid.GetGroupByFieldIds())
+					assert.Equal(t, task.GetGroupByFieldId(), hybrid.GetGroupByFieldId())
+					for _, sub := range hybrid.GetSubReqs() {
+						require.NoError(t, proto.Unmarshal(sub.GetSerializedExprPlan(), plan))
+						assert.Equal(t, tc.want, plan.GetVectorAnns().GetQueryInfo().GetGroupByFieldIds())
+						assert.Equal(t, hybrid.GetGroupByFieldId(), sub.GetGroupByFieldId())
+					}
+				})
+			})
+		}
+	})
+
 	t.Run("search with timeout", func(t *testing.T) {
 		collName := "search_with_timeout" + funcutil.GenRandomStr()
 		registerColl(collName, createColl(t, collName, nil))
@@ -2924,6 +2977,7 @@ func TestTaskSearch_reduceGroupBySearchResultData(t *testing.T) {
 			Type: schemapb.DataType_Int64,
 			Field: &schemapb.FieldData_Scalars{
 				Scalars: &schemapb.ScalarField{
+					ValidData: valids,
 					Data: &schemapb.ScalarField_LongData{
 						LongData: &schemapb.LongArray{
 							Data: groupByValues,
@@ -2931,7 +2985,6 @@ func TestTaskSearch_reduceGroupBySearchResultData(t *testing.T) {
 					},
 				},
 			},
-			ValidData: valids,
 		}
 		return result
 	}
@@ -2988,16 +3041,17 @@ func TestTaskSearch_reduceGroupBySearchResultData(t *testing.T) {
 			expectedIDs:    []int64{1, 3, 5, 7, 9, 1, 3, 5, 7, 9},
 			expectedScores: []float32{-10, -8, -6, -4, -2, -10, -8, -6, -4, -2},
 			expectedGroupByValues: &schemapb.FieldData{
-				Type:    schemapb.DataType_Int64,
-				FieldId: 1,
+				Type:      schemapb.DataType_Int64,
+				FieldId:   1,
+				ValidData: []bool{true, true, true, true, false, true, true, true, true, false},
 				Field: &schemapb.FieldData_Scalars{
 					Scalars: &schemapb.ScalarField{
+						ValidData: []bool{true, true, true, true, false, true, true, true, true, false},
 						Data: &schemapb.ScalarField_LongData{
 							LongData: &schemapb.LongArray{Data: []int64{1, 2, 3, 4, 0, 1, 2, 3, 4, 0}},
 						},
 					},
 				},
-				ValidData: []bool{true, true, true, true, false, true, true, true, true, false},
 			},
 		},
 	}
@@ -6893,6 +6947,17 @@ func TestSearchTask_ArrayOfVectorSimpleSearch(t *testing.T) {
 	const rangeParams = `{"nprobe": 10, "radius": 0.2}`
 	const plainParams = `{"nprobe": 10}`
 
+	t.Run("element-nullable vector array rejects only embedding-list search", func(t *testing.T) {
+		schema.StructArrayFields[0].Fields[0].ElementNullable = true
+		defer func() { schema.StructArrayFields[0].Fields[0].ElementNullable = false }()
+		task := makeTask("emb_vec", commonpb.PlaceholderType_EmbListFloatVector, plainParams, false, false)
+		task.schema = mustNewSchemaInfo(schema)
+		require.ErrorContains(t, task.initSearchRequest(ctx), "embedding-list search is not supported for element-nullable vector array")
+		task = makeTask("emb_vec", commonpb.PlaceholderType_FloatVector, plainParams, false, false)
+		task.schema = mustNewSchemaInfo(schema)
+		require.NoError(t, task.initSearchRequest(ctx))
+	})
+
 	t.Run("element-level range search should succeed", func(t *testing.T) {
 		task := makeTask("emb_vec", commonpb.PlaceholderType_FloatVector, rangeParams, false, false)
 		err := task.initSearchRequest(ctx)
@@ -7088,6 +7153,17 @@ func TestSearchTask_ArrayOfVectorHybridSearch(t *testing.T) {
 			hybridSubSpec{annsField: "emb_text_vec", metricType: metric.L2, phType: commonpb.PlaceholderType_FloatVector},
 		)
 	}
+
+	t.Run("hybrid element-nullable vector array rejects only embedding-list search", func(t *testing.T) {
+		schema.StructArrayFields[0].Fields[0].ElementNullable = true
+		defer func() { schema.StructArrayFields[0].Fields[0].ElementNullable = false }()
+		qt := buildHybridTask("emb_vec", "", false, "")
+		qt.schema = mustNewSchemaInfo(schema)
+		require.ErrorContains(t, qt.initAdvancedSearchRequest(ctx), "embedding-list search is not supported for element-nullable vector array")
+		qt = buildElementHybridTask("emb_vec", "", false, "")
+		qt.schema = mustNewSchemaInfo(schema)
+		require.NoError(t, qt.initAdvancedSearchRequest(ctx))
+	})
 
 	t.Run("hybrid with ArrayOfVector EmbList metric plain topK should succeed", func(t *testing.T) {
 		qt := buildHybridTaskWithMetric("emb_vec", metric.MaxSimCosine, commonpb.PlaceholderType_EmbListFloatVector, "", false, "")

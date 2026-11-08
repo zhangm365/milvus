@@ -56,6 +56,13 @@ import (
 	"github.com/milvus-io/milvus/pkg/v3/util/typeutil"
 )
 
+func testArrayTypeSchema(element *schemapb.TypeSchema, params ...*commonpb.KeyValuePair) *schemapb.TypeSchema {
+	return &schemapb.TypeSchema{
+		Kind:       &schemapb.TypeSchema_ArrayElement{ArrayElement: element},
+		TypeParams: params,
+	}
+}
+
 func captureProxyLogs(t *testing.T) *mlog.TestSink {
 	t.Helper()
 
@@ -147,6 +154,8 @@ func TestValidateResourceGroupName(t *testing.T) {
 	assert.Nil(t, ValidateResourceGroupName("abc"))
 	assert.Nil(t, ValidateResourceGroupName("_123abc"))
 	assert.Nil(t, ValidateResourceGroupName("abc123_"))
+	assert.Nil(t, ValidateResourceGroupName("rg-01"))
+	assert.Nil(t, ValidateResourceGroupName("a-b_c-"))
 
 	longName := make([]byte, 256)
 	for i := 0; i < len(longName); i++ {
@@ -161,6 +170,9 @@ func TestValidateResourceGroupName(t *testing.T) {
 		"",
 		string(longName),
 		"中文",
+		"-rg",
+		"-",
+		"a b-c",
 	}
 
 	for _, name := range invalidNames {
@@ -649,6 +661,25 @@ func TestValidateFieldType(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("top-level nested array with type schema", func(t *testing.T) {
+		sch := &schemapb.CollectionSchema{
+			Fields: []*schemapb.FieldSchema{
+				{
+					DataType:    schemapb.DataType_Array,
+					ElementType: schemapb.DataType_Array,
+					TypeSchema: testArrayTypeSchema(
+						testArrayTypeSchema(&schemapb.TypeSchema{
+							Kind: &schemapb.TypeSchema_LeafType{LeafType: schemapb.DataType_Int64},
+						}, &commonpb.KeyValuePair{Key: common.MaxCapacityKey, Value: "32"}),
+						&commonpb.KeyValuePair{Key: common.MaxCapacityKey, Value: "32"},
+					),
+				},
+			},
+		}
+		err := validateFieldType(sch)
+		require.ErrorContains(t, err, "nested array can only be in a struct array field")
+	})
 }
 
 func TestValidateMultipleVectorFields(t *testing.T) {
@@ -3778,9 +3809,9 @@ func TestCheckAndFlattenStructFieldData_ValidDataCopied(t *testing.T) {
 									FieldName: subFieldName,
 									FieldId:   201,
 									Type:      schemapb.DataType_Array,
-									ValidData: validData,
 									Field: &schemapb.FieldData_Scalars{
 										Scalars: &schemapb.ScalarField{
+											ValidData: validData,
 											Data: &schemapb.ScalarField_ArrayData{
 												ArrayData: &schemapb.ArrayArray{
 													Data: []*schemapb.ScalarField{
@@ -3809,7 +3840,8 @@ func TestCheckAndFlattenStructFieldData_ValidDataCopied(t *testing.T) {
 	for _, fd := range insertMsg.GetFieldsData() {
 		if fd.FieldName == transformedName {
 			found = true
-			assert.Equal(t, validData, fd.GetValidData(), "ValidData should be preserved in flattened sub-field")
+			assert.Equal(t, validData, fd.GetValidData(), "flattened sub-field should carry legacy ValidData")
+			assert.Equal(t, validData, fd.GetScalars().GetValidData(), "flattened sub-field should carry field-specific ValidData")
 			break
 		}
 	}
@@ -3973,9 +4005,9 @@ func TestCheckAndFlattenStructFieldData_RequiredMissingButNullablePresent(t *tes
 									FieldName: "sub_b",
 									FieldId:   301,
 									Type:      schemapb.DataType_Array,
-									ValidData: []bool{true, false},
 									Field: &schemapb.FieldData_Scalars{
 										Scalars: &schemapb.ScalarField{
+											ValidData: []bool{true, false},
 											Data: &schemapb.ScalarField_ArrayData{
 												ArrayData: &schemapb.ArrayArray{
 													Data: []*schemapb.ScalarField{
@@ -4058,16 +4090,18 @@ func TestCheckAndFlattenStructFieldData_AllNullWithInitializedVectorsOneof(t *te
 									FieldName: "tag",
 									FieldId:   201,
 									Type:      schemapb.DataType_Array,
-									ValidData: []bool{false, false},
+									Field: &schemapb.FieldData_Scalars{
+										Scalars: &schemapb.ScalarField{ValidData: []bool{false, false}},
+									},
 								},
 								{
 									FieldName: "vec",
 									FieldId:   202,
 									Type:      schemapb.DataType_ArrayOfVector,
-									ValidData: []bool{false, false},
 									Field: &schemapb.FieldData_Vectors{
 										Vectors: &schemapb.VectorField{
-											Dim: 4,
+											ValidData: []bool{false, false},
+											Dim:       4,
 										},
 									},
 								},
@@ -4329,9 +4363,9 @@ func TestCheckAndFlattenStructFieldData_ValidDataMaskMismatch(t *testing.T) {
 								{
 									FieldName: "a",
 									Type:      schemapb.DataType_Array,
-									ValidData: []bool{true, false},
 									Field: &schemapb.FieldData_Scalars{
 										Scalars: &schemapb.ScalarField{
+											ValidData: []bool{true, false},
 											Data: &schemapb.ScalarField_ArrayData{
 												ArrayData: &schemapb.ArrayArray{
 													Data: []*schemapb.ScalarField{
@@ -4347,9 +4381,9 @@ func TestCheckAndFlattenStructFieldData_ValidDataMaskMismatch(t *testing.T) {
 								{
 									FieldName: "b",
 									Type:      schemapb.DataType_Array,
-									ValidData: []bool{false, true},
 									Field: &schemapb.FieldData_Scalars{
 										Scalars: &schemapb.ScalarField{
+											ValidData: []bool{false, true},
 											Data: &schemapb.ScalarField_ArrayData{
 												ArrayData: &schemapb.ArrayArray{
 													Data: []*schemapb.ScalarField{
@@ -4418,9 +4452,9 @@ func TestCheckAndFlattenStructFieldData_ValidDataNilVsNonNil(t *testing.T) {
 								{
 									FieldName: "a",
 									Type:      schemapb.DataType_Array,
-									ValidData: nil, // no ValidData
 									Field: &schemapb.FieldData_Scalars{
 										Scalars: &schemapb.ScalarField{
+											ValidData: nil, // no ValidData
 											Data: &schemapb.ScalarField_ArrayData{
 												ArrayData: &schemapb.ArrayArray{
 													Data: []*schemapb.ScalarField{
@@ -4436,9 +4470,9 @@ func TestCheckAndFlattenStructFieldData_ValidDataNilVsNonNil(t *testing.T) {
 								{
 									FieldName: "b",
 									Type:      schemapb.DataType_Array,
-									ValidData: []bool{true, false}, // has ValidData
 									Field: &schemapb.FieldData_Scalars{
 										Scalars: &schemapb.ScalarField{
+											ValidData: []bool{true, false}, // has ValidData
 											Data: &schemapb.ScalarField_ArrayData{
 												ArrayData: &schemapb.ArrayArray{
 													Data: []*schemapb.ScalarField{
@@ -4508,8 +4542,10 @@ func TestCheckAndFlattenStructFieldData_ValidDataWithoutPayload(t *testing.T) {
 									FieldName: "a",
 									FieldId:   201,
 									Type:      schemapb.DataType_Array,
-									ValidData: []bool{true, false}, // claims row 0 is valid
-									// but no Field/payload
+									Field: &schemapb.FieldData_Scalars{
+										// Claims row 0 is valid, but provides no payload.
+										Scalars: &schemapb.ScalarField{ValidData: []bool{true, false}},
+									},
 								},
 							},
 						},

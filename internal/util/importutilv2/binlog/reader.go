@@ -51,6 +51,7 @@ type reader struct {
 	storageVersion   int64
 	importEz         string
 	sourceEncryption SourceEncryption
+	pluginContext    *indexcgopb.StoragePluginContext
 
 	fileSize         *atomic.Int64
 	bufferSize       int
@@ -92,8 +93,10 @@ func NewReader(ctx context.Context,
 	tsEnd uint64,
 	bufferSize int,
 	importEz string,
+	pluginContext *indexcgopb.StoragePluginContext,
 ) (*reader, error) {
 	r := newReader(ctx, cm, schema, storageConfig, storageVersion, bufferSize, importEz)
+	r.pluginContext = pluginContext
 	err := r.init(paths, tsStart, tsEnd)
 	if err != nil {
 		return nil, err
@@ -256,6 +259,9 @@ func (r *reader) init(paths []string, tsStart, tsEnd uint64) error {
 		return merr.WrapErrImportFailedMsg("too many input paths for binlog import. "+
 			"Valid paths length should be one or two, but got paths:%s", paths)
 	}
+	// The legacy prefix-based route must never interpret a StorageV3 source:
+	// snapshot imports go through NewStorageV3ManifestReader with an exact
+	// captured manifest instead of content-shaped path heuristics.
 	if r.storageVersion == storage.StorageV3 {
 		return merr.WrapErrImportFailedMsg(
 			"StorageV3 backup import requires an exact manifest from a snapshot source",
@@ -287,7 +293,11 @@ func (r *reader) init(paths []string, tsStart, tsEnd uint64) error {
 		storage.WithStorageConfig(r.storageConfig),
 	}
 
-	if len(r.importEz) > 0 {
+	// A caller-resolved plugin context takes precedence over deriving one from
+	// the EZK: the Import V3 reshard source resolves encryption once per task.
+	if r.pluginContext != nil {
+		rwOptions = append(rwOptions, storage.WithPluginContext(r.pluginContext))
+	} else if len(r.importEz) > 0 {
 		ezID, err := hookutil.GetEzIDByImportEzk(r.importEz)
 		if err != nil {
 			return err
@@ -709,7 +719,7 @@ func (r *reader) Read() (*storage.InsertData, error) {
 	if r.readErr != nil {
 		return nil, r.readErr
 	}
-	insertData, err := storage.NewInsertDataWithFunctionOutputField(r.schema)
+	insertData, err := storage.NewInsertDataWithMemoryTracking(r.schema)
 	if err != nil {
 		return nil, err
 	}
@@ -763,7 +773,7 @@ func (r *reader) Read() (*storage.InsertData, error) {
 		for _, field := range allFields {
 			fieldData := insertData.Data[field.GetFieldID()]
 			if fieldData == nil {
-				fieldData, err = storage.NewFieldData(field.GetDataType(), field, 1024)
+				fieldData, err = storage.NewFieldDataWithMemoryTracking(field.GetDataType(), field, 1024)
 				if err != nil {
 					return nil, err
 				}
@@ -776,7 +786,7 @@ func (r *reader) Read() (*storage.InsertData, error) {
 			}
 			rowNum++
 		}
-		if rowNum%100 == 0 && // Prevent frequent memory check
+		if rowNum%100 == 0 && // Prevent frequent memory check.
 			insertData.GetMemorySize() >= r.bufferSize {
 			break
 		}

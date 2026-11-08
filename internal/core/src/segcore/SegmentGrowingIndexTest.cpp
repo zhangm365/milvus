@@ -758,8 +758,9 @@ class GrowingIndexRawOwnershipTest : public ::testing::Test {
     FieldDataPtr
     CreateNullableFloatFieldData(const DataArray& data) const {
         std::vector<uint8_t> valid_bitmap((row_count + 7) / 8, 0);
+        const auto& valid_data = GetFieldDataRowValidData(data);
         for (int64_t i = 0; i < row_count; ++i) {
-            if (data.valid_data(i)) {
+            if (valid_data[i]) {
                 valid_bitmap[i / 8] |= uint8_t{1} << (i % 8);
             }
         }
@@ -776,9 +777,11 @@ class GrowingIndexRawOwnershipTest : public ::testing::Test {
     void
     AssertNullableFloatDataEqual(const DataArray& actual,
                                  const DataArray& expected) const {
-        ASSERT_EQ(actual.valid_data_size(), expected.valid_data_size());
-        for (int i = 0; i < actual.valid_data_size(); ++i) {
-            EXPECT_EQ(actual.valid_data(i), expected.valid_data(i));
+        const auto& actual_valid_data = GetFieldDataRowValidData(actual);
+        const auto& expected_valid_data = GetFieldDataRowValidData(expected);
+        ASSERT_EQ(actual_valid_data.size(), expected_valid_data.size());
+        for (int i = 0; i < actual_valid_data.size(); ++i) {
+            EXPECT_EQ(actual_valid_data[i], expected_valid_data[i]);
         }
 
         const auto& actual_values = actual.vectors().float_vector().data();
@@ -1151,7 +1154,7 @@ TEST(GrowingIndexNullableVectorTest, AddAllNullTailAdvancesIdMapLogicalCount) {
         knowhere::Version::GetCurrentVersion().VersionNumber(),
         false,
         milvus::storage::FileManagerContext());
-    index.SetIdMapType(knowhere::IdMap::Type::GROWING);
+    index.SetGrowingMapping();
 
     std::array<float, 4> initial_data = {0.0F, 0.0F, 2.0F, 0.0F};
     std::array<bool, 3> initial_valid = {true, false, true};
@@ -1160,11 +1163,10 @@ TEST(GrowingIndexNullableVectorTest, AddAllNullTailAdvancesIdMapLogicalCount) {
         initial_valid.data(), initial_valid.size()));
     index.BuildWithDataset(initial_dataset, build_config);
 
-    const auto* id_map = &index.GetIdMap();
-    ASSERT_EQ(id_map->OutCount(), 3);
-    ASSERT_EQ(id_map->InToOutIds().size(), 2);
-    EXPECT_EQ(id_map->MapInToOut(0), 0);
-    EXPECT_EQ(id_map->MapInToOut(1), 2);
+    ASSERT_EQ(index.GetLogicalCount(), 3);
+    ASSERT_EQ(index.GetValidCount(), 2);
+    EXPECT_TRUE(index.IsRowValid(0));
+    EXPECT_TRUE(index.IsRowValid(2));
 
     std::array<bool, 2> all_null_tail = {false, false};
     auto all_null_dataset = knowhere::GenDataSet(0, dim, nullptr);
@@ -1172,9 +1174,8 @@ TEST(GrowingIndexNullableVectorTest, AddAllNullTailAdvancesIdMapLogicalCount) {
         all_null_tail.data(), all_null_tail.size()));
     index.AddWithDataset(all_null_dataset, build_config);
 
-    id_map = &index.GetIdMap();
-    ASSERT_EQ(id_map->OutCount(), 5);
-    ASSERT_EQ(id_map->InToOutIds().size(), 2);
+    ASSERT_EQ(index.GetLogicalCount(), 5);
+    ASSERT_EQ(index.GetValidCount(), 2);
     EXPECT_FALSE(index.IsRowValid(3));
     EXPECT_FALSE(index.IsRowValid(4));
 
@@ -1185,17 +1186,23 @@ TEST(GrowingIndexNullableVectorTest, AddAllNullTailAdvancesIdMapLogicalCount) {
         appended_valid.data(), appended_valid.size()));
     index.AddWithDataset(appended_dataset, build_config);
 
-    id_map = &index.GetIdMap();
-    ASSERT_EQ(id_map->OutCount(), 8);
-    ASSERT_EQ(id_map->InToOutIds().size(), 4);
-    EXPECT_EQ(id_map->MapInToOut(0), 0);
-    EXPECT_EQ(id_map->MapInToOut(1), 2);
-    EXPECT_EQ(id_map->MapInToOut(2), 5);
-    EXPECT_EQ(id_map->MapInToOut(3), 7);
+    ASSERT_EQ(index.GetLogicalCount(), 8);
+    ASSERT_EQ(index.GetValidCount(), 4);
+    EXPECT_TRUE(index.IsRowValid(0));
+    EXPECT_TRUE(index.IsRowValid(2));
     EXPECT_TRUE(index.IsRowValid(5));
     EXPECT_FALSE(index.IsRowValid(6));
     EXPECT_TRUE(index.IsRowValid(7));
     EXPECT_EQ(index.Count(), 4);
+
+    const std::array<int64_t, 4> logical_ids = {0, 2, 5, 7};
+    auto vectors =
+        index.GetVector(GenIdsDataset(logical_ids.size(), logical_ids.data()));
+    const std::array<float, 8> expected = {
+        0.0F, 0.0F, 2.0F, 0.0F, 5.0F, 0.0F, 7.0F, 0.0F};
+    ASSERT_EQ(vectors.size(), sizeof(expected));
+    EXPECT_EQ(std::memcmp(vectors.data(), expected.data(), sizeof(expected)),
+              0);
 }
 
 TEST(GrowingIndexNullableVectorTest,

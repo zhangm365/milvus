@@ -23,6 +23,7 @@ import (
 
 	"github.com/apache/arrow/go/v17/arrow"
 	"github.com/apache/arrow/go/v17/arrow/array"
+	"github.com/apache/arrow/go/v17/arrow/bitutil"
 	"github.com/apache/arrow/go/v17/arrow/memory"
 	"github.com/bytedance/mockey"
 	"github.com/stretchr/testify/assert"
@@ -31,6 +32,7 @@ import (
 	"github.com/milvus-io/milvus-proto/go-api/v3/commonpb"
 	"github.com/milvus-io/milvus-proto/go-api/v3/schemapb"
 	"github.com/milvus-io/milvus/pkg/v3/common"
+	"github.com/milvus-io/milvus/pkg/v3/util/merr"
 )
 
 func TestGenerateEmptyArray(t *testing.T) {
@@ -247,7 +249,7 @@ func TestGenerateEmptyArray(t *testing.T) {
 				assert.NoError(t, err)
 				assert.EqualValues(t, rowNum, a.Len())
 				for i := range rowNum {
-					value, deserErr := serdeMap[tc.field.DataType].deserialize(a, i, schemapb.DataType_None, 0, false)
+					value, deserErr := serdeMap[tc.field.DataType].deserialize(a, i, schemapb.DataType_None, 0, false, false)
 					assert.True(t, a.IsValid(i))
 					assert.NoError(t, deserErr)
 					assert.Equal(t, tc.expectValue, value)
@@ -578,6 +580,113 @@ func TestGenerateEmptyArrayFromSchemaNullableVectorAppendsToRecordBuilder(t *tes
 	}
 }
 
+func TestAppendValueAtRejectsNullFixedSizeBinaryChild(t *testing.T) {
+	valueType := &arrow.FixedSizeBinaryType{ByteWidth: 8}
+	sourceBuilder := array.NewListBuilder(memory.DefaultAllocator, valueType)
+	defer sourceBuilder.Release()
+	sourceBuilder.Append(true)
+	sourceValues := sourceBuilder.ValueBuilder().(*array.FixedSizeBinaryBuilder)
+	sourceValues.Append(make([]byte, valueType.ByteWidth))
+	sourceValues.AppendNull()
+	sourceValues.Append(make([]byte, valueType.ByteWidth))
+	source := sourceBuilder.NewArray()
+	defer source.Release()
+
+	targetBuilder := array.NewListBuilder(memory.DefaultAllocator, valueType)
+	defer targetBuilder.Release()
+	size, err := appendValueAt(
+		targetBuilder,
+		source,
+		0,
+		&schemapb.FieldSchema{DataType: schemapb.DataType_ArrayOfVector},
+		appendValueDefault{},
+	)
+	require.ErrorContains(t, err, "contains null child")
+	require.ErrorIs(t, err, merr.ErrDataIntegrity)
+	require.Zero(t, size)
+}
+
+func TestAppendValueAtElementNullableArrayOfVectorUsesCompactBinaryPayload(t *testing.T) {
+	const dim = 2
+	sourceBuilder := array.NewListBuilder(memory.DefaultAllocator, arrow.BinaryTypes.Binary)
+	defer sourceBuilder.Release()
+	sourceBuilder.Append(true)
+	sourceValues := sourceBuilder.ValueBuilder().(*array.BinaryBuilder)
+	sourceValues.Append(make([]byte, dim*4))
+	sourceValues.AppendNull()
+	sourceValues.Append(make([]byte, dim*4))
+	source := sourceBuilder.NewArray()
+	defer source.Release()
+
+	targetBuilder := array.NewListBuilder(memory.DefaultAllocator, arrow.BinaryTypes.Binary)
+	defer targetBuilder.Release()
+	size, err := appendValueAt(
+		targetBuilder,
+		source,
+		0,
+		&schemapb.FieldSchema{
+			DataType:        schemapb.DataType_ArrayOfVector,
+			ElementType:     schemapb.DataType_FloatVector,
+			ElementNullable: true,
+			TypeParams: []*commonpb.KeyValuePair{
+				{Key: common.DimKey, Value: "2"},
+			},
+		},
+		appendValueDefault{arrayOfVectorByteWidth: dim * 4},
+	)
+	require.NoError(t, err)
+	const childCount = 3
+	expectedSize := uint64(2*dim*4+childCount*arrow.Int32SizeBytes) +
+		uint64(bitutil.BytesForBits(childCount))
+	require.Equal(t, expectedSize, size)
+
+	result := targetBuilder.NewArray().(*array.List)
+	defer result.Release()
+	child := result.ListValues().(*array.Binary)
+	require.Equal(t, 3, child.Len())
+	require.True(t, child.IsNull(1))
+}
+
+func TestAppendValueAtElementNullableArrayOfVectorCountsNullChildMetadata(t *testing.T) {
+	const (
+		dim        = 2
+		childCount = 4096
+	)
+	sourceBuilder := array.NewListBuilder(memory.DefaultAllocator, arrow.BinaryTypes.Binary)
+	defer sourceBuilder.Release()
+	sourceBuilder.Append(true)
+	sourceValues := sourceBuilder.ValueBuilder().(*array.BinaryBuilder)
+	for range childCount {
+		sourceValues.AppendNull()
+	}
+	source := sourceBuilder.NewArray()
+	defer source.Release()
+
+	targetBuilder := array.NewListBuilder(memory.DefaultAllocator, arrow.BinaryTypes.Binary)
+	defer targetBuilder.Release()
+	size, err := appendValueAt(
+		targetBuilder,
+		source,
+		0,
+		&schemapb.FieldSchema{
+			DataType:        schemapb.DataType_ArrayOfVector,
+			ElementType:     schemapb.DataType_FloatVector,
+			ElementNullable: true,
+		},
+		appendValueDefault{arrayOfVectorByteWidth: dim * 4},
+	)
+	require.NoError(t, err)
+	expectedSize := uint64(childCount*arrow.Int32SizeBytes) +
+		uint64(bitutil.BytesForBits(childCount))
+	require.Equal(t, expectedSize, size)
+
+	result := targetBuilder.NewArray().(*array.List)
+	defer result.Release()
+	child := result.ListValues().(*array.Binary)
+	require.Equal(t, childCount, child.Len())
+	require.Equal(t, childCount, child.NullN())
+}
+
 func TestRecordBuilderNullableDenseVectorPreservesDimMetadata(t *testing.T) {
 	schema := &schemapb.CollectionSchema{
 		Fields: []*schemapb.FieldSchema{
@@ -645,6 +754,93 @@ func TestRecordBuilderBuildReleasesCreatorRefs(t *testing.T) {
 		rec.Release()
 	}()
 	alloc.AssertSize(t, 0)
+}
+
+func TestRecordBuilderAppendResolvesColumnsOncePerCall(t *testing.T) {
+	const pkField, payloadField = FieldID(100), FieldID(101)
+	schema := &schemapb.CollectionSchema{Fields: []*schemapb.FieldSchema{
+		{FieldID: pkField, Name: "pk", DataType: schemapb.DataType_Int64},
+		{FieldID: payloadField, Name: "payload", DataType: schemapb.DataType_Int64},
+	}}
+	rb := NewRecordBuilder(schema)
+	defer rb.Release()
+
+	for i := range 2 {
+		base := mergeSortTestRec(t, map[FieldID][]int64{
+			pkField:      {int64(i*3 + 1), int64(i*3 + 2), int64(i*3 + 3)},
+			payloadField: {int64(i*30 + 10), int64(i*30 + 20), int64(i*30 + 30)},
+		}, nil)
+		defer base.Release()
+		record := &columnCountingRecord{Record: base, columnCalls: make(map[FieldID]int)}
+		require.NoError(t, rb.Append(record, i, 3))
+		require.Equal(t, map[FieldID]int{pkField: 1, payloadField: 1}, record.columnCalls)
+	}
+
+	out := rb.Build()
+	defer out.Release()
+	require.Equal(t, []int64{1, 2, 3, 5, 6}, out.Column(pkField).(*array.Int64).Int64Values())
+	require.Equal(t, []int64{10, 20, 30, 50, 60}, out.Column(payloadField).(*array.Int64).Int64Values())
+}
+
+func TestRecordBuilderAppendClearsBorrowedColumns(t *testing.T) {
+	for _, dataType := range []schemapb.DataType{schemapb.DataType_Int64, schemapb.DataType_Text} {
+		t.Run(dataType.String(), func(t *testing.T) {
+			base := mergeSortTestRec(t, map[FieldID][]int64{100: {1}}, nil)
+			defer base.Release()
+			rb := NewRecordBuilder(&schemapb.CollectionSchema{Fields: []*schemapb.FieldSchema{
+				{FieldID: 100, Name: "value", DataType: dataType},
+			}})
+			defer rb.Release()
+
+			err := rb.Append(base, 0, 1)
+			if dataType == schemapb.DataType_Text {
+				require.ErrorContains(t, err, "failed to append value")
+			} else {
+				require.NoError(t, err)
+			}
+			// Scratch storage must not keep borrowed source arrays after either
+			// a successful append or a failed append.
+			for _, column := range rb.columns {
+				require.Nil(t, column)
+			}
+		})
+	}
+}
+
+func TestRecordBuilderAppendEmptyRangeDoesNotReadColumns(t *testing.T) {
+	rb := NewRecordBuilder(&schemapb.CollectionSchema{Fields: []*schemapb.FieldSchema{
+		{FieldID: 100, Name: "value", DataType: schemapb.DataType_Int64},
+	}})
+	defer rb.Release()
+	require.NoError(t, rb.Append(nil, 0, 0))
+	require.Zero(t, rb.GetRowNum())
+}
+
+// Alternating kept/deleted rows make compaction append one-row ranges.
+// With destination capacity reserved, those calls must not allocate per range.
+func TestRecordBuilderAppendSingleRowDoesNotAllocate(t *testing.T) {
+	field := &schemapb.FieldSchema{FieldID: 100, Name: "value", DataType: schemapb.DataType_Int64}
+	source := array.NewInt64Builder(memory.DefaultAllocator)
+	defer source.Release()
+	source.AppendValues([]int64{7, 8}, nil)
+	values := source.NewArray()
+	defer values.Release()
+	rec := NewSimpleArrowRecord(array.NewRecord(arrow.NewSchema([]arrow.Field{{Name: "value", Type: arrow.PrimitiveTypes.Int64}}, nil), []arrow.Array{values}, 2), map[FieldID]int{100: 0})
+	defer rec.Release()
+	rb := NewRecordBuilder(&schemapb.CollectionSchema{Fields: []*schemapb.FieldSchema{field}})
+	defer rb.Release()
+	rb.builders[0].Reserve(1024)
+	require.NoError(t, rb.Append(rec, 0, 1))
+	allocs := testing.AllocsPerRun(100, func() {
+		if err := rb.Append(rec, 0, 1); err != nil {
+			panic(err)
+		}
+	})
+	require.Zero(t, allocs, "single-row Append must not allocate a source-column slice")
+	out := rb.Build()
+	defer out.Release()
+	require.Equal(t, 102, out.Column(100).Len())
+	require.Equal(t, int64(7), out.Column(100).(*array.Int64).Value(101))
 }
 
 func TestRecordBuilderAccountsForNullBuffers(t *testing.T) {

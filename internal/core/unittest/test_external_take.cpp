@@ -524,10 +524,11 @@ AssertNullableDenseVectorTake(DataType data_type, int64_t dim) {
     ASSERT_EQ(results->fields_data_size(), 1);
 
     const auto& retrieved = results->fields_data(0);
-    ASSERT_EQ(retrieved.valid_data_size(), 3);
-    EXPECT_TRUE(retrieved.valid_data(0));
-    EXPECT_FALSE(retrieved.valid_data(1));
-    EXPECT_TRUE(retrieved.valid_data(2));
+    const auto& retrieved_valid_data = GetFieldDataRowValidData(retrieved);
+    ASSERT_EQ(retrieved_valid_data.size(), 3);
+    EXPECT_TRUE(retrieved_valid_data[0]);
+    EXPECT_FALSE(retrieved_valid_data[1]);
+    EXPECT_TRUE(retrieved_valid_data[2]);
     ASSERT_EQ(retrieved.vectors().dim(), dim);
 
     std::string actual;
@@ -557,10 +558,11 @@ AssertNullableDenseVectorTake(DataType data_type, int64_t dim) {
         search_plan.get(), offsets.data(), offsets.size(), search_results);
     ASSERT_TRUE(ok);
     auto& searched = search_results.output_fields_data_.at(info.vec_id);
-    ASSERT_EQ(searched->valid_data_size(), 3);
-    EXPECT_TRUE(searched->valid_data(0));
-    EXPECT_FALSE(searched->valid_data(1));
-    EXPECT_TRUE(searched->valid_data(2));
+    const auto& searched_valid_data = GetFieldDataRowValidData(*searched);
+    ASSERT_EQ(searched_valid_data.size(), 3);
+    EXPECT_TRUE(searched_valid_data[0]);
+    EXPECT_FALSE(searched_valid_data[1]);
+    EXPECT_TRUE(searched_valid_data[2]);
     ASSERT_EQ(searched->vectors().dim(), dim);
 }
 
@@ -587,10 +589,11 @@ AssertNullableSparseVectorTake() {
     ASSERT_EQ(results->fields_data_size(), 1);
 
     const auto& retrieved = results->fields_data(0);
-    ASSERT_EQ(retrieved.valid_data_size(), 3);
-    EXPECT_TRUE(retrieved.valid_data(0));
-    EXPECT_FALSE(retrieved.valid_data(1));
-    EXPECT_TRUE(retrieved.valid_data(2));
+    const auto& retrieved_valid_data = GetFieldDataRowValidData(retrieved);
+    ASSERT_EQ(retrieved_valid_data.size(), 3);
+    EXPECT_TRUE(retrieved_valid_data[0]);
+    EXPECT_FALSE(retrieved_valid_data[1]);
+    EXPECT_TRUE(retrieved_valid_data[2]);
     const auto& sparse = retrieved.vectors().sparse_float_vector();
     ASSERT_EQ(sparse.contents_size(), 2);
     EXPECT_EQ(sparse.contents(0), row0);
@@ -604,10 +607,11 @@ AssertNullableSparseVectorTake() {
         search_plan.get(), offsets.data(), offsets.size(), search_results);
     ASSERT_TRUE(ok);
     auto& searched = search_results.output_fields_data_.at(info.vec_id);
-    ASSERT_EQ(searched->valid_data_size(), 3);
-    EXPECT_TRUE(searched->valid_data(0));
-    EXPECT_FALSE(searched->valid_data(1));
-    EXPECT_TRUE(searched->valid_data(2));
+    const auto& searched_valid_data = GetFieldDataRowValidData(*searched);
+    ASSERT_EQ(searched_valid_data.size(), 3);
+    EXPECT_TRUE(searched_valid_data[0]);
+    EXPECT_FALSE(searched_valid_data[1]);
+    EXPECT_TRUE(searched_valid_data[2]);
     const auto& search_sparse = searched->vectors().sparse_float_vector();
     ASSERT_EQ(search_sparse.contents_size(), 2);
     EXPECT_EQ(search_sparse.contents(0), row0);
@@ -1236,6 +1240,7 @@ BuildExternalSchemaWithArray() {
                                DataType::ARRAY,
                                DataType::INT32,
                                true,
+                               false,
                                std::optional<DefaultValueType>{std::nullopt},
                                "array_col"));
 
@@ -1407,10 +1412,11 @@ TEST(ExternalTakeTest, TryTakeForRetrieve_NullableVectorUsesCompactData) {
 
     auto& vec_data = results->fields_data(0);
     ASSERT_EQ(vec_data.field_id(), info.vec_id.get());
-    ASSERT_EQ(vec_data.valid_data_size(), 3);
-    EXPECT_TRUE(vec_data.valid_data(0));
-    EXPECT_FALSE(vec_data.valid_data(1));
-    EXPECT_TRUE(vec_data.valid_data(2));
+    const auto& valid_data = GetFieldDataRowValidData(vec_data);
+    ASSERT_EQ(valid_data.size(), 3);
+    EXPECT_TRUE(valid_data[0]);
+    EXPECT_FALSE(valid_data[1]);
+    EXPECT_TRUE(valid_data[2]);
 
     auto& fv = vec_data.vectors().float_vector();
     ASSERT_EQ(fv.data_size(), 2 * kVecDim);
@@ -1504,10 +1510,11 @@ TEST(ExternalTakeTest, TryTakeForRetrieve_NullableBinaryVectorUsesCompactData) {
 
     auto& binary_vec = results->fields_data(0);
     ASSERT_EQ(binary_vec.field_id(), info.binary_vec_id.get());
-    ASSERT_EQ(binary_vec.valid_data_size(), 3);
-    EXPECT_TRUE(binary_vec.valid_data(0));
-    EXPECT_FALSE(binary_vec.valid_data(1));
-    EXPECT_TRUE(binary_vec.valid_data(2));
+    const auto& valid_data = GetFieldDataRowValidData(binary_vec);
+    ASSERT_EQ(valid_data.size(), 3);
+    EXPECT_TRUE(valid_data[0]);
+    EXPECT_FALSE(valid_data[1]);
+    EXPECT_TRUE(valid_data[2]);
     EXPECT_EQ(binary_vec.vectors().binary_vector(),
               BuildDenseVectorBytesForRows({0, 2}, kBinaryVecDim / 8, 11));
 }
@@ -1640,10 +1647,11 @@ TEST(ExternalTakeTest, TryTakeForSearch_NullableVectorUsesCompactData) {
     ASSERT_TRUE(ok);
 
     auto& vec_data = results.output_fields_data_.at(info.vec_id);
-    ASSERT_EQ(vec_data->valid_data_size(), 3);
-    EXPECT_TRUE(vec_data->valid_data(0));
-    EXPECT_FALSE(vec_data->valid_data(1));
-    EXPECT_TRUE(vec_data->valid_data(2));
+    const auto& valid_data = GetFieldDataRowValidData(*vec_data);
+    ASSERT_EQ(valid_data.size(), 3);
+    EXPECT_TRUE(valid_data[0]);
+    EXPECT_FALSE(valid_data[1]);
+    EXPECT_TRUE(valid_data[2]);
 
     auto& fv = vec_data->vectors().float_vector();
     ASSERT_EQ(fv.data_size(), 2 * kVecDim);
@@ -1971,6 +1979,109 @@ TEST(InternalTakeTest, TryTakeForRetrieve_ProjectsDynamicField) {
     ASSERT_EQ(dynamic_data.scalars().json_data().data_size(), 2);
     EXPECT_EQ(dynamic_data.scalars().json_data().data(0), R"({"foo":3})");
     EXPECT_EQ(dynamic_data.scalars().json_data().data(1), R"({"foo":1})");
+}
+
+// A VECTOR_ARRAY column taken from a manifest-backed sealed segment must carry
+// the collection-level element type and dim, which the Go reduce and the SDK
+// read to decode the rows.
+TEST(InternalTakeTest, TryTakeForRetrieve_VectorArraySetsElementTypeAndDim) {
+    constexpr int64_t kRows = 3;
+    constexpr int kWidth = kVecDim * sizeof(float);
+    const FieldId pk_id(100);
+    const FieldId vecs_id(101);
+
+    auto schema = std::make_shared<Schema>();
+    schema->AddField(
+        FieldName("RowID"), RowFieldID, DataType::INT64, false, std::nullopt);
+    schema->AddField(FieldName("Timestamp"),
+                     TimestampFieldID,
+                     DataType::INT64,
+                     false,
+                     std::nullopt);
+    schema->AddField(FieldMeta(
+        FieldName("pk"), pk_id, DataType::INT64, false, std::nullopt));
+    schema->AddField(FieldMeta(FieldName("vecs"),
+                               vecs_id,
+                               DataType::VECTOR_ARRAY,
+                               DataType::VECTOR_FLOAT,
+                               kVecDim,
+                               knowhere::metric::L2,
+                               false,
+                               false));
+    schema->set_primary_field_id(pk_id);
+
+    auto vector_of = [](int64_t row, int64_t element) {
+        std::vector<float> v(kVecDim);
+        for (int64_t k = 0; k < kVecDim; ++k) {
+            v[k] = static_cast<float>(row * 100 + element * 10 + k);
+        }
+        return v;
+    };
+
+    // Row r of vecs holds r + 1 vectors.
+    arrow::Int64Builder pk_builder;
+    auto vecs_builder = std::make_shared<arrow::ListBuilder>(
+        arrow::default_memory_pool(),
+        std::make_shared<arrow::FixedSizeBinaryBuilder>(
+            arrow::fixed_size_binary(kWidth)));
+    auto* vecs_values = static_cast<arrow::FixedSizeBinaryBuilder*>(
+        vecs_builder->value_builder());
+    for (int64_t row = 0; row < kRows; ++row) {
+        ASSERT_TRUE(pk_builder.Append(row).ok());
+        ASSERT_TRUE(vecs_builder->Append().ok());
+        for (int64_t j = 0; j <= row; ++j) {
+            auto v = vector_of(row, j);
+            ASSERT_TRUE(
+                vecs_values->Append(reinterpret_cast<const uint8_t*>(v.data()))
+                    .ok());
+        }
+    }
+    auto table = arrow::Table::Make(
+        arrow::schema({
+            arrow::field(std::to_string(pk_id.get()), arrow::int64()),
+            arrow::field(std::to_string(vecs_id.get()),
+                         arrow::list(arrow::fixed_size_binary(kWidth))),
+        }),
+        {pk_builder.Finish().ValueOrDie(),
+         vecs_builder->Finish().ValueOrDie()});
+
+    SegmentSealedUPtr holder;
+    auto* segment = CreateExternalSegment(holder, schema);
+    segment->SetReaderForTesting(std::make_unique<MockTakeReader>(table));
+    segment->SetUseTakeForOutputForTesting(true);
+
+    auto plan = std::make_unique<query::RetrievePlan>(schema);
+    plan->field_ids_ = {pk_id, vecs_id};
+
+    auto results = std::make_unique<proto::segcore::RetrieveResults>();
+    std::vector<int64_t> offsets = {2, 0, 2};
+    ASSERT_TRUE(segment->TryTakeForRetrieve(
+        plan.get(), results, offsets.data(), offsets.size(), false, true));
+    ASSERT_EQ(results->fields_data_size(), 2);
+
+    const auto& vecs = results->fields_data(1);
+    ASSERT_EQ(vecs.field_id(), vecs_id.get());
+    ASSERT_EQ(vecs.type(), proto::schema::DataType::ArrayOfVector);
+    EXPECT_EQ(vecs.vectors().dim(), kVecDim);
+    const auto& vector_array = vecs.vectors().vector_array();
+    EXPECT_EQ(vector_array.element_type(),
+              proto::schema::DataType::FloatVector);
+    EXPECT_EQ(vector_array.dim(), kVecDim);
+    ASSERT_EQ(vector_array.data_size(), offsets.size());
+    for (size_t i = 0; i < offsets.size(); ++i) {
+        SCOPED_TRACE(i);
+        const auto& row = vector_array.data(i);
+        EXPECT_EQ(row.dim(), kVecDim);
+        ASSERT_EQ(row.float_vector().data_size(), (offsets[i] + 1) * kVecDim);
+        for (int64_t j = 0; j <= offsets[i]; ++j) {
+            auto expected = vector_of(offsets[i], j);
+            for (int64_t k = 0; k < kVecDim; ++k) {
+                EXPECT_FLOAT_EQ(row.float_vector().data(j * kVecDim + k),
+                                expected[k]);
+            }
+        }
+        EXPECT_EQ(row.valid_data_size(), 0);
+    }
 }
 
 TEST(InternalTakeTest, TryTakeForSearch_ResolvesTextOutputField) {
@@ -2586,7 +2697,7 @@ TEST(ExternalTakeAccessMode, RequestGateDisabledFallsBackForExternalText) {
     ASSERT_EQ(retrieve_results->fields_data_size(), 1);
     const auto& retrieved = retrieve_results->fields_data(0);
     EXPECT_EQ(retrieved.field_id(), text_id.get());
-    const auto& retrieve_valid = retrieved.valid_data();
+    const auto& retrieve_valid = GetFieldDataRowValidData(retrieved);
     ASSERT_EQ(retrieve_valid.size(), offsets.size());
     EXPECT_TRUE(retrieve_valid[0]);
     EXPECT_FALSE(retrieve_valid[1]);
@@ -2606,7 +2717,7 @@ TEST(ExternalTakeAccessMode, RequestGateDisabledFallsBackForExternalText) {
     segment->TestFillTargetEntry(search_plan.get(), search_results);
 
     const auto& searched = *search_results.output_fields_data_.at(text_id);
-    const auto& search_valid = searched.valid_data();
+    const auto& search_valid = GetFieldDataRowValidData(searched);
     ASSERT_EQ(search_valid.size(), offsets.size());
     EXPECT_TRUE(search_valid[0]);
     EXPECT_FALSE(search_valid[1]);
@@ -3747,6 +3858,7 @@ MakeExternalFieldMetaForNormalizeTest(DataType data_type,
                          dim,
                          std::nullopt,
                          nullable,
+                         false,
                          external_field);
     }
     if (IsVectorDataType(data_type)) {
@@ -3774,6 +3886,7 @@ MakeExternalFieldMetaForNormalizeTest(DataType data_type,
                          data_type,
                          element_type,
                          nullable,
+                         false,
                          std::optional<DefaultValueType>{std::nullopt},
                          external_field);
     }

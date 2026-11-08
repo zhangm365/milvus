@@ -19,6 +19,7 @@ package storage
 import (
 	"encoding/binary"
 
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/milvus-io/milvus-proto/go-api/v3/schemapb"
@@ -58,6 +59,17 @@ func NewInsertDataWithFunctionOutputField(schema *schemapb.CollectionSchema) (*I
 }
 
 func NewInsertDataWithCap(schema *schemapb.CollectionSchema, cap int, withFunctionOutput bool) (*InsertData, error) {
+	return newInsertDataWithCap(schema, cap, withFunctionOutput, false)
+}
+
+// NewInsertDataWithMemoryTracking creates an empty batch including function output fields.
+// Variable-width fields use incremental sizing; the batch total sums its current fields.
+// Use Append* methods to change tracked fields; appended payloads and getter views are read-only.
+func NewInsertDataWithMemoryTracking(schema *schemapb.CollectionSchema) (*InsertData, error) {
+	return newInsertDataWithCap(schema, 0, true, true)
+}
+
+func newInsertDataWithCap(schema *schemapb.CollectionSchema, cap int, withFunctionOutput, trackMemory bool) (*InsertData, error) {
 	if schema == nil {
 		// A nil schema here is an internal invariant violation (callers within
 		// Milvus always pass a schema), not a client-supplied missing parameter.
@@ -88,7 +100,7 @@ func NewInsertDataWithCap(schema *schemapb.CollectionSchema, cap int, withFuncti
 				return nil
 			}
 		}
-		fieldData, err := NewFieldData(field.DataType, field, cap)
+		fieldData, err := newFieldData(field.DataType, field, cap, trackMemory)
 		if err != nil {
 			return err
 		}
@@ -163,6 +175,34 @@ func (i *InsertData) Append(row map[FieldID]interface{}) error {
 	return nil
 }
 
+// CopyFrom appends the selected source rows column by column in indices order.
+// Indices must refer to valid source rows. Nil or empty indices append nothing.
+func (i *InsertData) CopyFrom(src *InsertData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	for fieldID, source := range src.Data {
+		target, ok := i.Data[fieldID]
+		if !ok {
+			return merr.WrapErrServiceInternalMsg("missing field when appending row, got %d", fieldID)
+		}
+		// Preserve AppendRow's value-level compatibility and error behavior
+		// for mismatched source columns instead of panicking on an assertion.
+		if source.GetDataType() != target.GetDataType() || source.GetNullable() != target.GetNullable() {
+			for _, i := range indices {
+				if err := target.AppendRow(source.GetRow(i)); err != nil {
+					return merr.Wrapf(err, "append data for field %d failed", fieldID)
+				}
+			}
+			continue
+		}
+		if err := target.CopyFrom(source, indices); err != nil {
+			return merr.Wrapf(err, "copy data for field %d failed", fieldID)
+		}
+	}
+	return nil
+}
+
 func (i *InsertData) GetRow(idx int) map[FieldID]interface{} {
 	res := make(map[FieldID]interface{})
 	for field, data := range i.Data {
@@ -179,25 +219,69 @@ func (i *InsertData) GetRowSize(idx int) int {
 	return size
 }
 
-// FieldData defines field data interface
+// FieldData represents a field's rows and validity.
+//
+// Memory tracking is disabled by default.
+// NewFieldDataWithMemoryTracking and NewInsertDataWithMemoryTracking enable it for variable-width fields.
+// Append* methods update the size cache, including changes retained after an error.
+// GetMemorySize returns the cache when enabled; otherwise, it scans variable-width data.
+// Fixed-width scalars and dense vectors always calculate their sizes in constant time.
+//
+// Tracking is fixed at construction.
+// With tracking enabled, only Append* methods may change the field's data and metadata.
+// Appended payloads and backing data returned by getters must remain unchanged.
 type FieldData interface {
-	GetMemorySize() int
 	RowNum() int
-	GetRow(i int) any
+
+	// Size accounting.
 	GetRowSize(i int) int
+	GetMemorySize() int
+
+	// Data and field metadata.
+	GetRow(i int) any
 	GetDataRows() any
+	GetDataType() schemapb.DataType
+	GetNullable() bool
 	GetValidData() []bool
-	// GetValidDataRows() any
+
+	// Append rows, payloads, or validity.
 	AppendRow(row interface{}) error
 	AppendRows(dataRows interface{}, validDataRows interface{}) error
 	AppendDataRows(rows interface{}) error
 	AppendValidDataRows(rows interface{}) error
-	GetDataType() schemapb.DataType
-	GetNullable() bool
+	// CopyFrom appends the selected source rows in indices order.
+	// Source and destination must have matching types and nullability;
+	// dense vectors must also have matching dimensions.
+	// Indices must refer to valid source rows. Nil or empty indices append nothing.
+	CopyFrom(src FieldData, indices []int) error
 }
 
+// NewFieldData creates an empty FieldData with memory tracking disabled.
+// cap is a row-capacity hint.
+// Non-nullable dense vectors scale payload capacity by dimension.
+// Nullable dense vectors reserve only cap payload elements.
+// Sparse vector contents grow on append.
+// Unused slice capacity is not included in GetMemorySize.
 func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema, cap int) (FieldData, error) {
+	return newFieldData(dataType, fieldSchema, cap, false)
+}
+
+// NewFieldDataWithMemoryTracking creates an empty FieldData.
+// Variable-width fields use incremental sizing; capacity follows NewFieldData.
+// Use Append* methods to change tracked fields; appended payloads and getter views are read-only.
+func NewFieldDataWithMemoryTracking(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema, cap int) (FieldData, error) {
+	return newFieldData(dataType, fieldSchema, cap, true)
+}
+
+func newFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema, cap int, trackMemory bool) (FieldData, error) {
 	typeParams := fieldSchema.GetTypeParams()
+	// Nullable vectors reserve only cap payload elements, including validity-only columns.
+	nullableDataCap := func(scaled int) int {
+		if fieldSchema.GetNullable() {
+			return cap
+		}
+		return scaled
+	}
 	switch dataType {
 	case schemapb.DataType_Float16Vector:
 		dim, err := GetDimFromParams(typeParams)
@@ -205,7 +289,7 @@ func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema,
 			return nil, err
 		}
 		data := &Float16VectorFieldData{
-			Data:     make([]byte, 0, cap),
+			Data:     make([]byte, 0, nullableDataCap(cap*dim*2)),
 			Dim:      dim,
 			Nullable: fieldSchema.GetNullable(),
 		}
@@ -219,7 +303,7 @@ func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema,
 			return nil, err
 		}
 		data := &BFloat16VectorFieldData{
-			Data:     make([]byte, 0, cap),
+			Data:     make([]byte, 0, nullableDataCap(cap*dim*2)),
 			Dim:      dim,
 			Nullable: fieldSchema.GetNullable(),
 		}
@@ -233,7 +317,7 @@ func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema,
 			return nil, err
 		}
 		data := &FloatVectorFieldData{
-			Data:     make([]float32, 0, cap),
+			Data:     make([]float32, 0, nullableDataCap(cap*dim)),
 			Dim:      dim,
 			Nullable: fieldSchema.GetNullable(),
 		}
@@ -247,7 +331,7 @@ func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema,
 			return nil, err
 		}
 		data := &BinaryVectorFieldData{
-			Data:     make([]byte, 0, cap),
+			Data:     make([]byte, 0, nullableDataCap(cap*dim/8)),
 			Dim:      dim,
 			Nullable: fieldSchema.GetNullable(),
 		}
@@ -256,20 +340,14 @@ func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema,
 		}
 		return data, nil
 	case schemapb.DataType_SparseFloatVector:
-		data := &SparseFloatVectorFieldData{
-			Nullable: fieldSchema.GetNullable(),
-		}
-		if fieldSchema.GetNullable() {
-			data.ValidData = make([]bool, 0, cap)
-		}
-		return data, nil
+		return newSparseFloatVectorFieldData(fieldSchema, cap, trackMemory)
 	case schemapb.DataType_Int8Vector:
 		dim, err := GetDimFromParams(typeParams)
 		if err != nil {
 			return nil, err
 		}
 		data := &Int8VectorFieldData{
-			Data:     make([]int8, 0, cap),
+			Data:     make([]int8, 0, nullableDataCap(cap*dim)),
 			Dim:      dim,
 			Nullable: fieldSchema.GetNullable(),
 		}
@@ -355,59 +433,15 @@ func NewFieldData(dataType schemapb.DataType, fieldSchema *schemapb.FieldSchema,
 		}
 		return data, nil
 	case schemapb.DataType_JSON:
-		data := &JSONFieldData{
-			Data:     make([][]byte, 0, cap),
-			Nullable: fieldSchema.GetNullable(),
-		}
-		if fieldSchema.GetNullable() {
-			data.ValidData = make([]bool, 0, cap)
-		}
-		return data, nil
-
+		return newJSONFieldData(fieldSchema, cap, trackMemory)
 	case schemapb.DataType_Geometry:
-		data := &GeometryFieldData{
-			Data:     make([][]byte, 0, cap),
-			Nullable: fieldSchema.GetNullable(),
-		}
-		if fieldSchema.GetNullable() {
-			data.ValidData = make([]bool, 0, cap)
-		}
-		return data, nil
+		return newGeometryFieldData(fieldSchema, cap, trackMemory)
 	case schemapb.DataType_Array:
-		data := &ArrayFieldData{
-			Data:        make([]*schemapb.ScalarField, 0, cap),
-			ElementType: fieldSchema.GetElementType(),
-			Nullable:    fieldSchema.GetNullable(),
-		}
-		if fieldSchema.GetNullable() {
-			data.ValidData = make([]bool, 0, cap)
-		}
-		return data, nil
+		return newArrayFieldData(fieldSchema, cap, trackMemory)
 	case schemapb.DataType_String, schemapb.DataType_VarChar, schemapb.DataType_Text:
-		data := &StringFieldData{
-			Data:     make([]string, 0, cap),
-			DataType: dataType,
-			Nullable: fieldSchema.GetNullable(),
-		}
-		if fieldSchema.GetNullable() {
-			data.ValidData = make([]bool, 0, cap)
-		}
-		return data, nil
+		return newStringFieldData(dataType, fieldSchema, cap, trackMemory)
 	case schemapb.DataType_ArrayOfVector:
-		dim, err := GetDimFromParams(typeParams)
-		if err != nil {
-			return nil, err
-		}
-		data := &VectorArrayFieldData{
-			Dim:         int64(dim),
-			Data:        make([]*schemapb.VectorField, 0, cap),
-			ElementType: fieldSchema.GetElementType(),
-			Nullable:    fieldSchema.GetNullable(),
-		}
-		if fieldSchema.GetNullable() {
-			data.ValidData = make([]bool, 0, cap)
-		}
-		return data, nil
+		return newVectorArrayFieldData(fieldSchema, cap, trackMemory)
 	default:
 		return nil, merr.WrapErrServiceInternalMsg("unexpected schema data type: %d", dataType)
 	}
@@ -453,18 +487,79 @@ type StringFieldData struct {
 	DataType  schemapb.DataType
 	ValidData []bool
 	Nullable  bool
+
+	trackMemory bool
+	memorySize  int
 }
+
+func newStringFieldData(dataType schemapb.DataType, schema *schemapb.FieldSchema, capacity int, trackMemory bool) (FieldData, error) {
+	data := &StringFieldData{
+		Data:     make([]string, 0, capacity),
+		DataType: dataType,
+		Nullable: schema.GetNullable(),
+	}
+	if schema.GetNullable() {
+		data.ValidData = make([]bool, 0, capacity)
+	}
+	if trackMemory {
+		data.trackMemory = true
+		data.memorySize = 1 // Nullable flag.
+	}
+	return data, nil
+}
+
 type ArrayFieldData struct {
-	ElementType schemapb.DataType
-	Data        []*schemapb.ScalarField
-	ValidData   []bool
-	Nullable    bool
+	ElementType     schemapb.DataType
+	Data            []*schemapb.ScalarField
+	ValidData       []bool
+	Nullable        bool
+	ElementNullable bool
+
+	trackMemory bool
+	memorySize  int
 }
+
+func newArrayFieldData(schema *schemapb.FieldSchema, capacity int, trackMemory bool) (FieldData, error) {
+	data := &ArrayFieldData{
+		ElementType:     schema.GetElementType(),
+		Data:            make([]*schemapb.ScalarField, 0, capacity),
+		Nullable:        schema.GetNullable(),
+		ElementNullable: schema.GetElementNullable(),
+	}
+	if schema.GetNullable() {
+		data.ValidData = make([]bool, 0, capacity)
+	}
+	if trackMemory {
+		data.trackMemory = true
+		data.memorySize = 2 // Nullable and ElementNullable flags.
+	}
+	return data, nil
+}
+
 type JSONFieldData struct {
 	Data      [][]byte
 	ValidData []bool
 	Nullable  bool
+
+	trackMemory bool
+	memorySize  int
 }
+
+func newJSONFieldData(schema *schemapb.FieldSchema, capacity int, trackMemory bool) (FieldData, error) {
+	data := &JSONFieldData{
+		Data:     make([][]byte, 0, capacity),
+		Nullable: schema.GetNullable(),
+	}
+	if schema.GetNullable() {
+		data.ValidData = make([]bool, 0, capacity)
+	}
+	if trackMemory {
+		data.trackMemory = true
+		data.memorySize = 1 // Nullable flag.
+	}
+	return data, nil
+}
+
 type TimestamptzFieldData struct {
 	Data      []int64
 	ValidData []bool
@@ -474,6 +569,24 @@ type GeometryFieldData struct {
 	Data      [][]byte
 	ValidData []bool
 	Nullable  bool
+
+	trackMemory bool
+	memorySize  int
+}
+
+func newGeometryFieldData(schema *schemapb.FieldSchema, capacity int, trackMemory bool) (FieldData, error) {
+	data := &GeometryFieldData{
+		Data:     make([][]byte, 0, capacity),
+		Nullable: schema.GetNullable(),
+	}
+	if schema.GetNullable() {
+		data.ValidData = make([]bool, 0, capacity)
+	}
+	if trackMemory {
+		data.trackMemory = true
+		data.memorySize = 1 // Nullable flag.
+	}
+	return data, nil
 }
 
 // LogicalToPhysicalMapping maps logical offset to physical offset for nullable vector
@@ -524,6 +637,17 @@ func (m *LogicalToPhysicalMapping) Build(validData []bool, startLogical, totalCo
 	m.validCount = physicalIdx
 }
 
+// countSelectedValidRows counts non-null rows in the selection, including repeated indices.
+func countSelectedValidRows(validData []bool, indices []int) int {
+	count := 0
+	for _, i := range indices {
+		if validData[i] {
+			count++
+		}
+	}
+	return count
+}
+
 func getNullableVectorPhysicalOffset(validData []bool, mapping *LogicalToPhysicalMapping, logicalOffset int) int {
 	if mapping != nil && mapping.l2pMap != nil {
 		return mapping.GetPhysicalOffset(logicalOffset)
@@ -571,6 +695,23 @@ type SparseFloatVectorFieldData struct {
 	ValidData  []bool
 	Nullable   bool
 	L2PMapping LogicalToPhysicalMapping
+
+	trackMemory bool
+	memorySize  int
+}
+
+func newSparseFloatVectorFieldData(schema *schemapb.FieldSchema, capacity int, trackMemory bool) (FieldData, error) {
+	data := &SparseFloatVectorFieldData{
+		Nullable: schema.GetNullable(),
+	}
+	if schema.GetNullable() {
+		data.ValidData = make([]bool, 0, capacity)
+	}
+	if trackMemory {
+		data.trackMemory = true
+		data.memorySize = 9 // Nullable flag (1 byte) and empty L2PMapping (8 bytes).
+	}
+	return data, nil
 }
 
 type Int8VectorFieldData struct {
@@ -582,11 +723,37 @@ type Int8VectorFieldData struct {
 }
 
 type VectorArrayFieldData struct {
-	Dim         int64
-	ElementType schemapb.DataType
-	Data        []*schemapb.VectorField
-	ValidData   []bool
-	Nullable    bool
+	Dim             int64
+	ElementType     schemapb.DataType
+	Data            []*schemapb.VectorField
+	ValidData       []bool
+	Nullable        bool
+	ElementNullable bool
+
+	trackMemory bool
+	memorySize  int
+}
+
+func newVectorArrayFieldData(schema *schemapb.FieldSchema, capacity int, trackMemory bool) (FieldData, error) {
+	dim, err := GetDimFromParams(schema.GetTypeParams())
+	if err != nil {
+		return nil, err
+	}
+	data := &VectorArrayFieldData{
+		Dim:             int64(dim),
+		ElementType:     schema.GetElementType(),
+		Data:            make([]*schemapb.VectorField, 0, capacity),
+		Nullable:        schema.GetNullable(),
+		ElementNullable: schema.GetElementNullable(),
+	}
+	if schema.GetNullable() {
+		data.ValidData = make([]bool, 0, capacity)
+	}
+	if trackMemory {
+		data.trackMemory = true
+		data.memorySize = 2 // Nullable and ElementNullable flags.
+	}
+	return data, nil
 }
 
 func emptyPerRowVectorField(dim int64, elementType schemapb.DataType) *schemapb.VectorField {
@@ -606,18 +773,23 @@ func emptyPerRowVectorField(dim int64, elementType schemapb.DataType) *schemapb.
 	return vf
 }
 
-func (dst *SparseFloatVectorFieldData) AppendAllRows(src *SparseFloatVectorFieldData) {
-	if dst.Dim < src.Dim {
-		dst.Dim = src.Dim
+func (data *SparseFloatVectorFieldData) AppendAllRows(src *SparseFloatVectorFieldData) {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Contents), len(data.ValidData),
+			data.Dim, data.L2PMapping.GetMemorySize())
 	}
-	dst.Contents = append(dst.Contents, src.Contents...)
+
+	if data.Dim < src.Dim {
+		data.Dim = src.Dim
+	}
+	data.Contents = append(data.Contents, src.Contents...)
 	if src.Nullable {
-		if dst.ValidData == nil {
-			dst.ValidData = make([]bool, 0, len(src.ValidData))
+		if data.ValidData == nil {
+			data.ValidData = make([]bool, 0, len(src.ValidData))
 		}
-		dst.L2PMapping.Build(src.ValidData, len(dst.ValidData), len(src.ValidData))
-		dst.ValidData = append(dst.ValidData, src.ValidData...)
-		dst.Nullable = true
+		data.L2PMapping.Build(src.ValidData, len(data.ValidData), len(src.ValidData))
+		data.ValidData = append(data.ValidData, src.ValidData...)
+		data.Nullable = true
 	}
 }
 
@@ -676,9 +848,7 @@ func (data *Int8VectorFieldData) RowNum() int {
 	return len(data.Data) / data.Dim
 }
 
-func (data *VectorArrayFieldData) RowNum() int {
-	return len(data.Data)
-}
+func (data *VectorArrayFieldData) RowNum() int { return len(data.Data) }
 
 // GetRow implements FieldData.GetRow
 func (data *BoolFieldData) GetRow(i int) any {
@@ -876,6 +1046,23 @@ func (data *BoolFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *BoolFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*BoolFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("bool CopyFrom requires a non-nil BoolFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
 func (data *Int8FieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, make([]int8, 1)...)
@@ -890,6 +1077,23 @@ func (data *Int8FieldData) AppendRow(row interface{}) error {
 		data.ValidData = append(data.ValidData, true)
 	}
 	data.Data = append(data.Data, v)
+	return nil
+}
+
+func (data *Int8FieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*Int8FieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("Int8FieldData.CopyFrom requires a non-nil Int8FieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
 	return nil
 }
 
@@ -910,6 +1114,23 @@ func (data *Int16FieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *Int16FieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*Int16FieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("Int16FieldData.CopyFrom requires a non-nil Int16FieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
 func (data *Int32FieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, make([]int32, 1)...)
@@ -924,6 +1145,23 @@ func (data *Int32FieldData) AppendRow(row interface{}) error {
 		data.ValidData = append(data.ValidData, true)
 	}
 	data.Data = append(data.Data, v)
+	return nil
+}
+
+func (data *Int32FieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*Int32FieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("Int32FieldData.CopyFrom requires a non-nil Int32FieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
 	return nil
 }
 
@@ -944,6 +1182,23 @@ func (data *Int64FieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *Int64FieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*Int64FieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("Int64FieldData.CopyFrom requires a non-nil Int64FieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
 func (data *FloatFieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, make([]float32, 1)...)
@@ -958,6 +1213,23 @@ func (data *FloatFieldData) AppendRow(row interface{}) error {
 		data.ValidData = append(data.ValidData, true)
 	}
 	data.Data = append(data.Data, v)
+	return nil
+}
+
+func (data *FloatFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*FloatFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("FloatFieldData.CopyFrom requires a non-nil FloatFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
 	return nil
 }
 
@@ -978,6 +1250,23 @@ func (data *DoubleFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *DoubleFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*DoubleFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("DoubleFieldData.CopyFrom requires a non-nil DoubleFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
 func (data *TimestamptzFieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, make([]int64, 1)...)
@@ -995,9 +1284,31 @@ func (data *TimestamptzFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *TimestamptzFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*TimestamptzFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("TimestamptzFieldData.CopyFrom requires a non-nil TimestamptzFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
+// AppendRow updates the size cache when memory tracking is enabled.
 func (data *StringFieldData) AppendRow(row interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if data.GetNullable() && row == nil {
-		data.Data = append(data.Data, make([]string, 1)...)
+		data.Data = append(data.Data, "")
 		data.ValidData = append(data.ValidData, false)
 		return nil
 	}
@@ -1012,24 +1323,76 @@ func (data *StringFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *StringFieldData) CopyFrom(src FieldData, indices []int) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*StringFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("StringFieldData.CopyFrom requires a non-nil StringFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
 func (data *ArrayFieldData) AppendRow(row interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if data.GetNullable() && row == nil {
-		data.Data = append(data.Data, make([]*schemapb.ScalarField, 1)...)
+		data.Data = append(data.Data, nil)
 		data.ValidData = append(data.ValidData, false)
 		return nil
 	}
+
 	v, ok := row.(*schemapb.ScalarField)
 	if !ok {
 		return merr.WrapErrParameterInvalid("*schemapb.ScalarField", row, "Wrong row type")
 	}
+	data.Data = append(data.Data, v)
+
 	if data.GetNullable() {
 		data.ValidData = append(data.ValidData, true)
 	}
-	data.Data = append(data.Data, v)
+	return nil
+}
+
+func (data *ArrayFieldData) CopyFrom(src FieldData, indices []int) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*ArrayFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("ArrayFieldData.CopyFrom requires a non-nil ArrayFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
 	return nil
 }
 
 func (data *JSONFieldData) AppendRow(row interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, make([][]byte, 1)...)
 		data.ValidData = append(data.ValidData, false)
@@ -1046,7 +1409,32 @@ func (data *JSONFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *JSONFieldData) CopyFrom(src FieldData, indices []int) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*JSONFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("JSONFieldData.CopyFrom requires a non-nil JSONFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
+	}
+	return nil
+}
+
 func (data *GeometryFieldData) AppendRow(row interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, make([][]byte, 1)...)
 		data.ValidData = append(data.ValidData, false)
@@ -1062,6 +1450,27 @@ func (data *GeometryFieldData) AppendRow(row interface{}) error {
 	}
 	if data.GetNullable() {
 		data.ValidData = append(data.ValidData, true)
+	}
+	return nil
+}
+
+func (data *GeometryFieldData) CopyFrom(src FieldData, indices []int) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*GeometryFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("GeometryFieldData.CopyFrom requires a non-nil GeometryFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
 	}
 	return nil
 }
@@ -1084,6 +1493,42 @@ func (data *BinaryVectorFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *BinaryVectorFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*BinaryVectorFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("BinaryVectorFieldData.CopyFrom requires a non-nil BinaryVectorFieldData source")
+	}
+	if source.Dim != data.Dim {
+		return merr.WrapErrServiceInternalMsg("BinaryVectorFieldData.CopyFrom dimension mismatch: source=%d, destination=%d", source.Dim, data.Dim)
+	}
+	rowWidth := data.Dim / 8
+	if data.Nullable {
+		validCount := countSelectedValidRows(source.ValidData, indices)
+		// Reserve only the selected non-null vectors, preserving existing data.
+		if required := len(data.Data) + validCount*rowWidth; required > cap(data.Data) {
+			values := make([]byte, len(data.Data), required)
+			copy(values, data.Data)
+			data.Data = values
+		}
+	}
+	for _, i := range indices {
+		if data.Nullable {
+			valid := source.ValidData[i]
+			data.L2PMapping.Build([]bool{valid}, len(data.ValidData), 1)
+			data.ValidData = append(data.ValidData, valid)
+			if !valid {
+				continue
+			}
+			i = getNullableVectorPhysicalOffset(source.ValidData, &source.L2PMapping, i)
+		}
+		data.Data = append(data.Data, source.Data[i*rowWidth:(i+1)*rowWidth]...)
+	}
+	return nil
+}
+
 func (data *FloatVectorFieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.L2PMapping.Build([]bool{false}, len(data.ValidData), 1)
@@ -1098,6 +1543,42 @@ func (data *FloatVectorFieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() {
 		data.L2PMapping.Build([]bool{true}, len(data.ValidData), 1)
 		data.ValidData = append(data.ValidData, true)
+	}
+	return nil
+}
+
+func (data *FloatVectorFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*FloatVectorFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("FloatVectorFieldData.CopyFrom requires a non-nil FloatVectorFieldData source")
+	}
+	if source.Dim != data.Dim {
+		return merr.WrapErrServiceInternalMsg("FloatVectorFieldData.CopyFrom dimension mismatch: source=%d, destination=%d", source.Dim, data.Dim)
+	}
+	rowWidth := data.Dim
+	if data.Nullable {
+		validCount := countSelectedValidRows(source.ValidData, indices)
+		// Reserve only the selected non-null vectors, preserving existing data.
+		if required := len(data.Data) + validCount*rowWidth; required > cap(data.Data) {
+			values := make([]float32, len(data.Data), required)
+			copy(values, data.Data)
+			data.Data = values
+		}
+	}
+	for _, i := range indices {
+		if data.Nullable {
+			valid := source.ValidData[i]
+			data.L2PMapping.Build([]bool{valid}, len(data.ValidData), 1)
+			data.ValidData = append(data.ValidData, valid)
+			if !valid {
+				continue
+			}
+			i = getNullableVectorPhysicalOffset(source.ValidData, &source.L2PMapping, i)
+		}
+		data.Data = append(data.Data, source.Data[i*rowWidth:(i+1)*rowWidth]...)
 	}
 	return nil
 }
@@ -1120,6 +1601,42 @@ func (data *Float16VectorFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *Float16VectorFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*Float16VectorFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("Float16VectorFieldData.CopyFrom requires a non-nil Float16VectorFieldData source")
+	}
+	if source.Dim != data.Dim {
+		return merr.WrapErrServiceInternalMsg("Float16VectorFieldData.CopyFrom dimension mismatch: source=%d, destination=%d", source.Dim, data.Dim)
+	}
+	rowWidth := data.Dim * 2
+	if data.Nullable {
+		validCount := countSelectedValidRows(source.ValidData, indices)
+		// Reserve only the selected non-null vectors, preserving existing data.
+		if required := len(data.Data) + validCount*rowWidth; required > cap(data.Data) {
+			values := make([]byte, len(data.Data), required)
+			copy(values, data.Data)
+			data.Data = values
+		}
+	}
+	for _, i := range indices {
+		if data.Nullable {
+			valid := source.ValidData[i]
+			data.L2PMapping.Build([]bool{valid}, len(data.ValidData), 1)
+			data.ValidData = append(data.ValidData, valid)
+			if !valid {
+				continue
+			}
+			i = getNullableVectorPhysicalOffset(source.ValidData, &source.L2PMapping, i)
+		}
+		data.Data = append(data.Data, source.Data[i*rowWidth:(i+1)*rowWidth]...)
+	}
+	return nil
+}
+
 func (data *BFloat16VectorFieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.L2PMapping.Build([]bool{false}, len(data.ValidData), 1)
@@ -1138,7 +1655,48 @@ func (data *BFloat16VectorFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *BFloat16VectorFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*BFloat16VectorFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("BFloat16VectorFieldData.CopyFrom requires a non-nil BFloat16VectorFieldData source")
+	}
+	if source.Dim != data.Dim {
+		return merr.WrapErrServiceInternalMsg("BFloat16VectorFieldData.CopyFrom dimension mismatch: source=%d, destination=%d", source.Dim, data.Dim)
+	}
+	rowWidth := data.Dim * 2
+	if data.Nullable {
+		validCount := countSelectedValidRows(source.ValidData, indices)
+		// Reserve only the selected non-null vectors, preserving existing data.
+		if required := len(data.Data) + validCount*rowWidth; required > cap(data.Data) {
+			values := make([]byte, len(data.Data), required)
+			copy(values, data.Data)
+			data.Data = values
+		}
+	}
+	for _, i := range indices {
+		if data.Nullable {
+			valid := source.ValidData[i]
+			data.L2PMapping.Build([]bool{valid}, len(data.ValidData), 1)
+			data.ValidData = append(data.ValidData, valid)
+			if !valid {
+				continue
+			}
+			i = getNullableVectorPhysicalOffset(source.ValidData, &source.L2PMapping, i)
+		}
+		data.Data = append(data.Data, source.Data[i*rowWidth:(i+1)*rowWidth]...)
+	}
+	return nil
+}
+
 func (data *SparseFloatVectorFieldData) AppendRow(row interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Contents), len(data.ValidData),
+			data.Dim, data.L2PMapping.GetMemorySize())
+	}
+
 	if data.GetNullable() && row == nil {
 		data.L2PMapping.Build([]bool{false}, len(data.ValidData), 1)
 		data.ValidData = append(data.ValidData, false)
@@ -1163,6 +1721,40 @@ func (data *SparseFloatVectorFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+// CopyFrom appends the selected source rows without validating sparse vector indices or values.
+// Callers must ensure that source data has already been validated.
+func (data *SparseFloatVectorFieldData) CopyFrom(src FieldData, indices []int) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Contents), len(data.ValidData),
+			data.Dim, data.L2PMapping.GetMemorySize())
+	}
+
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*SparseFloatVectorFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("SparseFloatVectorFieldData.CopyFrom requires a non-nil SparseFloatVectorFieldData source")
+	}
+	for _, i := range indices {
+		if data.Nullable {
+			valid := source.ValidData[i]
+			data.L2PMapping.Build([]bool{valid}, len(data.ValidData), 1)
+			data.ValidData = append(data.ValidData, valid)
+			if !valid {
+				continue
+			}
+			i = getNullableVectorPhysicalOffset(source.ValidData, &source.L2PMapping, i)
+		}
+		row := source.Contents[i]
+		data.Contents = append(data.Contents, row)
+		if dim := typeutil.SparseFloatRowDim(row); data.Dim < dim {
+			data.Dim = dim
+		}
+	}
+	return nil
+}
+
 func (data *Int8VectorFieldData) AppendRow(row interface{}) error {
 	if data.GetNullable() && row == nil {
 		data.L2PMapping.Build([]bool{false}, len(data.ValidData), 1)
@@ -1181,19 +1773,82 @@ func (data *Int8VectorFieldData) AppendRow(row interface{}) error {
 	return nil
 }
 
+func (data *Int8VectorFieldData) CopyFrom(src FieldData, indices []int) error {
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*Int8VectorFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("Int8VectorFieldData.CopyFrom requires a non-nil Int8VectorFieldData source")
+	}
+	if source.Dim != data.Dim {
+		return merr.WrapErrServiceInternalMsg("Int8VectorFieldData.CopyFrom dimension mismatch: source=%d, destination=%d", source.Dim, data.Dim)
+	}
+	rowWidth := data.Dim
+	if data.Nullable {
+		validCount := countSelectedValidRows(source.ValidData, indices)
+		// Reserve only the selected non-null vectors, preserving existing data.
+		if required := len(data.Data) + validCount*rowWidth; required > cap(data.Data) {
+			values := make([]int8, len(data.Data), required)
+			copy(values, data.Data)
+			data.Data = values
+		}
+	}
+	for _, i := range indices {
+		if data.Nullable {
+			valid := source.ValidData[i]
+			data.L2PMapping.Build([]bool{valid}, len(data.ValidData), 1)
+			data.ValidData = append(data.ValidData, valid)
+			if !valid {
+				continue
+			}
+			i = getNullableVectorPhysicalOffset(source.ValidData, &source.L2PMapping, i)
+		}
+		data.Data = append(data.Data, source.Data[i*rowWidth:(i+1)*rowWidth]...)
+	}
+	return nil
+}
+
 func (data *VectorArrayFieldData) AppendRow(row interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if data.GetNullable() && row == nil {
 		data.Data = append(data.Data, emptyPerRowVectorField(data.Dim, data.ElementType))
 		data.ValidData = append(data.ValidData, false)
 		return nil
 	}
+
 	v, ok := row.(*schemapb.VectorField)
 	if !ok {
 		return merr.WrapErrParameterInvalid("*schemapb.VectorField", row, "Wrong row type")
 	}
 	data.Data = append(data.Data, v)
+
 	if data.GetNullable() {
 		data.ValidData = append(data.ValidData, true)
+	}
+	return nil
+}
+
+func (data *VectorArrayFieldData) CopyFrom(src FieldData, indices []int) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
+	if len(indices) == 0 {
+		return nil
+	}
+	source, ok := src.(*VectorArrayFieldData)
+	if !ok || source == nil {
+		return merr.WrapErrServiceInternalMsg("VectorArrayFieldData.CopyFrom requires a non-nil VectorArrayFieldData source")
+	}
+	for _, i := range indices {
+		data.Data = append(data.Data, source.Data[i])
+		if data.Nullable {
+			data.ValidData = append(data.ValidData, source.ValidData[i])
+		}
 	}
 	return nil
 }
@@ -1262,9 +1917,10 @@ func (data *TimestamptzFieldData) AppendRows(dataRows interface{}, validDataRows
 	return data.AppendValidDataRows(validDataRows)
 }
 
+// AppendRows retains appended data if validity appending fails.
+// Each append step updates its own part of the size cache when tracking is enabled.
 func (data *StringFieldData) AppendRows(dataRows interface{}, validDataRows interface{}) error {
-	err := data.AppendDataRows(dataRows)
-	if err != nil {
+	if err := data.AppendDataRows(dataRows); err != nil {
 		return err
 	}
 	return data.AppendValidDataRows(validDataRows)
@@ -1345,7 +2001,7 @@ func (data *FloatVectorFieldData) AppendRows(dataRows interface{}, validDataRows
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]float32", dataRows, "Wrong rows type")
 	}
-	if len(v)%(data.Dim) != 0 {
+	if len(v)%data.Dim != 0 {
 		return merr.WrapErrParameterInvalid(data.Dim, len(v), "Wrong vector size")
 	}
 	if err := validateNullableVectorCompactRows(data.GetNullable(), validDataRows, len(v)/data.Dim); err != nil {
@@ -1397,9 +2053,8 @@ func (data *SparseFloatVectorFieldData) AppendRows(dataRows interface{}, validDa
 	if err := validateNullableVectorCompactRows(data.GetNullable(), validDataRows, len(v.Contents)); err != nil {
 		return err
 	}
-	data.Contents = append(data.Contents, v.Contents...)
-	if data.Dim < v.Dim {
-		data.Dim = v.Dim
+	if err := data.AppendDataRows(v); err != nil {
+		return err
 	}
 	return data.AppendValidDataRows(validDataRows)
 }
@@ -1409,7 +2064,7 @@ func (data *Int8VectorFieldData) AppendRows(dataRows interface{}, validDataRows 
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]int8", dataRows, "Wrong rows type")
 	}
-	if len(v)%(data.Dim) != 0 {
+	if len(v)%data.Dim != 0 {
 		return merr.WrapErrParameterInvalid(data.Dim, len(v), "Wrong vector size")
 	}
 	if err := validateNullableVectorCompactRows(data.GetNullable(), validDataRows, len(v)/data.Dim); err != nil {
@@ -1499,7 +2154,12 @@ func (data *TimestamptzFieldData) AppendDataRows(rows interface{}) error {
 	return nil
 }
 
+// AppendDataRows updates only the payload portion of the size cache when tracking is enabled.
 func (data *StringFieldData) AppendDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	v, ok := rows.([]string)
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]string", rows, "Wrong rows type")
@@ -1509,6 +2169,10 @@ func (data *StringFieldData) AppendDataRows(rows interface{}) error {
 }
 
 func (data *ArrayFieldData) AppendDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	v, ok := rows.([]*schemapb.ScalarField)
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]*schemapb.ScalarField", rows, "Wrong rows type")
@@ -1518,6 +2182,10 @@ func (data *ArrayFieldData) AppendDataRows(rows interface{}) error {
 }
 
 func (data *JSONFieldData) AppendDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	v, ok := rows.([][]byte)
 	if !ok {
 		return merr.WrapErrParameterInvalid("[][]byte", rows, "Wrong rows type")
@@ -1527,6 +2195,10 @@ func (data *JSONFieldData) AppendDataRows(rows interface{}) error {
 }
 
 func (data *GeometryFieldData) AppendDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	switch v := rows.(type) {
 	case [][]byte:
 		data.Data = append(data.Data, v...)
@@ -1559,7 +2231,7 @@ func (data *FloatVectorFieldData) AppendDataRows(rows interface{}) error {
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]float32", rows, "Wrong rows type")
 	}
-	if len(v)%(data.Dim) != 0 {
+	if len(v)%data.Dim != 0 {
 		return merr.WrapErrParameterInvalid(data.Dim, len(v), "Wrong vector size")
 	}
 	data.Data = append(data.Data, v...)
@@ -1593,6 +2265,11 @@ func (data *BFloat16VectorFieldData) AppendDataRows(rows interface{}) error {
 }
 
 func (data *SparseFloatVectorFieldData) AppendDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Contents), len(data.ValidData),
+			data.Dim, data.L2PMapping.GetMemorySize())
+	}
+
 	v, ok := rows.(*SparseFloatVectorFieldData)
 	if !ok {
 		return merr.WrapErrParameterInvalid("SparseFloatVectorFieldData", rows, "Wrong rows type")
@@ -1609,7 +2286,7 @@ func (data *Int8VectorFieldData) AppendDataRows(rows interface{}) error {
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]int8", rows, "Wrong rows type")
 	}
-	if len(v)%(data.Dim) != 0 {
+	if len(v)%data.Dim != 0 {
 		return merr.WrapErrParameterInvalid(data.Dim, len(v), "Wrong vector size")
 	}
 	data.Data = append(data.Data, v...)
@@ -1617,6 +2294,10 @@ func (data *Int8VectorFieldData) AppendDataRows(rows interface{}) error {
 }
 
 func (data *VectorArrayFieldData) AppendDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	v, ok := rows.([]*schemapb.VectorField)
 	if !ok {
 		return merr.WrapErrParameterInvalid("[]*schemapb.VectorField", rows, "Wrong rows type")
@@ -1721,7 +2402,12 @@ func (data *TimestamptzFieldData) AppendValidDataRows(rows interface{}) error {
 	return nil
 }
 
+// AppendValidDataRows updates only the validity portion of the size cache when tracking is enabled.
 func (data *StringFieldData) AppendValidDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if rows == nil {
 		return nil
 	}
@@ -1734,6 +2420,10 @@ func (data *StringFieldData) AppendValidDataRows(rows interface{}) error {
 }
 
 func (data *ArrayFieldData) AppendValidDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if rows == nil {
 		return nil
 	}
@@ -1746,6 +2436,10 @@ func (data *ArrayFieldData) AppendValidDataRows(rows interface{}) error {
 }
 
 func (data *JSONFieldData) AppendValidDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if rows == nil {
 		return nil
 	}
@@ -1758,6 +2452,10 @@ func (data *JSONFieldData) AppendValidDataRows(rows interface{}) error {
 }
 
 func (data *GeometryFieldData) AppendValidDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if rows == nil {
 		return nil
 	}
@@ -1787,6 +2485,10 @@ func (data *BinaryVectorFieldData) AppendValidDataRows(rows interface{}) error {
 }
 
 func (data *VectorArrayFieldData) AppendValidDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Data), len(data.ValidData))
+	}
+
 	if rows == nil {
 		return nil
 	}
@@ -1850,6 +2552,11 @@ func (data *BFloat16VectorFieldData) AppendValidDataRows(rows interface{}) error
 }
 
 func (data *SparseFloatVectorFieldData) AppendValidDataRows(rows interface{}) error {
+	if data.trackMemory {
+		defer data.trackAppendedSize(len(data.Contents), len(data.ValidData),
+			data.Dim, data.L2PMapping.GetMemorySize())
+	}
+
 	if rows == nil {
 		return nil
 	}
@@ -1932,9 +2639,10 @@ func (data *BFloat16VectorFieldData) GetMemorySize() int {
 }
 
 func (data *SparseFloatVectorFieldData) GetMemorySize() int {
-	// TODO(SPARSE): should this be the memory size of serialzied size?
-	// SparseFloatArray + ValidData + Nullable(1) + L2PMapping
-	return proto.Size(&data.SparseFloatArray) + binary.Size(data.ValidData) + 1 + data.L2PMapping.GetMemorySize()
+	if data.trackMemory {
+		return data.memorySize
+	}
+	return data.getMemorySize()
 }
 
 func (data *Int8VectorFieldData) GetMemorySize() int {
@@ -1942,6 +2650,9 @@ func (data *Int8VectorFieldData) GetMemorySize() int {
 }
 
 func GetVectorSize(vector *schemapb.VectorField, vectorType schemapb.DataType) int {
+	if vector == nil {
+		return 0
+	}
 	size := 0
 	switch vectorType {
 	case schemapb.DataType_BinaryVector:
@@ -1963,12 +2674,10 @@ func GetVectorSize(vector *schemapb.VectorField, vectorType schemapb.DataType) i
 }
 
 func (data *VectorArrayFieldData) GetMemorySize() int {
-	var size int
-	for _, val := range data.Data {
-		size += GetVectorSize(val, data.ElementType)
+	if data.trackMemory {
+		return data.memorySize
 	}
-	size += binary.Size(data.ValidData) + 1
-	return size
+	return data.getMemorySize()
 }
 
 // GetDataType implements FieldData.GetDataType
@@ -2020,58 +2729,82 @@ func (data *VectorArrayFieldData) GetDataType() schemapb.DataType {
 	return schemapb.DataType_ArrayOfVector
 }
 
-// why not binary.Size(data) directly? binary.Size(data) return -1
-// binary.Size returns how many bytes Write would generate to encode the value v, which
-// must be a fixed-size value or a slice of fixed-size values, or a pointer to such data.
-// If v is neither of these, binary.Size returns -1.
+// GetMemorySize returns the cached size or calculates the size from current data.
 func (data *StringFieldData) GetMemorySize() int {
-	var size int
-	for _, val := range data.Data {
-		size += len(val) + 16
+	if data.trackMemory {
+		return data.memorySize
 	}
-	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+	return data.getMemorySize()
+}
+
+// nestedArrayElementOverhead is the fixed heap cost of one inner array of a
+// nested Array row, on top of its leaf payload: the *ScalarField slot in the
+// parent slice (8 bytes), the ScalarField message (80), its oneof wrapper (8)
+// and the typed array message such as LongArray or StringArray (64), measured
+// on 64-bit Go. A null or empty inner array has no payload, so without it a
+// row of null inner arrays would count as nothing and memory-bounded batches
+// (import readers, insert buffers) would hold far more than their limit. Like
+// the string header in StringFieldData, it is a Go in-memory cost.
+const nestedArrayElementOverhead = 160
+
+func getArrayScalarFieldMemorySize(data *schemapb.ScalarField, elementType schemapb.DataType) int {
+	if data == nil {
+		return 0
+	}
+
+	// Nested Array rows are recursively encoded as ScalarField_ArrayData.
+	// Descend into that payload before dispatching on the leaf element type.
+	if arrayData := data.GetArrayData(); arrayData != nil {
+		var size int
+		for _, element := range arrayData.GetData() {
+			size += nestedArrayElementOverhead
+			size += getArrayScalarFieldMemorySize(element, arrayData.GetElementType())
+			size += binary.Size(typeutil.GetArrayElementValidData(element))
+		}
+		return size
+	}
+
+	switch elementType {
+	case schemapb.DataType_Bool:
+		return binary.Size(data.GetBoolData().GetData())
+	case schemapb.DataType_Int8:
+		return binary.Size(data.GetIntData().GetData()) / 4
+	case schemapb.DataType_Int16:
+		return binary.Size(data.GetIntData().GetData()) / 2
+	case schemapb.DataType_Int32:
+		return binary.Size(data.GetIntData().GetData())
+	case schemapb.DataType_Int64, schemapb.DataType_Timestamptz:
+		return binary.Size(data.GetLongData().GetData())
+	case schemapb.DataType_Float:
+		return binary.Size(data.GetFloatData().GetData())
+	case schemapb.DataType_Double:
+		return binary.Size(data.GetDoubleData().GetData())
+	case schemapb.DataType_String, schemapb.DataType_VarChar:
+		return (&StringFieldData{Data: data.GetStringData().GetData()}).GetMemorySize()
+	default:
+		return 0
+	}
 }
 
 func (data *ArrayFieldData) GetMemorySize() int {
-	var size int
-	for _, val := range data.Data {
-		switch data.ElementType {
-		case schemapb.DataType_Bool:
-			size += binary.Size(val.GetBoolData().GetData())
-		case schemapb.DataType_Int8:
-			size += binary.Size(val.GetIntData().GetData()) / 4
-		case schemapb.DataType_Int16:
-			size += binary.Size(val.GetIntData().GetData()) / 2
-		case schemapb.DataType_Int32:
-			size += binary.Size(val.GetIntData().GetData())
-		case schemapb.DataType_Int64:
-			size += binary.Size(val.GetLongData().GetData())
-		case schemapb.DataType_Float:
-			size += binary.Size(val.GetFloatData().GetData())
-		case schemapb.DataType_Double:
-			size += binary.Size(val.GetDoubleData().GetData())
-		case schemapb.DataType_String, schemapb.DataType_VarChar:
-			size += (&StringFieldData{Data: val.GetStringData().GetData()}).GetMemorySize()
-		}
+	if data.trackMemory {
+		return data.memorySize
 	}
-	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+	return data.getMemorySize()
 }
 
 func (data *JSONFieldData) GetMemorySize() int {
-	var size int
-	for _, val := range data.Data {
-		size += len(val) + 16
+	if data.trackMemory {
+		return data.memorySize
 	}
-	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+	return data.getMemorySize()
 }
 
 func (data *GeometryFieldData) GetMemorySize() int {
-	var size int
-	// what's the meaning of 16?
-	for _, val := range data.Data {
-		size += len(val) + 16
+	if data.trackMemory {
+		return data.memorySize
 	}
-	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+	return data.getMemorySize()
 }
 
 func (data *BoolFieldData) GetRowSize(i int) int        { return 1 }
@@ -2120,25 +2853,7 @@ func (data *StringFieldData) GetRowSize(i int) int   { return len(data.Data[i]) 
 func (data *JSONFieldData) GetRowSize(i int) int     { return len(data.Data[i]) + 16 }
 func (data *GeometryFieldData) GetRowSize(i int) int { return len(data.Data[i]) + 16 }
 func (data *ArrayFieldData) GetRowSize(i int) int {
-	switch data.ElementType {
-	case schemapb.DataType_Bool:
-		return binary.Size(data.Data[i].GetBoolData().GetData())
-	case schemapb.DataType_Int8:
-		return binary.Size(data.Data[i].GetIntData().GetData()) / 4
-	case schemapb.DataType_Int16:
-		return binary.Size(data.Data[i].GetIntData().GetData()) / 2
-	case schemapb.DataType_Int32:
-		return binary.Size(data.Data[i].GetIntData().GetData())
-	case schemapb.DataType_Int64:
-		return binary.Size(data.Data[i].GetLongData().GetData())
-	case schemapb.DataType_Float:
-		return binary.Size(data.Data[i].GetFloatData().GetData())
-	case schemapb.DataType_Double:
-		return binary.Size(data.Data[i].GetDoubleData().GetData())
-	case schemapb.DataType_String, schemapb.DataType_VarChar:
-		return (&StringFieldData{Data: data.Data[i].GetStringData().GetData()}).GetMemorySize()
-	}
-	return 0
+	return getArrayScalarFieldMemorySize(data.Data[i], data.ElementType)
 }
 
 func (data *SparseFloatVectorFieldData) GetRowSize(i int) int {
@@ -2217,12 +2932,20 @@ func (data *ArrayFieldData) GetNullable() bool {
 	return data.Nullable
 }
 
+func (data *ArrayFieldData) GetElementNullable() bool {
+	return data.ElementNullable
+}
+
 func (data *JSONFieldData) GetNullable() bool {
 	return data.Nullable
 }
 
 func (data *VectorArrayFieldData) GetNullable() bool {
 	return data.Nullable
+}
+
+func (data *VectorArrayFieldData) GetElementNullable() bool {
+	return data.ElementNullable
 }
 
 func (data *GeometryFieldData) GetNullable() bool {
@@ -2248,3 +2971,116 @@ func (data *BFloat16VectorFieldData) GetValidData() []bool    { return data.Vali
 func (data *SparseFloatVectorFieldData) GetValidData() []bool { return data.ValidData }
 func (data *Int8VectorFieldData) GetValidData() []bool        { return data.ValidData }
 func (data *VectorArrayFieldData) GetValidData() []bool       { return data.ValidData }
+
+// getMemorySize calculates the size without using the cache.
+func (data *StringFieldData) getMemorySize() int {
+	var size int
+	for _, val := range data.Data {
+		size += len(val) + 16
+	}
+	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+}
+
+func (data *StringFieldData) trackAppendedSize(oldRows, oldValid int) {
+	for _, value := range data.Data[oldRows:] {
+		data.memorySize += len(value) + 16
+	}
+	data.memorySize += len(data.ValidData) - oldValid
+}
+
+// getMemorySize calculates the size without using the cache.
+func (data *JSONFieldData) getMemorySize() int {
+	var size int
+	for _, val := range data.Data {
+		size += len(val) + 16
+	}
+	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+}
+
+func (data *JSONFieldData) trackAppendedSize(oldRows, oldValid int) {
+	for _, value := range data.Data[oldRows:] {
+		data.memorySize += len(value) + 16
+	}
+	data.memorySize += len(data.ValidData) - oldValid
+}
+
+// getMemorySize calculates the size without using the cache.
+func (data *GeometryFieldData) getMemorySize() int {
+	var size int
+	for _, val := range data.Data {
+		size += len(val) + 16
+	}
+	return size + binary.Size(data.ValidData) + binary.Size(data.Nullable)
+}
+
+func (data *GeometryFieldData) trackAppendedSize(oldRows, oldValid int) {
+	for _, value := range data.Data[oldRows:] {
+		data.memorySize += len(value) + 16
+	}
+	data.memorySize += len(data.ValidData) - oldValid
+}
+
+// getMemorySize calculates the size without using the cache.
+func (data *ArrayFieldData) getMemorySize() int {
+	var size int
+	for _, val := range data.Data {
+		size += getArrayScalarFieldMemorySize(val, data.ElementType)
+		size += binary.Size(typeutil.GetArrayElementValidData(val))
+	}
+	size += binary.Size(data.ValidData) + binary.Size(data.Nullable)
+	size += binary.Size(data.ElementNullable)
+	return size
+}
+
+func (data *ArrayFieldData) trackAppendedSize(oldRows, oldValid int) {
+	for _, value := range data.Data[oldRows:] {
+		data.memorySize += getArrayScalarFieldMemorySize(value, data.ElementType) + len(typeutil.GetArrayElementValidData(value))
+	}
+	data.memorySize += len(data.ValidData) - oldValid
+}
+
+// getMemorySize calculates the size without using the cache.
+func (data *SparseFloatVectorFieldData) getMemorySize() int {
+	// Vector data uses protobuf size; validity, Nullable and L2P metadata are added separately.
+	return proto.Size(&data.SparseFloatArray) + binary.Size(data.ValidData) + 1 + data.L2PMapping.GetMemorySize()
+}
+
+func (data *SparseFloatVectorFieldData) trackAppendedSize(oldRows, oldValid int, oldDim int64, oldMappingSize int) {
+	// +-------+--------+----------+-------+--------+----------+-----+-------+-------+
+	// | tag 1 | length | row 0    | tag 1 | length | row 1    | ... | tag 2 | Dim   |
+	// +-------+--------+----------+-------+--------+----------+-----+-------+-------+
+	// |<----- Contents[0] ------->|<----- Contents[1] ------->| ... |<---- Dim ---->|
+	// SizeBytes includes both the length prefix and the payload.
+	for _, row := range data.Contents[oldRows:] {
+		data.memorySize += protowire.SizeTag(1) + protowire.SizeBytes(len(row))
+	}
+	if data.Dim != oldDim {
+		if data.Dim != 0 {
+			data.memorySize += protowire.SizeTag(2) + protowire.SizeVarint(uint64(data.Dim))
+		}
+		if oldDim != 0 {
+			data.memorySize -= protowire.SizeTag(2) + protowire.SizeVarint(uint64(oldDim))
+		}
+	}
+	data.memorySize += len(data.ValidData) - oldValid
+	data.memorySize += data.L2PMapping.GetMemorySize() - oldMappingSize
+}
+
+// getMemorySize calculates the size without using the cache.
+func (data *VectorArrayFieldData) getMemorySize() int {
+	var size int
+	for _, val := range data.Data {
+		size += GetVectorSize(val, data.ElementType)
+		size += binary.Size(typeutil.GetVectorArrayElementValidData(val))
+	}
+	size += binary.Size(data.ValidData) + binary.Size(data.Nullable)
+	size += binary.Size(data.ElementNullable)
+	return size
+}
+
+func (data *VectorArrayFieldData) trackAppendedSize(oldRows, oldValid int) {
+	for _, value := range data.Data[oldRows:] {
+		data.memorySize += GetVectorSize(value, data.ElementType) + len(typeutil.GetVectorArrayElementValidData(value))
+	}
+	data.memorySize += len(data.ValidData) - oldValid
+}

@@ -140,22 +140,32 @@ class Schema {
     AddDebugField(const std::string& name,
                   DataType data_type,
                   DataType element_type,
-                  bool nullable = false) {
+                  bool nullable = false,
+                  bool element_nullable = false) {
         auto field_id = FieldId(debug_id);
         debug_id++;
-        this->AddField(
-            FieldName(name), field_id, data_type, element_type, nullable);
+        this->AddField(FieldName(name),
+                       field_id,
+                       data_type,
+                       element_type,
+                       nullable,
+                       element_nullable);
         return field_id;
     }
 
     FieldId
     AddDebugArrayField(const std::string& name,
                        DataType element_type,
-                       bool nullable) {
+                       bool nullable,
+                       bool element_nullable = false) {
         auto field_id = FieldId(debug_id);
         debug_id++;
-        this->AddField(
-            FieldName(name), field_id, DataType::ARRAY, element_type, nullable);
+        this->AddField(FieldName(name),
+                       field_id,
+                       DataType::ARRAY,
+                       element_type,
+                       nullable,
+                       element_nullable);
         return field_id;
     }
 
@@ -185,7 +195,8 @@ class Schema {
                              DataType element_type,
                              int64_t dim,
                              std::optional<knowhere::MetricType> metric_type,
-                             bool nullable = false) {
+                             bool nullable = false,
+                             bool element_nullable = false) {
         auto field_id = FieldId(debug_id);
         debug_id++;
         auto field_meta = FieldMeta(FieldName(name),
@@ -194,7 +205,8 @@ class Schema {
                                     element_type,
                                     dim,
                                     metric_type,
-                                    nullable);
+                                    nullable,
+                                    element_nullable);
         this->AddField(std::move(field_meta));
         return field_id;
     }
@@ -242,9 +254,17 @@ class Schema {
              const FieldId id,
              DataType data_type,
              DataType element_type,
-             bool nullable) {
-        auto field_meta = FieldMeta(
-            name, id, data_type, element_type, nullable, std::nullopt);
+             bool nullable,
+             bool element_nullable) {
+        auto field_meta = FieldMeta(name,
+                                    id,
+                                    data_type,
+                                    element_type,
+                                    nullable,
+                                    element_nullable,
+                                    std::nullopt,
+                                    std::string{},
+                                    std::nullopt);
         this->AddField(std::move(field_meta));
     }
 
@@ -597,6 +617,17 @@ class Schema {
     const FieldMeta&
     GetFirstArrayFieldInStruct(const std::string& struct_name) const;
 
+    // Field ID of the struct array field itself. Only schemas parsed from a
+    // CollectionSchema proto know it.
+    std::optional<FieldId>
+    GetStructFieldId(const std::string& struct_name) const {
+        auto it = struct_field_ids_.find(struct_name);
+        if (it == struct_field_ids_.end()) {
+            return std::nullopt;
+        }
+        return it->second;
+    }
+
     DataType
     GetFieldType(const FieldId& field_id) const {
         AssertInfo(fields_.count(field_id),
@@ -691,6 +722,9 @@ class Schema {
 
     // Cache for struct_name -> first array field mapping (built during AddField)
     std::unordered_map<std::string, FieldId> struct_array_field_cache_;
+
+    // struct_name -> field ID of the struct array field (built in ParseFrom)
+    std::unordered_map<std::string, FieldId> struct_field_ids_;
 
     // warmup policy settings
     // Valid values: "disable", "sync", "async" (empty string means no setting)

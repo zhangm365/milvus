@@ -119,25 +119,16 @@ class VectorDiskAnnIndex : public VectorIndex {
                     const BitsetView& bitset,
                     milvus::OpContext* op_context = nullptr) const override;
 
-    knowhere::IdMap&
-    GetIdMap() override {
-        return index_.GetIdMap();
-    }
-
-    const knowhere::IdMap&
-    GetIdMap() const override {
-        return index_.GetIdMap();
-    }
-
-    void
-    SetIdMapType(knowhere::IdMap::Type type) override {
-        index_.SetIdMapType(type);
+ protected:
+    const knowhere::Index<knowhere::IndexNode>&
+    GetNativeIndex() const override {
+        return index_;
     }
 
  private:
     bool
     IsEmptyEmbListIndex() const {
-        return elem_type_ != DataType::NONE && !empty_emb_list_offsets_.empty();
+        return !empty_emb_list_offsets_.empty();
     }
 
     knowhere::Json

@@ -22,6 +22,7 @@ import (
 
 	"github.com/apache/arrow/go/v17/arrow"
 	"github.com/apache/arrow/go/v17/arrow/array"
+	"github.com/apache/arrow/go/v17/arrow/bitutil"
 	"github.com/apache/arrow/go/v17/arrow/memory"
 	"github.com/samber/lo"
 
@@ -46,8 +47,9 @@ func isNullableDenseVectorArrowType(dataType schemapb.DataType) bool {
 }
 
 type appendValueDefault struct {
-	value       *schemapb.ValueField
-	geometryWKB []byte
+	value                  *schemapb.ValueField
+	geometryWKB            []byte
+	arrayOfVectorByteWidth int
 }
 
 func newAppendValueDefault(field *schemapb.FieldSchema) (appendValueDefault, error) {
@@ -59,6 +61,19 @@ func newAppendValueDefault(field *schemapb.FieldSchema) (appendValueDefault, err
 			return ret, merr.WrapErrServiceInternalErr(err, "invalid default value for geometry field %s", field.GetName())
 		}
 		ret.geometryWKB = val
+	}
+	if field.GetDataType() == schemapb.DataType_ArrayOfVector && field.GetElementNullable() {
+		dim, err := typeutil.GetDim(field)
+		if err != nil {
+			return ret, merr.WrapErrAsSysError(
+				merr.Wrapf(err, "get dimension for ArrayOfVector field %s", field.GetName()),
+			)
+		}
+		byteWidth, err := getArrayOfVectorElementByteWidth(field.GetElementType(), int(dim))
+		if err != nil {
+			return ret, err
+		}
+		ret.arrayOfVectorByteWidth = byteWidth
 	}
 	return ret, nil
 }
@@ -247,7 +262,6 @@ func appendValueAt(builder array.Builder, a arrow.Array, idx int, field *schemap
 			return uint64(len(val)), nil
 		}
 	case *array.ListBuilder:
-		// Handle ListBuilder for ArrayOfVector type
 		la, ok := a.(*array.List)
 		if !ok {
 			return 0, merr.WrapErrServiceInternalMsg("invalid value type %T, expect %T", a.DataType(), builder.Type())
@@ -258,27 +272,49 @@ func appendValueAt(builder array.Builder, a arrow.Array, idx int, field *schemap
 		}
 
 		start, end := la.ValueOffsets(idx)
-		b.Append(true)
-
-		valuesArray := la.ListValues()
-		var totalSize uint64 = 0
-		valueBuilder := b.ValueBuilder()
-		switch vb := valueBuilder.(type) {
-		case *array.FixedSizeBinaryBuilder:
-			fixedArray, ok := valuesArray.(*array.FixedSizeBinary)
-			if !ok {
-				return 0, merr.WrapErrServiceInternalMsg("invalid value type %T, expect %T", valuesArray.DataType(), vb.Type())
+		values := la.ListValues()
+		isVectorArray := field != nil && field.GetDataType() == schemapb.DataType_ArrayOfVector
+		if isVectorArray {
+			if field.GetElementNullable() {
+				if _, ok := values.(*array.Binary); !ok {
+					return 0, merr.WrapErrDataIntegrityMsg("element-nullable ArrayOfVector requires Binary child, got %T", values)
+				}
+				if appendDefault.arrayOfVectorByteWidth <= 0 {
+					return 0, merr.WrapErrServiceInternalMsg("missing ArrayOfVector child byte width")
+				}
+			} else if _, ok := values.(*array.FixedSizeBinary); !ok {
+				return 0, merr.WrapErrDataIntegrityMsg("non-element-nullable ArrayOfVector requires FixedSizeBinary child, got %T", values)
 			}
 			for i := start; i < end; i++ {
-				val := fixedArray.Value(int(i))
-				vb.Append(val)
-				totalSize += uint64(len(val))
+				if values.IsNull(int(i)) {
+					if !field.GetElementNullable() {
+						return 0, merr.WrapErrDataIntegrityMsg("non-element-nullable ArrayOfVector contains null child at logical element %d", i-start)
+					}
+					continue
+				}
+				if field.GetElementNullable() && len(values.(*array.Binary).Value(int(i))) != appendDefault.arrayOfVectorByteWidth {
+					return 0, merr.WrapErrDataIntegrityMsg("ArrayOfVector child at logical element %d has invalid byte width", i-start)
+				}
 			}
-		default:
-			return 0, merr.WrapErrServiceInternalMsg("unsupported value builder type in ListBuilder: %T", valueBuilder)
 		}
-
-		return totalSize, nil
+		b.Append(true)
+		childBuilder := b.ValueBuilder()
+		childBuilder.Reserve(int(end - start))
+		size := uint64(arrow.Int32SizeBytes)
+		for i := start; i < end; i++ {
+			childSize, err := appendValueAt(childBuilder, values, int(i), nil, appendValueDefault{})
+			if err != nil {
+				return 0, err
+			}
+			size += childSize
+		}
+		if isVectorArray {
+			size -= uint64(arrow.Int32SizeBytes)
+			if field.GetElementNullable() {
+				size += uint64(end-start)*uint64(arrow.Int32SizeBytes) + uint64(bitutil.BytesForBits(end-start))
+			}
+		}
+		return size, nil
 	default:
 		return 0, merr.WrapErrServiceInternalMsg("unsupported builder type: %T", builder)
 	}
@@ -293,13 +329,10 @@ func GenerateEmptyArrayFromSchema(schema *schemapb.FieldSchema, numRows int) (ar
 	if !schema.GetNullable() {
 		return nil, merr.WrapErrServiceInternalMsg("missing field data %s", schema.Name)
 	}
-	dim, _ := typeutil.GetDim(schema)
-
-	elementType := schemapb.DataType_None
-	if schema.GetDataType() == schemapb.DataType_ArrayOfVector {
-		elementType = schema.GetElementType()
+	arrowType, err := ArrowTypeForField(schema)
+	if err != nil {
+		return nil, err
 	}
-	arrowType := serdeMap[schema.GetDataType()].arrowType(int(dim), elementType)
 	if schema.GetDataType() == schemapb.DataType_Text {
 		arrowType = arrow.BinaryTypes.Binary
 	} else if schema.GetNullable() && isNullableDenseVectorArrowType(schema.GetDataType()) {
@@ -389,6 +422,8 @@ type RecordBuilder struct {
 	builders    []array.Builder
 	defaults    []appendValueDefault
 	allocator   *recordBuilderAllocator
+	// Append reuses this slice and clears its borrowed columns before returning.
+	columns []arrow.Array
 
 	nRows int
 	size  uint64
@@ -436,13 +471,30 @@ func (b *RecordBuilder) prepareAppendDefaults() error {
 }
 
 func (b *RecordBuilder) Append(rec Record, start, end int) error {
+	if start >= end {
+		return b.appendColumns(nil, start, end)
+	}
+	if b.columns == nil {
+		b.columns = make([]arrow.Array, len(b.fields))
+	}
+	defer clear(b.columns)
+	for i, field := range b.fields {
+		b.columns[i] = rec.Column(field.GetFieldID())
+	}
+	return b.appendColumns(b.columns, start, end)
+}
+
+// appendColumns appends rows from source columns already resolved in builder
+// field order. MergeSort keeps these columns with each reader's current record
+// so the per-row output loop does not repeat Record.Column lookups.
+func (b *RecordBuilder) appendColumns(columns []arrow.Array, start, end int) error {
 	if err := b.prepareAppendDefaults(); err != nil {
 		return err
 	}
 	for offset := start; offset < end; offset++ {
 		for i, builder := range b.builders {
 			f := b.fields[i]
-			col := rec.Column(f.FieldID)
+			col := columns[i]
 			// TEXT may be decoded UTF8 or a binary LOB reference. Preserve the
 			// reader's representation instead of treating decoded text as a ref.
 			// Reader/writer schemas must agree on one non-null representation
@@ -564,7 +616,10 @@ func newRecordBuilder(schema *schemapb.CollectionSchema, useFieldID bool) *Recor
 			// so the builder must use binary type to match what the reader returns.
 			builders[i] = array.NewBinaryBuilder(allocator, arrow.BinaryTypes.Binary)
 		} else {
-			arrowType := serdeMap[field.DataType].arrowType(int(dim), elementType)
+			arrowType, err := ArrowTypeForField(field)
+			if err != nil {
+				panic(err)
+			}
 			builders[i] = array.NewBuilder(allocator, arrowType)
 		}
 		arrowFields[i] = newRecordBuilderArrowField(field, builders[i].Type(), dim, elementType, useFieldID)
